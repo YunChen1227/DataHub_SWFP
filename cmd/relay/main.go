@@ -1,10 +1,4 @@
-// Command relay is the entrypoint for the经济能力查询转接服务. It wires the
-// hexagonal layers together and starts the HTTP server + background workers.
-//
-// 各路由 (x1/v9/v8/zlf/blk) 对外接口完全一致，仅靠路由名区分；存储按「域」装配
-// (x1/v8v9/zlf/blk 四域，v8/v9 共用 v8v9 域库与同一套 license，其余路由各自独立
-// 一套 DB+Redis+license)。跨域使用 license 一律鉴权失败。
-// Dev defaults use in-memory adapters; production swaps in Redis+Lua + 独立 PG。
+// Command relay is the DataHub_SWFP entrypoint: SWFP tax/invoice aggregation relay.
 package main
 
 import (
@@ -27,7 +21,6 @@ import (
 	"github.com/datahub/relay/internal/domain/parse"
 	"github.com/datahub/relay/internal/domain/port"
 	"github.com/datahub/relay/internal/domain/quota"
-	"github.com/datahub/relay/internal/infrastructure/oss"
 	"github.com/datahub/relay/internal/infrastructure/persistence/memory"
 	"github.com/datahub/relay/internal/infrastructure/persistence/postgres"
 	redisq "github.com/datahub/relay/internal/infrastructure/persistence/redis"
@@ -180,10 +173,10 @@ func main() {
 			"upstream", cfg.versions[route].upstreamKind(), "sources", len(cfg.versions[route].upstreams))
 	}
 
-	// 控制面：后台统一登录 + JWT 校验走 x1 路由的 admin 服务 (x1 域)。
-	control := adminByRoute["x1"]
+	// 控制面：后台统一登录 + JWT 校验走 swfp 路由的 admin 服务 (swfp 域)。
+	control := adminByRoute["swfp"]
 	if control == nil {
-		logger.Error("x1 stack not built; cannot start admin control plane")
+		logger.Error("swfp stack not built; cannot start admin control plane")
 		os.Exit(1)
 	}
 	if err := control.BootstrapAdmin(ctx, cfg.adminUser, cfg.adminPass); err != nil {
@@ -310,26 +303,6 @@ func buildRouteStack(cfg config, route string, ds *domainStorage, httpClient *ht
 	case upstream.ProviderEntCredit:
 		// swfp 入参对齐上游证通 entcreditapi 的 args.creditCode。
 		orch.WithParser(parse.ParseCreditCode)
-	case upstream.ProviderRental, upstream.ProviderBlacklist:
-		// zlf (租赁分 name 必传) / blk (黑名单V35 name 参与摘要匹配) 均要求姓名必填。
-		orch.WithParser(parse.ParseWithName)
-	case upstream.ProviderFaceCompare:
-		// rlbd1 人脸身份证比对：name+idCard 必填、image|url 二选一（对齐数脉契约）。
-		orch.WithParser(parse.ParseFace)
-	case upstream.ProviderIDVerify:
-		// sfzhy 身份证三要素核验：name+idCard(15/18)+profilePicture 均必填。
-		orch.WithParser(parse.ParseIDVerify)
-	case upstream.ProviderConsumeTxn:
-		// xfjy 消费交易特征：上游 params 全选填，网关仅校验格式并要求至少一个
-		// 查询要素 (name/idCard/mobile)，对齐上游必填口径不臆造多余必填。
-		orch.WithParser(parse.ParseConsumeTxn)
-	case upstream.ProviderComplaint:
-		// tsfx 投诉分析识别名单：mobile + poly(C1/C2/C3) 均必填 (对齐 kfongtech 契约)。
-		orch.WithParser(parse.ParseComplaint)
-	case upstream.ProviderLXScore:
-		// lxf 灵犀分：上游 name/mobile/idCardNo 三项参数表都标"必传"，但文档 §2.2 明确
-		// 姓名缺省时传固定值 MD5("")，故实际必填口径为 mobile+idCardNo，name 选填——
-		// 恰与默认 parse.Parse 一致，无需专属校验器（此 case 仅为记录该判断依据）。
 	}
 	requery := job.NewRequeryWorker(ds.ledgerRepo, ds.licenseRepo, upClient, billSvc, quotaSvc, cfg.requeryInterval, log)
 
@@ -384,57 +357,6 @@ func labelFor(uc upstreamConfig, idx int) string {
 // buildClient constructs one 上游子源 client (port.UpstreamPort) by kind.
 func buildClient(version string, uc upstreamConfig, httpClient *http.Client, logger *slog.Logger) (port.UpstreamPort, error) {
 	switch uc.kind {
-	case upstream.ProviderIncome:
-		client := upstream.NewIncome(upstream.IncomeConfig{
-			BaseURL: uc.baseURL,
-			Account: uc.account,
-			Key:     uc.key,
-			Version: version,
-			// v9 与 v8 的 verify 公式不同：v9 含 mobile，v8 不含（对方 showdoc
-			// 经济能力10W-V8；2026-07-06 实测 v8 带 mobile 签名被拒 013）。
-			SignWithMobile: version != "v8",
-		}, httpClient)
-		return client, nil
-	case upstream.ProviderRental:
-		// 启动时把固定授权书上传到 OSS, 缓存 licenseUrl 供所有查询复用。OSS/授权书
-		// 未配置时 (dev/memory) 留空, 由上游在调用时报错, 不阻塞服务启动。
-		licenseURL := ""
-		if uc.licenseFile != "" {
-			url, err := oss.UploadFile(oss.Config{
-				Endpoint:        uc.oss.endpoint,
-				AccessKeyID:     uc.oss.accessKeyID,
-				AccessKeySecret: uc.oss.accessKeySecret,
-				Bucket:          uc.oss.bucket,
-				ObjectPrefix:    uc.oss.objectPrefix,
-			}, uc.licenseFile)
-			if err != nil {
-				logger.Warn("rental 授权书上传 OSS 失败, licenseUrl 留空", "err", err)
-			} else {
-				licenseURL = url
-				logger.Info("rental 授权书已上传 OSS", "licenseUrl", licenseURL)
-			}
-		} else {
-			logger.Warn("rental 未配置授权书文件 (licenseFile), licenseUrl 留空")
-		}
-		client := upstream.NewRental(upstream.RentalConfig{
-			BaseURL:       uc.baseURL,
-			InstitutionID: uc.institutionID,
-			AESKey:        uc.aesKey,
-			Service:       uc.service,
-			Mode:          uc.mode,
-			LicenseURL:    licenseURL,
-			LicenseType:   uc.licenseType,
-		}, httpClient)
-		return client, nil
-	case upstream.ProviderBlacklist:
-		client := upstream.NewBlacklist(upstream.BlacklistConfig{
-			BaseURL:        uc.baseURL,
-			AppID:          uc.appID,
-			Secret:         uc.appSecret,
-			APIKey:         uc.apiKey,
-			EncryptionType: uc.encryptionType,
-		}, httpClient)
-		return client, nil
 	case upstream.ProviderEntCredit:
 		client := upstream.NewEntCredit(upstream.EntCreditConfig{
 			Endpoint:        uc.baseURL,
@@ -444,40 +366,6 @@ func buildClient(version string, uc upstreamConfig, httpClient *http.Client, log
 			Product:         uc.product,
 		}, httpClient)
 		return client, nil
-	case upstream.ProviderFaceCompare:
-		client := upstream.NewFaceCompare(upstream.FaceCompareConfig{
-			BaseURL:   uc.baseURL,
-			AppID:     uc.appID,
-			AppSecret: uc.appSecret,
-		}, httpClient)
-		return client, nil
-	case upstream.ProviderIDVerify:
-		client := upstream.NewIDVerify(upstream.IDVerifyConfig{
-			BaseURL:   uc.baseURL,
-			AppID:     uc.appID,
-			AppSecret: uc.appSecret,
-		}, httpClient)
-		return client, nil
-	case upstream.ProviderConsumeTxn:
-		// xfjy 消费交易特征 (data-bean)：sceneid=appID、appkey=appSecret、
-		// procode 默认 fk3002（可经 apiKey 覆盖）。
-		client := upstream.NewConsumeTxn(upstream.ConsumeTxnConfig{
-			BaseURL: uc.baseURL,
-			SceneID: uc.appID,
-			AppKey:  uc.appSecret,
-			Procode: uc.apiKey,
-		}, httpClient)
-		return client, nil
-	case upstream.ProviderComplaint:
-		// tsfx 投诉分析识别名单 (kfongtech)：apiKey=Apikey、aesKey=param AES 密钥、
-		// appSecret=sign 密钥 (复用既有凭证字段，不新增 config 字段)。
-		client := upstream.NewComplaint(upstream.ComplaintConfig{
-			BaseURL:    uc.baseURL,
-			APIKey:     uc.apiKey,
-			AESKey:     uc.aesKey,
-			SignSecret: uc.appSecret,
-		}, httpClient)
-		return client, nil
 	case upstream.ProviderSalesData:
 		// swfp 源5 销项数据 (凯盈云 crestv)：appId=AppID、appSecret=AppKey (兼作
 		// AES 密钥，复用既有凭证字段)。baseURL 为业务接口前缀 (…/api/ws)。
@@ -485,25 +373,6 @@ func buildClient(version string, uc upstreamConfig, httpClient *http.Client, log
 			BaseURL: uc.baseURL,
 			AppID:   uc.appID,
 			AppKey:  uc.appSecret,
-		}, httpClient)
-		return client, nil
-	case upstream.ProviderLXScore:
-		// lxf 灵犀分 score_195_v1 (fullink)：appId=customerId(商户code)、
-		// apiKey=customerProdId(产品code)、appSecret=encryptKey(DES 密钥，兼作
-		// sign 加密与 data 解密；复用既有凭证字段，不新增 config 字段)。
-		client := upstream.NewLXScore(upstream.LXScoreConfig{
-			BaseURL:        uc.baseURL,
-			CustomerID:     uc.appID,
-			CustomerProdID: uc.apiKey,
-			EncryptKey:     uc.appSecret,
-		}, httpClient)
-		return client, nil
-	case upstream.ProviderGama, "":
-		client := upstream.NewGama(upstream.GamaConfig{
-			BaseURL: uc.baseURL,
-			AppID:   uc.appID,
-			Secret:  uc.appSecret,
-			APIKey:  uc.apiKey,
 		}, httpClient)
 		return client, nil
 	default:

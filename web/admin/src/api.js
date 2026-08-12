@@ -1,16 +1,11 @@
-// Admin API client (DESIGN §16): fetch wrapper with Bearer JWT.
-// 登录走统一控制面 /admin/api/login；用户/审计等数据请求带路由前缀
-// /admin/api/{ver}/...。存储按「域」隔离：x1 / zlf / blk 各自独立数据库
-// （license/用户/统计/日志互不可见，license 跨域不可用）；v8 与 v9 同属 v8v9 域，
-// 共用同一套 license/appKey/secret（在任一标签下创建/编辑/删除/轮换，对另一标签
-// 同步生效），仅统计与操作日志按路由各自独立。
+// Admin API client: login via /admin/api/login; data via /admin/api/swfp/...
 const BASE = '/admin/api'
 
-export const VERSIONS = ['x1', 'v9', 'v8', 'zlf', 'blk', 'swfp', 'rlbd1', 'rlbd2', 'sfzhy', 'xfjy', 'tsfx', 'lxf']
+export const VERSIONS = ['swfp']
 
 let token = localStorage.getItem('adminToken') || ''
-let version = localStorage.getItem('adminVersion') || 'x1'
-if (!VERSIONS.includes(version)) version = 'x1'
+let version = localStorage.getItem('adminVersion') || 'swfp'
+if (!VERSIONS.includes(version)) version = 'swfp'
 
 export function setToken(t) {
   token = t || ''
@@ -23,7 +18,7 @@ export function getToken() {
 }
 
 export function setVersion(v) {
-  version = VERSIONS.includes(v) ? v : 'x1'
+  version = VERSIONS.includes(v) ? v : 'swfp'
   localStorage.setItem('adminVersion', version)
 }
 

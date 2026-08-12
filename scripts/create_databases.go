@@ -2,7 +2,7 @@
 
 // Create missing PostgreSQL databases listed in config (no DROP / no migrate).
 // 阿里云 RDS 常无法连接 postgres 维护库；本脚本改连 config 里已有的库
-// (默认 x1 的 database.name) 执行 CREATE DATABASE。
+// (默认 swfp 的 database.name) 执行 CREATE DATABASE。
 //
 // Usage:
 //
@@ -37,7 +37,7 @@ type fileConfig struct {
 	Versions map[string]fileVersion `yaml:"versions"`
 }
 
-var versionOrder = []string{"x1", "v9", "v8", "zlf", "blk", "swfp", "rlbd1", "rlbd2", "sfzhy"}
+var versionOrder = []string{"swfp"}
 
 const perDBTimeout = 2 * time.Minute
 

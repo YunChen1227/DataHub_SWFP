@@ -17,7 +17,7 @@ import (
 const (
 	baseURL = "http://localhost:8080"
 	secret  = "demo-app-secret"
-	appKey  = "y89098io"
+	appKey  = "y890swfp"
 )
 
 func sign(params map[string]string, secret string) string {
@@ -83,11 +83,9 @@ func main() {
 	st, body, err := call(http.MethodGet, "/healthz", nil)
 	check("GET /healthz", st, body, err)
 
-	// 2. POST /v1/openapi/zlx/querySrmxX1
+	// 2. POST /v1/openapi/zlx/querySrmxSWFP
 	qBody := map[string]string{
-		"mobile": "13809091009",
-		"idCard": "330129199109094312",
-		"name":   "张三",
+		"creditCode": "92500233MA60R5KW8M",
 	}
 	payload := map[string]any{
 		"encryptionType": 1,
@@ -95,8 +93,8 @@ func main() {
 		"sign":           sign(qBody, secret),
 		"body":           qBody,
 	}
-	st, body, err = call(http.MethodPost, "/v1/openapi/zlx/querySrmxX1", payload)
-	check("POST /v1/openapi/zlx/querySrmxX1", st, body, err)
+	st, body, err = call(http.MethodPost, "/v1/openapi/zlx/querySrmxSWFP", payload)
+	check("POST /v1/openapi/zlx/querySrmxSWFP", st, body, err)
 
 	// 3. GET /v1/openapi/zlx/quota (empty body → sign = MD5(secret))
 	quotaPayload := map[string]any{
@@ -105,8 +103,8 @@ func main() {
 		"sign":           sign(map[string]string{}, secret),
 		"body":           map[string]string{},
 	}
-	st, body, err = call(http.MethodGet, "/v1/openapi/zlx/quotaX1", quotaPayload)
-	check("GET /v1/openapi/zlx/quotaX1", st, body, err)
+	st, body, err = call(http.MethodGet, "/v1/openapi/zlx/quotaSWFP", quotaPayload)
+	check("GET /v1/openapi/zlx/quotaSWFP", st, body, err)
 
 	if ok {
 		fmt.Println("\nAll routes responded successfully.")

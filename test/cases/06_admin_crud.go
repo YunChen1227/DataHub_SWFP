@@ -15,7 +15,7 @@ import (
 )
 
 func base() map[string]string {
-	return map[string]string{"mobile": "13809091009", "idCard": "330129199109094312", "name": "张三"}
+	return map[string]string{"creditCode": "92500233MA60R5KW8M"}
 }
 
 func main() {
@@ -29,7 +29,7 @@ func main() {
 		return
 	}
 	auth := harness.AuthHeader(token)
-	adminBase := harness.AdminBase("x1")
+	adminBase := harness.AdminBase("swfp")
 
 	// 2. 登录（错误密码）-> 401
 	stw, _, wr := harness.Call(http.MethodPost, "/admin/api/login",
@@ -64,7 +64,7 @@ func main() {
 	rec.Check("用户列表", "包含至少 1 个用户", len(users) > 0, lr)
 
 	// 7. 轮换密钥：旧 secret 应失败，新 secret 应成功
-	r := harness.QueryX1(appKey, secret1, base(), nil)
+	r := harness.QuerySWFP(appKey, secret1, base(), nil)
 	rec.Check("轮换前旧 secret 可用", "errorCode=0", r.ErrorCode == "0", r.Raw)
 
 	_, rm, rr := harness.Call(http.MethodPost, adminBase+"/users/"+licenseID+"/rotate-secret", nil, auth)
@@ -72,9 +72,9 @@ func main() {
 	rec.Check("轮换密钥返回新 secret", "secret 非空且不同于旧值", secret2 != "" && secret2 != secret1, rr)
 
 	if secret2 != "" {
-		rOld := harness.QueryX1(appKey, secret1, base(), nil)
+		rOld := harness.QuerySWFP(appKey, secret1, base(), nil)
 		rec.Check("旧 secret 轮换后失效", "errorCode=505002", rOld.ErrorCode == "505002", rOld.Raw)
-		rNew := harness.QueryX1(appKey, secret2, base(), nil)
+		rNew := harness.QuerySWFP(appKey, secret2, base(), nil)
 		rec.Check("新 secret 生效", "errorCode=0", rNew.ErrorCode == "0", rNew.Raw)
 	}
 
@@ -90,13 +90,13 @@ func main() {
 	masked := false
 	for _, a := range audits {
 		rc, _ := a.(map[string]any)
-		if nm, _ := rc["nameMask"].(string); strings.Contains(nm, "*") {
+		if nm, _ := rc["idCardMask"].(string); strings.Contains(nm, "*") {
 			masked = true
 			break
 		}
 	}
 	rec.Check("审计列表(按 appKey 过滤)", "返回记录数组", am["audits"] != nil, ar)
-	rec.Check("审计 PII 掩码", "nameMask 含 *", masked, "未发现掩码记录(可能本次无 demo 流量)")
+	rec.Check("审计 PII 掩码", "idCardMask 含 *", masked, "未发现掩码记录(可能本次无 demo 流量)")
 
 	// 10. 删除
 	std, _, dr := harness.Call(http.MethodDelete, adminBase+"/users/"+licenseID, nil, auth)

@@ -1,441 +1,73 @@
-# DataHub — 经济能力查询转接服务（Go）
+# DataHub_SWFP
 
-接口转接网关（当前服务版本 **x1**）：
-- **对外（下游，x1）**：`POST /v1/openapi/zlx/querySrmxX1`，网关信封 `appKey/sign/encryptionType/body` + **MD5 加签**，
-  响应 `head{errorCode,logId,time,errorMsg,timestamp} / body{code,msg,uid,reqid,verify,result{range}}`；在此基础上提供 **License 鉴权** 与 **成功查得数统计**（无额度限制）。
-- **对外（下游，v9/v8）**：`POST /v1/openapi/zlx/querySrmxV9` / `querySrmxV8`，对外契约与 x1 **完全一致**（同信封/同 MD5 加签/同 `head/body`），仅路由名不同；各自对接独立的经济能力上游（`docs/income_cls.md` 协议）。详见 [`docs/API_接口文档与使用手册_v9v8.md`](docs/API_接口文档与使用手册_v9v8.md)。
-- **对外（下游，zlf=租赁分V2-D）**：`POST /v1/openapi/zlx/querySrmxZLF`，对外契约与 x1 **完全一致**（同信封/同 MD5 加签/同 `head/body`），仅路由名不同；`result.range` 透出上游 `score1`（500-700，[500-550]高 /(550-590]中 /(590-700]低）。详见 [`docs/API_接口文档与使用手册_zlf.md`](docs/API_接口文档与使用手册_zlf.md)。
-- **对外（下游，blk=黑名单因子V35）**：`POST /v1/openapi/zlx/querySrmxBLK`，对外契约与 x1 **完全一致**（同信封/同 MD5 加签/同 `head/body`），仅路由名不同；上游富对象结果（`whether_hit`/`hit_grade`/`hit_type[P1-P8 的 m1/m3/m6]`）整体 **JSON 序列化为字符串**经 `result.range` 透出，客户自行解析。详见 [`docs/API_接口文档与使用手册_blk.md`](docs/API_接口文档与使用手册_blk.md)。
-- **对外（下游，swfp=税务发票聚合）**：`POST /v1/openapi/zlx/querySrmxSWFP`，同信封/同 MD5 加签/同 `head/body`，但为**企业维度**入参（`creditCode` 统一社会信用代码必填 + 可选 `scope`："all" 缺省=全部数据源 / "basic"=仅基础源）；内部**并发聚合五个数据源**（发票 P0130081/P0130083 + 税务 P0130082/P0130084 + 可选的凯盈云销项数据月度汇总）。swfp 是首个有**明确下游返回值契约**（[`docs/税票分析接口文档.xlsx`](docs/税票分析接口文档.xlsx)）的路由：`result.range` 不再原样透传，而是经**契约映射层**（`upstream/swfpcontract.go`）按 xlsx 整理为「发票数据聚合 / 税务数据聚合」两段结构，每个字段按脱敏源编号分组（`源1`-`源5`），附 `sourceStatus` 段级状态；**严格白名单**——xlsx 之外的字段一律不返回，xlsx 定义而上游缺失的字段输出空串。聚合特有业务码 **`002` = 部分数据源成功（不计费）**。
-- **对外（下游，rlbd1=人脸身份证比对一所）**：`POST /v1/openapi/zlx/querySrmxRLBD1`，对外契约与 x1 **完全一致**（同信封/同 MD5 加签/同 `head/body`），仅路由名不同；入参为 `name`+`idCard`+（`image` base64 或 `url` 二选一）；比对成功结果富对象（`order_no`/`score`/`incorrect`/`sex`/`birthday`/`address`）整体 **JSON 序列化为字符串**经 `result.range` 透出。人脸比对无「查无」概念，故不产生 `999`。
-- **对外（下游，rlbd2=人脸身份证比对一所·独立凭证）**：`POST /v1/openapi/zlx/querySrmxRLBD2`，对外契约与 rlbd1 **完全一致**（同信封/同 MD5 加签/同 `head/body`），独立成域（独立库/统计/license）。详见 [`docs/API_接口文档与使用手册_rlbd2.pdf`](docs/API_接口文档与使用手册_rlbd2.pdf)。
-- **对外（下游，sfzhy=身份证三要素核验）**：`POST /v1/openapi/zlx/querySrmxSFZHY`，对外契约与 x1 **完全一致**（同信封/同 MD5 加签/同 `head/body`），仅路由名不同；入参为 `name`+`idCard`(15/18 位)+`profilePicture`(base64 人像照片)；核验结果富对象（`Result`/`ResultMessage`/`ImageScore`）整体 **JSON 序列化为字符串**经 `result.range` 透出。三要素核验无「查无」概念，故不产生 `999`。
-- **对外（下游，xfjy=消费交易特征）**：`POST /v1/openapi/zlx/querySrmxXFJY`，对外契约与 x1 **完全一致**（同信封/同 MD5 加签/同 `head/body`），仅路由名不同；入参为 `name`/`idCard`/`mobile`/`authlet`（均选填，至少提供一个查询要素）；消费交易特征富对象整体 **JSON 序列化为字符串**经 `result.range` 透出。区分「查得」（`001` 计费）与「查无」（`999` 不计费）。
-- **对外（下游，tsfx=投诉分析识别名单）**：`POST /v1/openapi/zlx/querySrmxTSFX`，对外契约与 x1 **完全一致**（同信封/同 MD5 加签/同 `head/body`），仅路由名不同；入参为 `mobile`+`poly`（命中级别 `C1`/`C2`/`C3`，均必填）；命中结果数组整体 **JSON 序列化为字符串**经 `result.range` 透出（每条含 `callee`/`forbid`）。本路由**只要调用成功即 `001` 计费**，是否命中体现在 `forbid`（无 `999` 查无码）。
+SWFP（税务发票聚合）API 转接服务。对外提供统一网关信封（`appKey/sign/encryptionType/body` + MD5 加签），对内并发聚合 4 路证通 entcredit 产品码 + 可选源5 销项数据（salesdata），输出按 `docs/税票分析接口文档.xlsx` 契约整理。
 
-> **额度策略（v0.6+）**：已**取消额度限制**——不限制客户调用次数；系统仅**统计每个用户累计成功查得数据的次数**（上游 001 → busiCode 10）。维度②（上游配额/调用计数/对账作业）已在 v0.7 **彻底移除**。
+## 路由
 
-> **IP 准入（v0.7）**：网关**不再**做全局/每用户 IP 白名单校验；来源 IP 仅写入审计日志。生产环境由**阿里云 ECS 安全组**等网络层控制访问。
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/v1/openapi/zlx/querySrmxSWFP` | 主查询（入参 `creditCode`，可选 `scope=all\|basic`） |
+| GET | `/v1/openapi/zlx/quotaSWFP` | 配额/统计 |
+| GET | `/healthz` | 健康检查 |
+| POST | `/admin/api/login` | 管理后台登录 |
+| * | `/admin/api/swfp/*` | 用户与审计管理 |
 
-> **按域隔离 + demo 治理（v0.9）**：存储按「域」划分——`x1` / `v8v9` / `zlf` / `blk` / `swfp` / `rlbd1` / `rlbd2` / `sfzhy` / `xfjy` / `tsfx` 各域独立，各域独占一套 **PostgreSQL 库 + Redis 逻辑库 + license/appKey/secret + 记录**；**v8 与 v9 同属 `v8v9` 域，共用同一套 license**（调用次数/成功查得数/操作日志仍按路由独立统计），其余路由完全独立。跨域使用 license 一律鉴权失败（`505004` 账户信息不存在）。历史上被播种进**每个库**的同一个 demo license（`y89098io`，"一个 token 可访问所有路由"的根因）**随迁移 `0004` 自动清除**，生产启动不再播种 demo；开发态各域播种互不相同的 demo appKey。启动时另有防呆校验：两个不同的域若配置了同一个数据库或同一个 Redis 逻辑库，服务直接拒绝启动。管理后台为统一管理员登录，按路由标签页管理（v8/v9 标签展示同一份用户，统计/日志各自独立）。
-
-- **对内（上游，按版本路由）**：每个版本各自对接一个上游，归一化为统一的 `UpstreamResult`（`001`查得 /`999`查无）：
-  - `x1` → **伽马分层分**（`gama`，《伽马分层分_定制版》PDF：`POST /enol/api/v1/doCheck`，MD5 加签 JSON 信封）。
-  - `v9/v8` → **经济能力**（`income`，`docs/income_cls.md`：GET + `account/key` 验签）。
-  - `zlf` → **租赁分V2-D / 守信**（`rental`，`POST .../api/lightning/product/query`：业务数据 **AES/ECB/PKCS5Padding + Base64** 成 `biz_data`，与 `institution_id` 一起 **form** 提交；授权书由本服务启动时上传 OSS 一次并缓存 `licenseUrl` 复用）。
-  - `blk` → **黑名单因子V35 / 应诺尔**（`blacklist`，与 `gama` 同 `POST /enol/api/v1/doCheck` 端点 + 同 MD5 信封；`apiKey=blackIntV35`、`encryptionType=2`：`name/idCard/mobile` 由本服务取 **MD5** 摘要后入 body 加签；响应富对象 `result` 序列化为 JSON 字符串透出 `result.range`）。
-  - `swfp` → **税务发票四产品聚合 / 证通**（`entcredit`，`HMAC-SHA256` 签名 + `form` 提交，企业维度 `creditCode` 入参；并发聚合四产品码，部分成功归一 `002`）+ **销项数据 / 凯盈云 crestv**（`salesdata`，可选第五源：`{AppID, ReqData}` 信封、ReqData=Base64(AES(内层 JSON))，调「月度开票汇总 + 月度下游企业」两个接口，`optional: true`，下游 `scope=basic` 可跳过；见 [`docs/销项数据接口文档V1.0.docx`](docs/销项数据接口文档V1.0.docx)）。
-  - `rlbd1` → **人脸身份证比对一所 / 数脉**（`facecompare`，`POST /v4/face_id_card/yisuo/compare` **form** 提交；`sign = md5(appid&timestamp&app_security)`，明文传 `name/idcard` + `image` 或 `url`；收费类 `incorrect` 归一 `001`，不收费类/`code≠200` 归一上游侧错误；响应富对象序列化透出 `result.range`）。
-  - `rlbd2` → **人脸身份证比对一所 / 数脉（独立凭证）**（同 `rlbd1` 的 `facecompare` 上游接口与协议，仅换一套 `appId/appSecret`，独立成域）。
-  - `sfzhy` → **身份证三要素核验**（`idverify`，`POST /api/idCardThreeElements` **JSON** 提交；`signature = SHA256(升序 k=v&… + "&AppSecret=" + 商户密钥)`，明文传 `name/idCard/profilePicture`；`Code=0` 归一 `001`（Result 0–5 均计费），`Code≠0` 归一上游侧错误；响应富对象序列化透出 `result.range`）。
-  - `xfjy` → **消费交易特征 / data-bean**（`consumetxn`，`POST /` **JSON** 提交；公共参数 `procode(fk3002)/sceneid/reqtime/nonce/sign`，`sign = MD5(过滤空值升序 k=v&… + "&appkey=" + appkey)`，私有参数 `params{name/idcard/mobile/authlet}`；`code=0 且 result=0` 归一 `001`（计费），`result=1` 归一 `999`（查无不计费），`code≠0` 归一上游侧错误；响应 `data.resultdata` 富对象序列化透出 `result.range`）。
-  - `tsfx` → **投诉分析识别名单 / kfongtech**（`complaint`，`POST /inlet/api` **JSON** 提交；外层 `{apiKey, param, sign}`，`param` 为业务参数 `{method/version/poly/mobile}` **AES 加密**、`sign` 为外层签名，响应 `data` 为 **gzip 压缩**的命中结果数组；`code=0000` 归一 `001`（**调用成功即计费**，命中状态 `forbid` 随结果数组透出 `result.range`），`code≠0000` 归一上游侧错误。本上游无「查无(999)」概念）。
-  保留 `upstream.Router` 抽象，每版本一个单 provider 路由。
-
-设计见 [`docs/DESIGN.md`](docs/DESIGN.md)，架构图见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
-
-## 目录结构（六边形分层）
-
-```
-cmd/relay/                 # 入口：装配各层 + 启动 HTTP/后台任务
-internal/
-├── api/                   # 接入层：requestId/clientIP 中间件、信封/签名提取、handler、admin API + JWT 中间件 + SPA 托管
-├── application/           # 编排层：QueryOrchestrator（主流程 + 审计写入）
-├── domain/                # 领域层（无框架依赖）
-│   ├── model/             #   核心类型（共享，零依赖；含 admin/审计/用户视图）
-│   ├── port/              #   出站接口（仓储/上游/密钥/admin/审计等"端口"）
-│   ├── auth/              #   License 鉴权 + appKey 校验 + MD5 加签验签
-│   ├── quota/             #   成功查得数统计 + 台账 PENDING→BILLED/UNBILLED（无额度限制）
-│   ├── billing/           #   计费判定表 + 状态机
-│   ├── parse/             #   参数校验/规范化
-│   ├── mapping/           #   上游结果→客户 head/body 响应 + errorCode
-│   └── admin/             #   管理后台：登录/用户 CRUD/密钥轮换/审计查询
-├── infrastructure/        # 适配器
-│   ├── upstream/          #   上游路由 + 伽马客户端 + MD5 签名
-│   ├── persistence/memory #   开发用内存实现（默认）
-│   ├── persistence/postgres # 生产：license/台账/审计/管理员（PostgreSQL）
-│   ├── persistence/redis  #   生产：成功查得数原子计数（Redis INCR + PG 镜像）
-│   └── secret/            #   密钥提供者（按 licenseId 动态读取）
-├── job/                   # 异步复查 worker（RequeryWorker；伽马 Requery 当前为 stub）
-└── common/                # errs(错误码) / reqid / appctx / jwt / ipfilter(仅解析 IP) / mask
-web/admin/                 # 管理后台 React + Vite SPA（DESIGN §16）
-migrations/                # 建表 DDL（PostgreSQL）：0001 业务 / 0002 管理后台 / 0003 路由统计 / 0004 demo 清理
-scripts/                   # mock_gama、e2e、recreate_databases 等辅助脚本
-test/                      # 固定测试套件（run.ps1 + cases/*.go）
-```
-
-依赖箭头始终指向内层：`api → application → domain ← infrastructure`。
-
-## 前置依赖
-
-| 组件 | 版本/说明 | 用途 |
-|---|---|---|
-| **Go** | 1.25+（见 `go.mod`） | 编译/运行 relay 服务 |
-| **Node.js + npm** | 18+ 推荐 | 仅**构建**管理后台 SPA（`web/admin`） |
-| **PostgreSQL** | 15+（生产用阿里云 RDS） | license / 台账 / 审计 / 管理员 |
-| **Redis** | 6+（生产用阿里云 Redis） | 成功查得数原子计数（PG 镜像） |
-| **伽马上游凭证** | 商务分配 | `upstream.gama.appId` / `appSecret` |
-
-> 本项目**不使用** `config.json`，运行时配置全部为 **YAML**，通过环境变量 `CONFIG_FILE` 指定路径（默认 `./config.yaml`）。
-
-### Go 模块镜像（国内 / 阿里云 ECS）
-
-在**国内服务器**（如阿里云 ECS）上，`go mod download` 默认走 `proxy.golang.org`，常会超时（`dial tcp ...:443: i/o timeout`）。需改用国内镜像：
-
-```bash
-# 临时生效（当前 shell）
-export GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
-export GOSUMDB=sum.golang.google.cn
-
-go mod download
-```
-
-长期生效（写入 `~/.bashrc` 后 `source ~/.bashrc`）：
-
-```bash
-cat >> ~/.bashrc <<'EOF'
-export GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
-export GOSUMDB=sum.golang.google.cn
-EOF
-source ~/.bashrc
-```
-
-说明：
-
-| 变量 | 含义 |
-|---|---|
-| `GOPROXY=...,direct` | 优先走阿里云 Go 模块镜像；镜像没有的再直连源站 |
-| `GOSUMDB=sum.golang.google.cn` | 校验和数据库也用国内源 |
-
-若仍超时，可换备用镜像：`export GOPROXY=https://goproxy.cn,direct`。仅在内网可信环境且校验和源不可达时，可临时 `export GOSUMDB=off`（不推荐长期使用）。
-
-## 运行（开发）
-
-```bash
-# 安装 Go 依赖（国内 ECS 请先设置 GOPROXY，见上文「Go 模块镜像」）
-go mod download
-
-# 默认：无 config.yaml 时使用 memory 适配器
-go run ./cmd/relay
-
-# 推荐：本地 memory + mock 上游（需自行从 config.example.yaml 复制为 config.local.mem.yaml）
-CONFIG_FILE=config.local.mem.yaml go run ./cmd/relay
-
-# 另开终端启动 mock 伽马（:9112）
-go run ./scripts/mock_gama.go
-
-# 健康检查
-curl http://localhost:8080/healthz
-```
-
-开发态（memory；PG 由 `scripts/recreate_databases.go` 在 `SEED_DEMO=1` 时播种）为**每个域分别**预置一个独立的 demo license（`secret` 均为 `demo-app-secret`，appKey 按域不同，**跨域不可用**；v8/v9 同域共用一个）：
-
-| 域（路由） | demo appKey |
-|---|---|
-| x1 | `y89098io` |
-| v8v9（v9 与 v8 共用） | `y890v8v9` |
-| zlf | `y8909zlf` |
-| blk | `y8909blk` |
-
-生产（relay 以 postgres 启动）**不播种** demo license。
-上游唯一为 **伽马**（`upstream.provider: gama`），需在配置文件中设置 `upstream.gama.baseURL`/`appId`/`appSecret`/`apiKey`（见 `config.example.yaml`）。
-
-## 运行（生产）
-
-### 1. 准备配置文件
-
-仓库内**仅提交** [`config.example.yaml`](config.example.yaml) 作为模板；含真实凭证的文件均在 [`.gitignore`](.gitignore) 中，需在本机/服务器上自行创建：
-
-```bash
-cp config.example.yaml config.aliyun.prod.yaml
-# 编辑 config.aliyun.prod.yaml，填入下方「必填项」
-```
-
-| 文件 | 是否在仓库 | 用途 |
-|---|---|---|
-| `config.example.yaml` | ✅ 提交 | 配置模板（无真实密钥） |
-| `config.yaml` | ❌ 忽略 | 通用本地/部署配置（默认路径） |
-| `config.local.mem.yaml` | ❌ 忽略 | 本地 memory + mock gama |
-| `config.aliyun.e2e.yaml` | ❌ 忽略 | 阿里云 PG `dev_db` + Redis db0 + mock gama（e2e） |
-| `config.aliyun.prod.yaml` | ❌ 忽略 | **生产（Ubuntu 部署用此文件）**：各域独立 PG + Redis + 真实上游 |
-
-生产环境关键配置（完整字段见 `config.example.yaml` / 本地 `config.aliyun.prod.yaml`）：
-
-```yaml
-addr: ":8080"                    # 监听地址；前面通常有 Nginx/SLB 做 HTTPS 终结
-
-storage:
-  driver: "postgres"             # 生产必须为 postgres
-  migrationsDir: "migrations"    # 相对 relay 工作目录；启动时自动跑 DDL
-
-# 存储按域独立：x1/v8v9/zlf/blk/swfp/rlbd1/rlbd2/sfzhy/xfjy/tsfx 各一套 PG 库 + Redis 逻辑库。
-# 上游按 upstreams 列表配置：单源路由列表长度 1；聚合路由 (swfp) 长度 N，每个子源自带
-# 完整凭证，主程序并发调所有子源后按判定表聚合（≥1查得→001计费 / 全查无→999 /
-# 部分成功→002不计费 / 全失败→505062）。同一路由所有子源 kind 必须一致。
-versions:
-  x1:
-    upstreams:
-      - kind: "gama"
-        baseURL: "https://api.enolfax.com/enol/api/v1/doCheck"
-        appId: "<x1 伽马 appId>"
-        appSecret: "<x1 伽马 appSecret>"
-        apiKey: "gama_ctmz_layer_score"
-    database: { host: "<RDS>", name: "datahub_x1_prod_db", user: "...", password: "..." }
-    redis:    { addr: "<Redis>:6379", db: 3, password: "..." }
-  v9:                               # v8v9 域 owner：其 database/redis 即整个域的存储
-    upstreams:
-      - { kind: "income", baseURL: "...", account: "...", key: "..." }
-    database: { host: "<RDS>", name: "datahub_v8v9_prod_db", ... }
-    redis:    { db: 4, ... }
-  v8:                               # 与 v9 共用 v8v9 域库，仅配上游
-    upstreams:
-      - { kind: "income", baseURL: "...", account: "...", key: "..." }
-  zlf:                              # 租赁分V2-D（守信）：AES + form + 授权书 OSS
-    upstreams:
-      - kind: "rental"
-        baseURL: "https://shouwei.shouxin168.com/api/lightning/product/query"
-        institutionId: "<机构号>"
-        aesKey: "<AES 密钥 16/24/32 字节>"
-        service: "buer_unique_service"
-        mode: "mode_rent_score_v2_d"
-        licenseFile: "./config/approve.pdf"   # 固定授权书，启动上传 OSS 缓存 licenseUrl
-        licenseType: 1                          # 0:图片 1:pdf
-        oss: { endpoint: "oss-cn-shanghai.aliyuncs.com", accessKeyId: "...", accessKeySecret: "...", bucket: "shouwei", objectPrefix: "approve_files/" }
-    database: { host: "<RDS>", name: "datahub_zlf_prod_db", ... }
-    redis:    { db: 6, ... }
-  blk:                              # 黑名单因子V35（应诺尔）：同 gama 端点 + MD5 信封
-    upstreams:
-      - kind: "blacklist"
-        baseURL: "https://api.enolfax.com/enol/api/v1/doCheck"
-        appId: "<应诺尔分配 appId>"
-        appSecret: "<应诺尔分配 secret>"
-        apiKey: "blackIntV35"         # 固定产品码
-        encryptionType: 2             # 2=MD5：name/idCard/mobile 取摘要后入 body 加签
-    database: { host: "<RDS>", name: "datahub_blk_prod_db", ... }
-    redis:    { db: 7, ... }
-  swfp:                             # 税务发票四产品聚合：4 个 entcredit 子源并发聚合
-    upstreams:
-      - { kind: "entcredit", label: "invoice1", product: "P0130081", baseURL: "https://cisp.zenitera.com", orgCode: "...", accessKeyId: "...", secretAccessKey: "..." }
-      - { kind: "entcredit", label: "invoice2", product: "P0130083", baseURL: "https://cisp.zenitera.com", orgCode: "...", accessKeyId: "...", secretAccessKey: "..." }
-      - { kind: "entcredit", label: "tax1",     product: "P0130082", baseURL: "https://cisp.zenitera.com", orgCode: "...", accessKeyId: "...", secretAccessKey: "..." }
-      - { kind: "entcredit", label: "tax2",     product: "P0130084", baseURL: "https://cisp.zenitera.com", orgCode: "...", accessKeyId: "...", secretAccessKey: "..." }
-    database: { host: "<RDS>", name: "datahub_swfp_db", ... }
-    redis:    { db: 5, ... }
-
-admin:
-  bootstrapUser: "admin"
-  bootstrapPass: "<强密码>"       # 首次启动写入 x1 库 admin_user 表
-  jwtSecret: "<随机长字符串>"     # JWT 签名密钥，务必更换
-  spaDir: "web/admin/dist"       # 管理后台静态资源目录
-```
-
-**必填项清单**（留空或占位符会导致启动失败或无法对外服务）：
-
-| 配置路径 | 说明 |
-|---|---|
-| `storage.driver` | 必须为 `postgres` |
-| `versions.{x1,v9,zlf,blk}.database.*` | 各域各自 PG 库（v8 与 v9 共用 v9 配的 v8v9 域库，v8 不单列） |
-| `versions.{x1,v9,zlf,blk}.redis.*` | 各域各自 Redis 逻辑库（db3/4/6/7；不同域不得复用） |
-| `versions.x1.upstream.*` | x1 伽马上游凭证 |
-| `versions.v9/v8.upstream.*` | v9/v8 经济能力上游凭证 |
-| `versions.zlf.upstream.*` | 租赁分V2-D 凭证：`institutionId`/`aesKey`/`oss.*`/`licenseFile`/`licenseType` |
-| `versions.blk.upstream.*` | 黑名单因子V35 凭证：`appId`/`appSecret`/`apiKey`(blackIntV35)/`encryptionType`(2) |
-| `admin.bootstrapPass` / `jwtSecret` | 管理后台登录与 JWT（**禁止使用示例占位符**） |
-
-可选：`billing.requeryInterval`（默认 10s）、`admin.tokenTTL`（默认 8h）、`addr`（默认 `:8080`）。
-
-### 2. 初始化数据库（首次部署，Ubuntu）
-
-relay 启动时会自动执行 `migrations/*.sql` 建表；**首次**需为四个域各创建一个独立生产库（x1 / v8v9 / zlf / blk；v8 与 v9 共用 v8v9 库）并迁移：
-
-```bash
-cd /workspace/DataHub   # 或你的部署目录，下同
-
-# 按 config.aliyun.prod.yaml 补建缺失的 datahub_*_prod_db + 迁移
-# ✅ 安全：默认只建缺失的库并迁移，绝不 DROP/删除已有数据；且对生产库硬拒绝破坏性重置
-# （开发/e2e 需要 demo license 时加 SEED_DEMO=1；生产不要加）
-CONFIG_FILE=config.aliyun.prod.yaml go run ./scripts/recreate_databases.go
-```
-
-已有生产数据的部署升级到 v0.9 无需换库：重启 relay 后迁移 `0004` 会自动删除旧的共享 demo license（`y89098io`），此后各域之间不再存在任何可跨域使用的凭证。
-
-仅清空某库旧表、让 relay 下次启动重跑 migrations 时，可对该库执行 [`scripts/recreate_schema.sql`](scripts/recreate_schema.sql)。
-
-### 3. 构建（Ubuntu）
-
-在**仓库根目录**执行（管理后台需先构建，否则 `/admin/` 不可用）：
-
-```bash
-cd /workspace/DataHub
-
-# 依赖：Go 1.25+、Node.js 18+（仅构建 SPA 时需要）
-sudo apt update
-sudo apt install -y golang-go nodejs npm   # 若尚未安装；或用官方/ nvm 安装较新版本
-
-# 国内 ECS：Go 模块走阿里云镜像（见上文「Go 模块镜像」）
-export GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
-export GOSUMDB=sum.golang.google.cn
-
-go mod download
-
-# 管理后台 SPA → web/admin/dist
-cd web/admin
-npm install
-npm run build
-cd ../..
-
-# 编译 relay 二进制
-go build -o relay ./cmd/relay
-chmod +x relay
-```
-
-部署目录内需包含（相对 `relay` 工作目录）：
-
-- `relay` — 可执行文件
-- `config.aliyun.prod.yaml` — 生产配置（含真实凭证，勿提交 git）
-- `migrations/` — 启动时自动迁移
-- `web/admin/dist/` — 管理后台静态文件
-
-### 4. 启动生产服务（Ubuntu）
-
-**前台调试（SSH 里临时跑）：**
-
-```bash
-cd /workspace/DataHub
-export CONFIG_FILE=/workspace/DataHub/config.aliyun.prod.yaml
-./relay
-```
-
-**后台运行（简单方式）：**
-
-```bash
-cd /workspace/DataHub
-nohup env CONFIG_FILE=/workspace/DataHub/config.aliyun.prod.yaml ./relay \
-  >> /var/log/datahub/relay.log 2>&1 &
-```
-
-**推荐：systemd 托管（开机自启）：**
-
-```bash
-sudo tee /etc/systemd/system/datahub.service <<'EOF'
-[Unit]
-Description=DataHub relay
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/workspace/DataHub
-Environment=CONFIG_FILE=/workspace/DataHub/config.aliyun.prod.yaml
-ExecStart=/workspace/DataHub/relay
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable datahub
-sudo systemctl start datahub
-sudo systemctl status datahub
-```
-
-查看日志：`journalctl -u datahub -f`
-
-可选调试：`LOG_LEVEL=debug CONFIG_FILE=config.aliyun.prod.yaml ./relay`
-
-启动后 relay 会依次：存储隔离防呆校验 → 按域（x1/v8v9/zlf/blk）连接独立 PG → 自动迁移 → 连接独立 Redis → 装配 x1/v9/v8/zlf/blk 各自上游 → 创建/校验管理员账号 → 监听 HTTP。
-
-**健康检查：**
-
-```bash
-curl http://127.0.0.1:8080/healthz          # 应返回 ok
-curl http://127.0.0.1:8080/admin/          # 管理后台（建议仅内网访问）
-```
-
-**网络与安全（v0.7）：**
-
-- 网关不做 IP 白名单；生产访问控制由**阿里云 ECS 安全组** / SLB 等网络层负责。
-- 对外 HTTPS 在 Nginx/SLB 侧终结；relay 默认 HTTP 监听 `:8080`。
-- 管理后台 `/admin/` 应仅限内网或 VPN 访问；ECS 安全组勿对公网开放 8080（除非有 SLB/Nginx 反代）。
-
-### 5. 环境与隔离
-
-| 环境 | 配置文件 | PG 库（每域独立，v8/v9 共用 v8v9 库） | Redis DB（每域独立） |
-|---|---|---|---|
-| 开发/e2e | `config.aliyun.e2e.yaml` | `datahub_{x1,v8v9,zlf,blk}_db` | 0 / 1 / 3 / 4 |
-| **生产（Ubuntu）** | `config.aliyun.prod.yaml` | `datahub_{x1,v8v9,zlf,blk}_prod_db` | 3 / 4 / 6 / 7 |
-
-`storage.driver`：`memory`（开发默认）| `postgres`（**生产必须**）。
-
-### 请求示例
-
-下游 MD5 加签见 DESIGN §8.1：对 `body` 非空业务参数按 ASCII 升序拼接后追加 `secret` 再 MD5。
-
-```bash
-curl -X POST http://localhost:8080/v1/openapi/zlx/querySrmxX1 \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "encryptionType": 1,
-    "appKey": "y89098io",
-    "sign": "<MD5(idCard...mobile...name...secret)>",
-    "body": {
-      "mobile": "138xxxx1009",
-      "idCard": "330xxxxxxxx4312",
-      "name": "张三"
-    }
-  }'
-```
-
-成功响应：`{"head":{"errorCode":"0","logId":"<requestId>","time":81,"errorMsg":"success","timestamp":...},"body":{"code":"001","msg":"成功","uid":"...","reqid":"...","verify":"","result":{"range":"7"}}}`。
-查无：`head.errorCode="0"` + `body.code="999"`；网关级错误（鉴权/参数）：只返回 `head`（`errorCode` 非 0 + `errorMsg`），无 `body`。
-
-## 管理后台（Admin Console，DESIGN §16）
-
-面向我方运营的内部控制台：① 查看用户操作记录与上下游日志、累计成功查得数；② 增删用户（无额度配置）；③ 生成/轮换鉴权 `appKey+secret`；④ 按 uuid(appKey)/名称/手机号检索用户与审计记录。
-
-- **后端 API**：`/admin/api/**`（除 `/admin/api/login` 外均需 `Authorization: Bearer <JWT>`）。
-- **初始管理员**：配置文件 `admin.bootstrapUser` / `admin.bootstrapPass`（**非**环境变量；e2e 默认 `admin` / `admin12345`）。
-  其它：`admin.jwtSecret`、`admin.tokenTTL`（默认 8h）、`admin.spaDir`（默认 `web/admin/dist`）。
-- **用户字段**：名称、手机号（列表脱敏展示）、密钥创建时间、授权过期日期（`validTo`）、累计成功查得数。
-- **无 IP 白名单管理页**（v0.7 已移除）。
-
-前端（React + Vite SPA）：
-
-```bash
-cd web/admin
-npm install
-# 开发模式（:5173，自动代理 /admin/api → :8080）
-npm run dev          # 打开 http://localhost:5173/admin/
-# 或构建静态产物，由 Go 服务在 /admin/ 托管
-npm run build        # 产物输出到 web/admin/dist；访问 http://localhost:8080/admin/
-```
-
-> 安全：`secret` 仅创建/轮换时一次性返回；审计入参（name/idCard/mobile）一律脱敏存储；管理后台应仅限内网/受控网络访问（网络层由 ECS 安全组等控制）。开发期密码用加盐 SHA-256，生产应换 bcrypt/argon2。
-
-## 实现现状
-
-- ✅ 下游契约（x1：`/v1/openapi/zlx/querySrmxX1`、`appKey/sign/encryptionType/body` + MD5 加签、`head/body` 信封、`errorCode` 映射）。
-- ✅ 旧版 v9 兼容（`GET /yrzx/finan/net/10w/v9`：`account/key` 验签、`code/result.range` 响应；复用同一上游/鉴权/统计）。
-- ✅ 上游：唯一伽马，归一化为 `UpstreamResult`（`001`查得/`999`查无）；保留 `upstream.Router` 抽象便于扩展。
-- ✅ 成功查得数统计（**仅查得数据 busiCode=10 计数**，无额度拦截）、台账状态机、requestId 追踪（`head.logId`）、建表 DDL。
-- ✅ 持久化：`memory`（开发）与 `postgres`+`redis`（生产/e2e）；`dev_db` / `prod_db` 同实例隔离。
-- ✅ 管理后台：管理员登录（JWT）、用户 CRUD（手机号/密钥时间/过期日期、检索）、`appKey/secret` 生成与轮换、审计日志（含 `?q=` 关键字过滤）、React+Vite SPA。
-- ✅ 固定测试套件（`test/run.ps1`，7 个 case；结果输出 `test_res/<date>/`）。
-- ✅ 端到端延迟优化（DESIGN 顶部「异步记账」变更说明）：结算+审计经 `application.Bookkeeper` 移出响应关键路径（背压降级同步、停机 drain）；鉴权 license+secret 单查询 + 按域 10s 进程缓存（后台变更即时失效）；内部生成 reqid 跳过必 miss 的幂等查询；上游 HTTP 连接池调优（`MaxIdleConnsPerHost=64`）。计数/审计为毫秒级最终一致。
-- 🚧 待完善：
-  - 伽马 `Requery` 当前为 stub（`Reachable=false`），RequeryWorker 对伽马上游暂无实际复查能力。
-  - `license.valid_to` 已存储并在后台展示，鉴权目前仅检查 `status==ACTIVE`（未按日期自动过期）。
-  - `license.rate_limit` 列存在但代码未读取。
-  - 密钥列 `app_secret_enc` 开发/e2e 为明文存储（生产应接入 KMS/加密）。
-
-## 测试
+## 快速启动
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\test\run.ps1
-powershell -ExecutionPolicy Bypass -File .\test\run.ps1 -ConfigFile config.local.mem.yaml
-powershell -ExecutionPolicy Bypass -File .\test\run.ps1 -SkipReal   # 跳过真实 gama 冒烟
+cd c:\workspace\DataHub_SWFP
+cp config.example.yaml config.yaml   # 填入凭证
+go run ./cmd/relay
 ```
 
-详见 [`test/README.md`](test/README.md)。
+本地全链路测试（memory + mock 上游）：
+
+```powershell
+# 终端1: mock entcredit (:9116)
+go run ./scripts/mock_entcredit.go
+# 终端2: mock salesdata (:9121)
+go run ./scripts/mock_salesdata.go
+# 终端3: relay
+$env:CONFIG_FILE = "config.local.mem.yaml"; go run ./cmd/relay
+# 终端4: 测试套件
+powershell -ExecutionPolicy Bypass -File .\test\run.ps1 -ConfigFile config.local.mem.yaml
+```
+
+## 配置
+
+- `config.example.yaml` — 配置模板（仅 `swfp` 块）
+- `config.local.mem.yaml` — 本地 memory 模式
+- `config.aliyun.prod.yaml` / `config.aliyun.e2e.yaml` — 生产/e2e（PostgreSQL + Redis）
+
+Demo license（memory / SEED_DEMO=1）：
+
+| 域 | appKey | secret |
+|----|--------|--------|
+| swfp | `y890swfp` | `demo-app-secret` |
+
+## 目录结构
+
+```
+cmd/relay/          主程序入口
+internal/
+  api/              HTTP 路由与 admin API
+  application/      编排、异步记账
+  domain/           领域模型、鉴权、计费、解析
+  infrastructure/upstream/  entcredit + salesdata + 聚合/契约层
+scripts/            mock 上游、探测脚本、建库脚本
+test/cases/         固定测试用例
+web/admin/          管理后台 SPA
+docs/               SWFP 上下游文档与契约
+```
+
+## 上游子源
+
+| 段名 | kind | 产品/说明 |
+|------|------|-----------|
+| invoice1 | entcredit | P0130081 发票 part1 |
+| invoice2 | entcredit | P0130083 发票 part2 |
+| tax1 | entcredit | P0130082 税务 part1 |
+| tax2 | entcredit | P0130084 税务 part2 |
+| sales | salesdata | 源5 销项（optional，`scope=basic` 时跳过） |
+
+详细设计见 `docs/DESIGN.md`。

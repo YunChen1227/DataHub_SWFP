@@ -1,16 +1,14 @@
-﻿# DataHub fixed test-suite entrypoint (Windows / PowerShell).
+﻿# DataHub_SWFP fixed test-suite entrypoint (Windows / PowerShell).
 #
-# Flow: make result dir test_res/<date> -> build + start mock gama(:9112) +
-# mock_income(:9113) + mock_rental(:9114) + mock_blacklist(:9115) + mock_entcredit(:9116) + mock_facecompare(:9117) + mock_idverify(:9118) + mock_consumetxn(:9119) + mock_complaint(:9120) + mock_salesdata(:9121) + mock_lxscore(:9122) + relay(:8080,
-# live Aliyun PG+Redis) -> wait /healthz -> (optional) start real-gama relay(:8090)
-# -> run test/cases/*.go in order -> aggregate REPORT.md -> stop services.
+# Flow: make result dir test_res/<date> -> build + start mock_entcredit(:9116) +
+# mock_salesdata(:9121) + relay(:8080, live Aliyun PG+Redis or memory) -> wait
+# /healthz -> run test/cases/*.go in order -> aggregate REPORT.md -> stop services.
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File .\test\run.ps1
-#   powershell -ExecutionPolicy Bypass -File .\test\run.ps1 -ConfigFile config.aliyun.e2e.yaml -SkipReal
+#   powershell -ExecutionPolicy Bypass -File .\test\run.ps1 -ConfigFile config.local.mem.yaml
 param(
-    [string]$ConfigFile = "config.aliyun.e2e.yaml",
-    [switch]$SkipReal
+    [string]$ConfigFile = "config.aliyun.e2e.yaml"
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,15 +19,14 @@ $date = Get-Date -Format "yyyy-MM-dd"
 $resultDir = Join-Path $repo "test_res\$date"
 New-Item -ItemType Directory -Force -Path $resultDir | Out-Null
 
-Write-Host "== DataHub test suite =="
+Write-Host "== DataHub_SWFP test suite =="
 Write-Host "  repo      : $repo"
 Write-Host "  config    : $ConfigFile"
 Write-Host "  resultDir : $resultDir"
 
-$env:CONFIG_FILE       = $ConfigFile
-$env:RESULT_DIR        = $resultDir
-$env:RELAY_BASE_URL    = "http://localhost:8080"
-$env:REAL_GAMA_ENABLED = "0"
+$env:CONFIG_FILE    = $ConfigFile
+$env:RESULT_DIR     = $resultDir
+$env:RELAY_BASE_URL = "http://localhost:8080"
 
 $procs = New-Object System.Collections.ArrayList
 
@@ -52,116 +49,42 @@ function Wait-Health([string]$url, [int]$tries = 40) {
 
 $anyFail = $false
 try {
-    $mockExe      = Join-Path $resultDir "mock_gama.exe"
-    $incomeExe    = Join-Path $resultDir "mock_income.exe"
-    $rentalExe    = Join-Path $resultDir "mock_rental.exe"
-    $blacklistExe = Join-Path $resultDir "mock_blacklist.exe"
     $entcreditExe = Join-Path $resultDir "mock_entcredit.exe"
-    $facecompareExe = Join-Path $resultDir "mock_facecompare.exe"
-    $idverifyExe  = Join-Path $resultDir "mock_idverify.exe"
-    $consumetxnExe = Join-Path $resultDir "mock_consumetxn.exe"
-    $complaintExe = Join-Path $resultDir "mock_complaint.exe"
     $salesdataExe = Join-Path $resultDir "mock_salesdata.exe"
-    $lxscoreExe   = Join-Path $resultDir "mock_lxscore.exe"
     $relayExe     = Join-Path $resultDir "relay.exe"
     Write-Host "building mocks + relay ..."
-    go build -o $mockExe ./scripts/mock_gama.go
-    if ($LASTEXITCODE -ne 0) { throw "go build mock_gama failed" }
-    go build -o $incomeExe ./scripts/mock_income.go
-    if ($LASTEXITCODE -ne 0) { throw "go build mock_income failed" }
-    go build -o $rentalExe ./scripts/mock_rental.go
-    if ($LASTEXITCODE -ne 0) { throw "go build mock_rental failed" }
-    go build -o $blacklistExe ./scripts/mock_blacklist.go
-    if ($LASTEXITCODE -ne 0) { throw "go build mock_blacklist failed" }
     go build -o $entcreditExe ./scripts/mock_entcredit.go
     if ($LASTEXITCODE -ne 0) { throw "go build mock_entcredit failed" }
-    go build -o $facecompareExe ./scripts/mock_facecompare.go
-    if ($LASTEXITCODE -ne 0) { throw "go build mock_facecompare failed" }
-    go build -o $idverifyExe ./scripts/mock_idverify.go
-    if ($LASTEXITCODE -ne 0) { throw "go build mock_idverify failed" }
-    go build -o $consumetxnExe ./scripts/mock_consumetxn.go
-    if ($LASTEXITCODE -ne 0) { throw "go build mock_consumetxn failed" }
-    go build -o $complaintExe ./scripts/mock_complaint.go
-    if ($LASTEXITCODE -ne 0) { throw "go build mock_complaint failed" }
     go build -o $salesdataExe ./scripts/mock_salesdata.go
     if ($LASTEXITCODE -ne 0) { throw "go build mock_salesdata failed" }
-    go build -o $lxscoreExe ./scripts/mock_lxscore.go
-    if ($LASTEXITCODE -ne 0) { throw "go build mock_lxscore failed" }
     go build -o $relayExe ./cmd/relay
     if ($LASTEXITCODE -ne 0) { throw "go build relay failed" }
 
-    # postgres 模式：在启动 relay 前重建各版本库 (datahub_*_db)。
     $cfgText = Get-Content -Raw -Path (Join-Path $repo $ConfigFile)
     if ($cfgText -match 'driver:\s*"?postgres"?') {
-        Write-Host "postgres mode: recreating per-domain databases (with demo seed) ..."
-        $env:SEED_DEMO = "1"          # e2e 需要各路由的 demo license；生产建库不要设置
-        $env:RESET_DESTRUCTIVE = "1"  # 仅测试库：允许 DROP 重建（脚本会硬拒绝生产库）
+        Write-Host "postgres mode: recreating swfp database (with demo seed) ..."
+        $env:SEED_DEMO = "1"
+        $env:RESET_DESTRUCTIVE = "1"
         go run ./scripts/recreate_databases.go
         if ($LASTEXITCODE -ne 0) { throw "recreate_databases failed" }
     } else {
         Write-Host "memory mode: skipping database recreate."
     }
 
-    $mock = Start-Process -FilePath $mockExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "mock_gama.log") -RedirectStandardError (Join-Path $resultDir "mock_gama.err.log")
-    [void]$procs.Add($mock)
-
-    $income = Start-Process -FilePath $incomeExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "mock_income.log") -RedirectStandardError (Join-Path $resultDir "mock_income.err.log")
-    [void]$procs.Add($income)
-
-    $rental = Start-Process -FilePath $rentalExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "mock_rental.log") -RedirectStandardError (Join-Path $resultDir "mock_rental.err.log")
-    [void]$procs.Add($rental)
-
-    $blacklist = Start-Process -FilePath $blacklistExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "mock_blacklist.log") -RedirectStandardError (Join-Path $resultDir "mock_blacklist.err.log")
-    [void]$procs.Add($blacklist)
-
     $entcredit = Start-Process -FilePath $entcreditExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "mock_entcredit.log") -RedirectStandardError (Join-Path $resultDir "mock_entcredit.err.log")
     [void]$procs.Add($entcredit)
 
-    $facecompare = Start-Process -FilePath $facecompareExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "mock_facecompare.log") -RedirectStandardError (Join-Path $resultDir "mock_facecompare.err.log")
-    [void]$procs.Add($facecompare)
-
-    $idverify = Start-Process -FilePath $idverifyExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "mock_idverify.log") -RedirectStandardError (Join-Path $resultDir "mock_idverify.err.log")
-    [void]$procs.Add($idverify)
-
-    $consumetxn = Start-Process -FilePath $consumetxnExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "mock_consumetxn.log") -RedirectStandardError (Join-Path $resultDir "mock_consumetxn.err.log")
-    [void]$procs.Add($consumetxn)
-
-    $complaint = Start-Process -FilePath $complaintExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "mock_complaint.log") -RedirectStandardError (Join-Path $resultDir "mock_complaint.err.log")
-    [void]$procs.Add($complaint)
-
     $salesdata = Start-Process -FilePath $salesdataExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "mock_salesdata.log") -RedirectStandardError (Join-Path $resultDir "mock_salesdata.err.log")
     [void]$procs.Add($salesdata)
-
-    $lxscore = Start-Process -FilePath $lxscoreExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "mock_lxscore.log") -RedirectStandardError (Join-Path $resultDir "mock_lxscore.err.log")
-    [void]$procs.Add($lxscore)
 
     $relay = Start-Process -FilePath $relayExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "relay.log") -RedirectStandardError (Join-Path $resultDir "relay.err.log")
     [void]$procs.Add($relay)
 
     Write-Host "waiting for relay /healthz ..."
     if (-not (Wait-Health "http://localhost:8080/healthz")) {
-        throw "relay /healthz not ready; see $resultDir\relay.err.log (PG/Redis connect or migration failure)"
+        throw "relay /healthz not ready; see $resultDir\relay.err.log"
     }
     Write-Host "relay is up."
-
-    $realCfg = Join-Path $repo "config.gama.real.yaml"
-    if (-not $SkipReal -and (Test-Path $realCfg)) {
-        Write-Host "starting real-gama relay (:8090) from config.gama.real.yaml ..."
-        $prev = $env:CONFIG_FILE
-        $env:CONFIG_FILE = "config.gama.real.yaml"
-        $realRelay = Start-Process -FilePath $relayExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "relay_real.log") -RedirectStandardError (Join-Path $resultDir "relay_real.err.log")
-        $env:CONFIG_FILE = $prev
-        [void]$procs.Add($realRelay)
-        if (Wait-Health "http://localhost:8090/healthz" 20) {
-            $env:REAL_GAMA_ENABLED = "1"
-            $env:REAL_BASE_URL = "http://localhost:8090"
-            Write-Host "real-gama relay is up."
-        } else {
-            Write-Host "real-gama relay not ready; 07 will be SKIP."
-        }
-    } else {
-        Write-Host "real-gama smoke disabled (no config.gama.real.yaml or -SkipReal); 07 will be SKIP."
-    }
 
     $cases = Get-ChildItem (Join-Path $repo "test\cases\*.go") | Sort-Object Name
     foreach ($c in $cases) {

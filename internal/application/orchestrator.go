@@ -38,11 +38,10 @@ func NewQueryOrchestrator(route string, a *auth.Service, q *quota.Service, b *bi
 	if log == nil {
 		log = slog.Default()
 	}
-	return &QueryOrchestrator{route: route, auth: a, quota: q, billing: b, upstream: up, audit: audit, parseFn: parse.Parse, log: log}
+	return &QueryOrchestrator{route: route, auth: a, quota: q, billing: b, upstream: up, audit: audit, parseFn: parse.ParseCreditCode, log: log}
 }
 
-// WithParser 替换本路由的参数校验器 (默认 parse.Parse 个人三要素)。企业维度等
-// 非三要素入参的路由在装配时调用 (如 swfp → parse.ParseCredit)。
+// WithParser replaces the parameter validator (default ParseCreditCode for SWFP).
 func (o *QueryOrchestrator) WithParser(fn func(*model.QueryCommand) (*model.UpstreamRequest, error)) *QueryOrchestrator {
 	if fn != nil {
 		o.parseFn = fn
@@ -73,9 +72,7 @@ func (o *QueryOrchestrator) Handle(ctx context.Context, signed *model.SignedRequ
 		Version:    o.route,
 		AppKey:     signed.AppKey,
 		ClientIP:   clientIP,
-		NameMask:   mask.Name(cmd.Name),
-		IDCardMask: mask.IDCard(cmd.IDCard),
-		MobileMask: mask.Mobile(cmd.Mobile),
+		IDCardMask: mask.CreditCode(cmd.CreditCode),
 	}
 	// 结算 + 审计在响应构造完成后统一提交（异步记账，见 Bookkeeper）。settleTok/
 	// settleDec 由 runCore 在拿到上游确定结论时填入；PENDING/失败路径保持 nil。

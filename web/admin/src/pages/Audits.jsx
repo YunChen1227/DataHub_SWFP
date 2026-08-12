@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../api.js'
 
-export default function Audits({ version }) {
-  const ver = (version || '').toUpperCase()
+export default function Audits() {
   const [rows, setRows] = useState([])
   const [err, setErr] = useState('')
   const [keyword, setKeyword] = useState('')
@@ -33,11 +32,11 @@ export default function Audits({ version }) {
 
   return (
     <div className="card">
-      <h2>{ver} 操作记录 / 审计日志</h2>
-      <p className="muted">仅展示 {ver} 路由自己的调用记录，与其它路由相互独立（v8/v9 虽共用 license，操作日志也按路由分开）。</p>
+      <h2>SWFP 操作记录 / 审计日志</h2>
+      <p className="muted">展示 SWFP 路由的调用审计，creditCode 入参已脱敏。</p>
       <form className="toolbar" onSubmit={(e) => { e.preventDefault(); load() }}>
         <div>
-          <label>检索（uuid / 名称 / 手机号）</label>
+          <label>检索（uuid / appKey）</label>
           <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="全部" />
         </div>
         <div>
@@ -55,10 +54,10 @@ export default function Audits({ version }) {
         <table>
           <thead>
             <tr>
-              <th>时间</th><th>requestId(seqNo)</th><th>appKey</th><th>来源IP</th>
+              <th>时间</th><th>requestId</th><th>appKey</th><th>来源IP</th>
               <th>调用上游</th><th>查得数据</th><th>计费</th>
               <th>busiCode</th><th>上游code</th><th>上游uid</th><th>上游logId</th>
-              <th>耗时(ms)</th><th>入参(脱敏)</th><th>tradeNo/reqid</th><th>错误</th>
+              <th>耗时(ms)</th><th>creditCode(脱敏)</th><th>tradeNo/reqid</th><th>错误</th>
             </tr>
           </thead>
           <tbody>
@@ -76,7 +75,7 @@ export default function Audits({ version }) {
                 <td>{a.upstreamUid || '-'}</td>
                 <td className="muted">{a.upstreamLogId || '-'}</td>
                 <td>{a.latencyMs}</td>
-                <td className="muted">{[a.nameMask, a.idCardMask, a.mobileMask].filter(Boolean).join(' / ')}</td>
+                <td className="muted">{a.idCardMask || '-'}</td>
                 <td className="muted">{[a.tradeNo, a.reqid].filter(Boolean).join(' / ')}</td>
                 <td className="tag-err">{a.errMsg || ''}</td>
               </tr>

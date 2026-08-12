@@ -1,7 +1,6 @@
 //go:build ignore
 
-// 01_health_routes: /healthz 与五版本业务路由 (querySrmx{X1,V9,V8,ZLF,BLK} + quota)
-// 的可达性。仅验证路由已注册（非 404）且 relay 在线，不校验业务结果。
+// 01_health_routes: /healthz 与 SWFP 业务路由 (querySrmxSWFP + quotaSWFP) 的可达性。
 //
 // Run: go run test/cases/01_health_routes.go
 package main
@@ -13,7 +12,7 @@ import (
 )
 
 func main() {
-	rec := harness.NewRecorder("01_health_routes", "健康检查与五版本路由可达性")
+	rec := harness.NewRecorder("01_health_routes", "健康检查与 SWFP 路由可达性")
 	defer rec.Finish()
 
 	st, _, raw := harness.Call(http.MethodGet, "/healthz", nil, nil)
@@ -23,7 +22,7 @@ func main() {
 	for _, v := range harness.Versions {
 		// query: POST，带最小信封；只要不是 404 即视为已注册。
 		x := harness.Query(v, harness.AppKeyFor(v), harness.Secret,
-			map[string]string{"mobile": "13809091009", "idCard": "330129199109094312"}, nil)
+			map[string]string{"creditCode": "92500233MA60R5KW8M"}, nil)
 		rec.Check("POST querySrmx"+up(v)+" 已注册", "返回 head 信封(非404)",
 			x.HTTPStatus == 200 && x.ErrorCode != "", "status="+itoa(x.HTTPStatus)+" raw="+x.Raw)
 

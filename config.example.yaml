@@ -1,67 +1,36 @@
-# DataHub 运行配置示例（敏感信息不要进代码/不要提交真实值）
+# DataHub_SWFP 运行配置示例（敏感信息不要进代码/不要提交真实值）
 #
 # 用法：
-#   cp config.example.yaml config.yaml   # config.yaml 已被 .gitignore 忽略
-#   # 填入真实地址/凭证后启动
+#   cp config.example.yaml config.yaml
 #   go run ./cmd/relay
 #
-# 也可用环境变量 CONFIG_FILE 指定其它路径：CONFIG_FILE=/etc/datahub/config.yaml
-#
-# 各版本 (x1/v9/v8/zlf/blk/swfp/rlbd1/rlbd2/sfzhy/xfjy/tsfx/lxf) 对外接口完全一致，仅靠路由名区分：
-#   POST /v1/openapi/zlx/querySrmxX1 | ...V9 | ...V8 | ...ZLF | ...BLK | ...SWFP | ...RLBD1 | ...RLBD2 | ...SFZHY | ...XFJY | ...TSFX | ...LXF
-#   GET  /v1/openapi/zlx/quotaX1     | ...V9 | ...V8 | ...ZLF | ...BLK | ...SWFP | ...RLBD1 | ...RLBD2 | ...SFZHY | ...XFJY | ...TSFX | ...LXF
-# 存储按「域」划分：x1 / v8v9 / zlf / blk / swfp / rlbd1 / rlbd2 / sfzhy / xfjy / tsfx / lxf 各域独占一套 DB + Redis 逻辑库。
-# v8 与 v9 同属 v8v9 域——共用同一套 license/appKey/secret，但调用次数/成功查得数/
-# 操作日志按各自路由独立统计（v8v9 域库内 quota/台账/审计带 route 字段区分）。
-# 跨域使用 license 一律鉴权失败。启动时会做防呆校验：两个不同的域配置同一个数据库
-# 或同一个 Redis 逻辑库将直接拒绝启动。每条路由各自对接独立上游。
-# zlf 转接租赁分V2-D (守信 shouxin168) 上游：AES 加密 biz_data + form 提交。
-# blk 转接黑名单因子V35 (应诺尔 enol，与 x1/gama 同端点)：apiKey=blackIntV35、encryptionType=2 (PII 走 MD5)。
-# rlbd1/rlbd2 转接人脸身份证比对一所 (数脉)：form POST + sign=md5(appid&timestamp&app_security)，name+idCard+image|url 入参。
-#   rlbd1 与 rlbd2 是同一个上游接口，仅 appId/appSecret 不同 (各自独立库/统计/license)。
-# sfzhy 转接身份证三要素核验：JSON POST + signature=SHA256(升序 k=v&... + "&AppSecret=" + 商户密钥)，name+idCard+profilePicture 入参。
-# xfjy 转接消费交易特征 (data-bean)：JSON POST + sign=MD5(过滤空值升序 k=v&... + "&appkey=" + appkey)，name/idcard/mobile/authlet 入参 (全选填，至少一个查询要素)；有查得(001)/查无(999)。
-# tsfx 转接投诉分析识别名单 (kfongtech)：JSON POST + 业务参数 param 走 AES 加密 + 外层 sign，响应 data 为 gzip 压缩结果集；mobile+poly(C1/C2/C3) 入参；调用成功即计费(001)，命中状态 forbid 随结果数组经 result.range 透出。
-# lxf 转接灵犀分 score_195_v1 (fullink)：JSON POST + sign=DES/CBC(升序 k=v&... , encryptKey) 大写 hex，name/mobile/idCardNo 传 MD5 摘要；响应 data 为 DES 密文，解密得 300-900 评分经 result.range 透出；分数=-1 视为查无(999)。
-#
-# 上游按「子源列表」配置：versions.<route>.upstreams 是一个列表。
-#   - 单源路由 (x1/v9/v8/zlf/blk/rlbd1/rlbd2/sfzhy/xfjy/tsfx/lxf)：列表长度 1。
-#   - 聚合路由 (swfp)：列表长度 N，每个子源自带完整凭证；主程序并发调所有子源、
-#     按判定表聚合 (≥1查得→001 计费 / 全查无→999 / 部分成功→002 不计费 / 全失败→505062)。
-#   同一路由内所有子源 kind 必须一致 (入参校验/信封按路由统一)。
-#
-# 注：durations 支持 Go 风格字符串，如 4s / 10s / 5m / 8h。
+# 仅 SWFP 路由：
+#   POST /v1/openapi/zlx/querySrmxSWFP
+#   GET  /v1/openapi/zlx/quotaSWFP
 
-# HTTP 服务监听地址
 addr: ":8080"
 
 upstream:
-  # 所有版本共用的上游调用超时
   timeout: "4s"
 
 billing:
-  requeryInterval: "10s"   # PENDING 复查间隔
+  requeryInterval: "10s"
 
 admin:
-  # 后台统一登录账号 + JWT（控制面 = x1 版本库）
   bootstrapUser: "admin"
   bootstrapPass: "REPLACE_WITH_ADMIN_PASSWORD"
   jwtSecret: "REPLACE_WITH_ADMIN_JWT_SECRET"
   tokenTTL: "8h"
   spaDir: "web/admin/dist"
 
-# 开发期预置 demo license 的绑定 secret（生产由管理后台为每个用户生成）
 demo:
   appSecret: "REPLACE_WITH_DEMO_APP_SECRET"
-  seed: false               # 默认 false：不在 postgres 启动时注入 demo license（0004 迁移已从生产清除 demo）；开发/演示可设 true，e2e 由建库脚本 SEED_DEMO=1 播种
+  seed: false
 
-# 存储后端 (DESIGN §11): memory（开发/默认）| postgres（生产，每个域独立 PG + Redis）。
 storage:
-  driver: "memory"          # memory | postgres
+  driver: "memory"
   migrationsDir: "migrations"
 
-# PostgreSQL / Redis 全实例共用凭证（填 RDS 高权限账号，阿里云即 pg_rds_superuser 成员；
-# 可 CREATE DATABASE + DDL。admin.bootstrapUser 是网页后台，不是 PG 账号）。
 pg_base: &pg_base
   host: "REPLACE_WITH_PG_HOST"
   port: 5432
@@ -76,215 +45,46 @@ redis_base: &redis_base
   password: "REPLACE_WITH_REDIS_ADMIN_PASSWORD"
   poolSize: 10
 
-# 按路由配置上游 (upstreams 列表)；存储按「域」装配：每个域用其 owner 路由的 database/redis 开库。
-# 域 owner：x1→x1, v8v9→v9, zlf→zlf, blk→blk。v8 与 v9 共用 v8v9 域库（同一套
-# license），故 v8 无需单列 database/redis。memory 模式下 database/redis 可全省略。
 versions:
-  x1:
-    upstreams:
-      - kind: "gama"          # x1 对接上游 A
-        baseURL: "REPLACE_WITH_X1_UPSTREAM_DOCHECK_URL"
-        appId: "REPLACE_WITH_X1_UPSTREAM_APP_ID"
-        appSecret: "REPLACE_WITH_X1_UPSTREAM_APP_SECRET"
-        apiKey: "gama_ctmz_layer_score"
-    database:
-      <<: *pg_base
-      name: "datahub_x1_db"
-    redis:
-      <<: *redis_base
-      db: 0
-  # v9 是 v8v9 域的 owner：其 database/redis 即整个 v8v9 域的存储（v8 复用）。
-  v9:
-    upstreams:
-      - kind: "income"        # v9 对接上游 B（GET account/key 验签）
-        baseURL: "REPLACE_WITH_V9_UPSTREAM_URL"
-        account: "REPLACE_WITH_V9_UPSTREAM_ACCOUNT"
-        key: "REPLACE_WITH_V9_UPSTREAM_KEY"
-    database:
-      <<: *pg_base
-      name: "datahub_v8v9_db"
-    redis:
-      <<: *redis_base
-      db: 1
-  # v8 与 v9 同属 v8v9 域，共用 v9 的库/Redis（同一套 license）。仅配上游；
-  # database/redis 不单列，主程序按域 owner(v9) 装配存储。
-  v8:
-    upstreams:
-      - kind: "income"        # v8 对接上游 C（GET account/key 验签）
-        baseURL: "REPLACE_WITH_V8_UPSTREAM_URL"
-        account: "REPLACE_WITH_V8_UPSTREAM_ACCOUNT"
-        key: "REPLACE_WITH_V8_UPSTREAM_KEY"
-  zlf:
-    upstreams:
-      - kind: "rental"        # zlf 对接租赁分V2-D（AES 加密 biz_data + form POST）
-        baseURL: "https://shouwei.shouxin168.com/api/lightning/product/query"
-        institutionId: "REPLACE_WITH_RENTAL_INSTITUTION_ID"
-        aesKey: "REPLACE_WITH_RENTAL_AES_KEY"   # AES/ECB/PKCS5Padding 密钥（16/24/32 字节）
-        service: "buer_unique_service"          # 可省，默认值
-        mode: "mode_rent_score_v2_d"            # 可省，默认值
-        # 授权书：固定本地文件，服务启动时上传 OSS 一次并缓存 licenseUrl 复用
-        licenseFile: "REPLACE_WITH_LOCAL_AUTH_FILE_PATH"   # 如 ./config/approve.pdf
-        licenseType: 1                          # 0:图片(jpg/jpeg/png/bmp) 1:pdf
-        oss:
-          endpoint: "oss-cn-shanghai.aliyuncs.com"
-          accessKeyId: "REPLACE_WITH_OSS_ACCESS_KEY_ID"
-          accessKeySecret: "REPLACE_WITH_OSS_ACCESS_KEY_SECRET"
-          bucket: "shouwei"
-          objectPrefix: "approve_files/"        # 必须以 approve_files/ 开头
-    database:
-      <<: *pg_base
-      name: "datahub_zlf_db"
-    redis:
-      <<: *redis_base
-      db: 3
-  blk:
-    upstreams:
-      - kind: "blacklist"     # blk 对接黑名单因子V35（应诺尔 enol，同 gama 端点 + MD5 信封）
-        baseURL: "REPLACE_WITH_BLK_UPSTREAM_DOCHECK_URL"
-        appId: "REPLACE_WITH_BLK_UPSTREAM_APP_ID"
-        appSecret: "REPLACE_WITH_BLK_UPSTREAM_APP_SECRET"
-        apiKey: "blackIntV35"   # 黑名单因子V35 固定产品码
-        encryptionType: 2       # 2=MD5：name/idCard/mobile 取 MD5 摘要后入 body 加签
-    database:
-      <<: *pg_base
-      name: "datahub_blk_db"
-    redis:
-      <<: *redis_base
-      db: 4
-  # swfp 是聚合路由：4 个 entcredit 子源（证通 entcreditapi 四产品码）+ 1 个可选的
-  # salesdata 子源（凯盈云销项数据）并发查询后聚合。每个子源自带完整凭证——即使同
-  # 平台同凭证也各写一份（子源完全独立）。label 是该子源的段名，契约层按 label 映射
-  # 为对下游脱敏的源编号：invoice1→源1 / invoice2→源2 / tax1→源3 / tax2→源4 / sales→源5。
-  # swfp 有明确下游返回值文档（docs/税票分析接口文档.xlsx）：输出经契约层按 xlsx 两段
-  # 结构（发票数据聚合/税务数据聚合）+ 按源分组 + sourceStatus 整理，严格白名单。
-  # 下游可选入参 scope："all"(缺省)=全部数据源 / "basic"=仅源1-4（跳过 optional 子源）。
   swfp:
     upstreams:
       - kind: "entcredit"
         label: "invoice1"
-        product: "P0130081"                              # 发票数据聚合-part1
-        baseURL: "REPLACE_WITH_SWFP_UPSTREAM_ENDPOINT"   # 仅 endpoint（scheme+host[:port]），不含 requestUri
-        orgCode: "REPLACE_WITH_SWFP_ORG_CODE"            # 机构代码
-        accessKeyId: "REPLACE_WITH_SWFP_ACCESS_KEY_ID"   # AK
-        secretAccessKey: "REPLACE_WITH_SWFP_SECRET_ACCESS_KEY"  # SK，Base64 编码
+        product: "P0130081"
+        baseURL: "REPLACE_WITH_SWFP_UPSTREAM_ENDPOINT"
+        orgCode: "REPLACE_WITH_SWFP_ORG_CODE"
+        accessKeyId: "REPLACE_WITH_SWFP_ACCESS_KEY_ID"
+        secretAccessKey: "REPLACE_WITH_SWFP_SECRET_ACCESS_KEY"
       - kind: "entcredit"
         label: "invoice2"
-        product: "P0130083"                              # 发票数据聚合-part2
+        product: "P0130083"
         baseURL: "REPLACE_WITH_SWFP_UPSTREAM_ENDPOINT"
         orgCode: "REPLACE_WITH_SWFP_ORG_CODE"
         accessKeyId: "REPLACE_WITH_SWFP_ACCESS_KEY_ID"
         secretAccessKey: "REPLACE_WITH_SWFP_SECRET_ACCESS_KEY"
       - kind: "entcredit"
         label: "tax1"
-        product: "P0130082"                              # 税务数据聚合-part1
+        product: "P0130082"
         baseURL: "REPLACE_WITH_SWFP_UPSTREAM_ENDPOINT"
         orgCode: "REPLACE_WITH_SWFP_ORG_CODE"
         accessKeyId: "REPLACE_WITH_SWFP_ACCESS_KEY_ID"
         secretAccessKey: "REPLACE_WITH_SWFP_SECRET_ACCESS_KEY"
       - kind: "entcredit"
         label: "tax2"
-        product: "P0130084"                              # 税务数据聚合-part2
+        product: "P0130084"
         baseURL: "REPLACE_WITH_SWFP_UPSTREAM_ENDPOINT"
         orgCode: "REPLACE_WITH_SWFP_ORG_CODE"
         accessKeyId: "REPLACE_WITH_SWFP_ACCESS_KEY_ID"
         secretAccessKey: "REPLACE_WITH_SWFP_SECRET_ACCESS_KEY"
-      - kind: "salesdata"     # 源5 销项数据（凯盈云 crestv，docs/销项数据接口文档V1.0.docx）
+      - kind: "salesdata"
         label: "sales"
-        optional: true        # 可选源：下游 scope=basic 时跳过（成本控制）
-        baseURL: "http://api2.crestv.com:32313/api/ws"   # 业务接口前缀（测试环境 api2-test...:32314）
-        appId: "REPLACE_WITH_SALESDATA_APP_ID"           # AppID（应用唯一 ID）
-        appSecret: "REPLACE_WITH_SALESDATA_APP_KEY"      # AppKey：鉴权凭证兼 AES 密钥（16/24/32 字节原文，或 32/48/64 个十六进制字符）
+        optional: true
+        baseURL: "http://api2.crestv.com:32313/api/ws"
+        appId: "REPLACE_WITH_SALESDATA_APP_ID"
+        appSecret: "REPLACE_WITH_SALESDATA_APP_KEY"
     database:
       <<: *pg_base
       name: "datahub_swfp_db"
     redis:
       <<: *redis_base
       db: 5
-  rlbd1:
-    upstreams:
-      - kind: "facecompare"   # rlbd1 对接人脸身份证比对一所（数脉，form POST + md5 签名）
-        baseURL: "https://api.shumaidata.com/v4/face_id_card/yisuo/compare"
-        appId: "nar7aGqok9Q5x31iWoZFgEtsssE7tq9b"           # 上游 appid
-        appSecret: "KKZwRJ6zrlIAEY2RMhh79orZT2VVpq66"   # 上游 app_security（sign 用）
-    database:
-      <<: *pg_base
-      name: "datahub_rlbd1_db"
-    redis:
-      <<: *redis_base
-      db: 6
-  sfzhy:
-    upstreams:
-      - kind: "idverify"   # sfzhy 对接身份证三要素核验（JSON POST + SHA256 签名）
-        baseURL: "https://api.cqcucc.com:8443/api/idCardThreeElements"
-        appId: "302CcJOpWsT44rToGQEPeA"           # 上游 appId
-        appSecret: "4TnKoR4uB4ZIIlRexiOgIDq3IlZLWzs7uBeOlNFfUE7OsKegya21VEqfDCHWJpKLn"   # 上游商户密钥（拼 &AppSecret= 参与签名）
-    database:
-      <<: *pg_base
-      name: "datahub_sfzhy_db"
-    redis:
-      <<: *redis_base
-      db: 7
-  # rlbd2：与 rlbd1 同一个人脸身份证比对上游接口，仅换一套 appId/appSecret；
-  # 独立成域（独立库 datahub_rlbd2_db / redis db8 / 独立 license 与统计）。
-  rlbd2:
-    upstreams:
-      - kind: "facecompare"
-        baseURL: "https://api.shumaidata.com/v4/face_id_card/yisuo/compare"
-        appId: "REPLACE_WITH_RLBD2_UPSTREAM_APP_ID"           # 上游 appid（与 rlbd1 不同）
-        appSecret: "REPLACE_WITH_RLBD2_UPSTREAM_APP_SECRET"   # 上游 app_security（与 rlbd1 不同）
-    database:
-      <<: *pg_base
-      name: "datahub_rlbd2_db"
-    redis:
-      <<: *redis_base
-      db: 8
-  xfjy:
-    upstreams:
-      - kind: "consumetxn"   # xfjy 对接消费交易特征 (data-bean，JSON POST + MD5 签名)
-        baseURL: "https://api.data-bean.cn"
-        appId: "REPLACE_WITH_XFJY_SCENEID"        # 上游 sceneid（业务场景标识，参与签名与 nonce）
-        appSecret: "REPLACE_WITH_XFJY_APPKEY"     # 上游 appkey（拼 &appkey= 参与 MD5 签名）
-        # apiKey: "fk3002"                        # 产品码 procode，缺省 fk3002，通常无需填
-    database:
-      <<: *pg_base
-      name: "datahub_xfjy_db"
-    redis:
-      <<: *redis_base
-      db: 9
-  # tsfx 对接「投诉分析识别名单」(kfongtech)：JSON POST，业务参数 param 走 AES 加密，
-  # 外层带 apiKey/sign，响应 data 为 gzip 压缩结果集。独立成域（库 datahub_tsfx_db /
-  # redis db10 / 独立 license 与统计）。入参 mobile + poly(C1/C2/C3)；调用成功即计费，
-  # 命中状态 forbid 随结果数组经 result.range 透出。
-  tsfx:
-    upstreams:
-      - kind: "complaint"
-        baseURL: "https://api.kfongtech.com/inlet/api"
-        apiKey: "REPLACE_WITH_TSFX_APIKEY"          # 上游 Apikey（外层明文字段）
-        aesKey: "REPLACE_WITH_TSFX_AES_KEY"         # param 业务参数 AES 加密密钥
-        appSecret: "REPLACE_WITH_TSFX_SIGN_SECRET"  # sign 计算用密钥/salt
-    database:
-      <<: *pg_base
-      name: "datahub_tsfx_db"
-    redis:
-      <<: *redis_base
-      db: 10
-  # lxf 对接「灵犀分 score_195_v1」(fullink)：JSON POST，八个字段全必传，
-  # name/mobile/idCardNo 传 MD5 摘要，sign = DES/CBC(按参数名升序拼的 k=v&… 串,
-  # encryptKey) 大写 hex；响应 data 为同一套 DES 密文，解密得 {"score_195_v1":"600"}。
-  # 独立成域（库 datahub_lxf_db / redis db11 / 独立 license 与统计）。
-  # 入参 mobile+idCard 必填、name 选填（缺省按上游要求传 MD5("")）。
-  # 计费：status=200 且分数≠-1 → 001 查得计费；分数=-1 → 999 查无；非 200 → 上游侧错误不计费。
-  # 注意：上游按源 IP 白名单放行（文档「注意事项」第 1 条），部署机出口 IP 需先报上游加白。
-  lxf:
-    upstreams:
-      - kind: "lxscore"
-        baseURL: "https://lxf.fullink.tech/report/encode"   # 生产环境
-        appId: "REPLACE_WITH_LXF_CUSTOMER_ID"        # 上游 customerId（商户 code）
-        apiKey: "REPLACE_WITH_LXF_CUSTOMER_PROD_ID"  # 上游 customerProdId（产品 code）
-        appSecret: "REPLACE_WITH_LXF_ENCRYPT_KEY"    # 上游 encryptKey（DES 密钥，兼作 sign 加密与 data 解密；须为 8 个字符或 16 个 hex 字符）
-    database:
-      <<: *pg_base
-      name: "datahub_lxf_db"
-    redis:
-      <<: *redis_base
-      db: 11

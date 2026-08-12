@@ -1,8 +1,4 @@
-// Package harness provides shared helpers for the DataHub fixed test suite under
-// test/cases/*.go. 各版本 (x1/v9/v8/zlf/blk) 对外接口完全一致 (x1 信封格式:
-// 小写 sorted-body MD5 加签)，仅靠路由名区分。It centralizes the x1 signing scheme,
-// an HTTP client against the running relay, version-scoped admin helpers, and the
-// result recorder that each case writes to $RESULT_DIR/<suite>.json.
+// Package harness provides shared helpers for the DataHub_SWFP test suite.
 package harness
 
 import (
@@ -24,29 +20,18 @@ import (
 // secret 相同。v8 与 v9 同属 v8v9 域，共用同一个 demo appKey（license 共享，但
 // 统计/日志按路由独立）；任何域的 demo appKey 在其它域的路由上都会鉴权失败 (505004)。
 const (
-	AppKey    = "y89098io" // x1 域的 demo appKey（QueryX1 等 x1 用例向后兼容）
+	AppKey    = "y890swfp" // swfp 域的 demo appKey
 	Secret    = "demo-app-secret"
 	AdminUser = "admin"
 	AdminPass = "admin12345"
 )
 
 // Versions is the ordered list of service versions under test.
-var Versions = []string{"x1", "v9", "v8", "zlf", "blk", "swfp", "rlbd1", "rlbd2", "sfzhy", "xfjy", "tsfx", "lxf"}
+var Versions = []string{"swfp"}
 
-// demoAppKeys mirrors model.DemoAppKey：按域独立的 demo appKey（v8/v9 共用）。
+// demoAppKeys mirrors model.DemoAppKey：按域独立的 demo appKey。
 var demoAppKeys = map[string]string{
-	"x1":    "y89098io",
-	"v9":    "y890v8v9",
-	"v8":    "y890v8v9",
-	"zlf":   "y8909zlf",
-	"blk":   "y8909blk",
-	"swfp":  "y890swfp",
-	"rlbd1": "y89rlbd1",
-	"rlbd2": "y89rlbd2",
-	"sfzhy": "y89sfzhy",
-	"xfjy":  "y890xfjy",
-	"tsfx":  "y89tsfx",
-	"lxf":   "y8909lxf",
+	"swfp": "y890swfp",
 }
 
 // AppKeyFor returns the demo appKey seeded for the given route's 域.
@@ -165,9 +150,9 @@ func Query(version, appKey, secret string, body map[string]string, overrides map
 	return r
 }
 
-// QueryX1 is a convenience wrapper for the x1 version (backwards-compatible).
-func QueryX1(appKey, secret string, body map[string]string, overrides map[string]any) X1Result {
-	return Query("x1", appKey, secret, body, overrides)
+// QuerySWFP is a convenience wrapper for the swfp version.
+func QuerySWFP(appKey, secret string, body map[string]string, overrides map[string]any) X1Result {
+	return Query("swfp", appKey, secret, body, overrides)
 }
 
 // ServiceUsed reads the cumulative 成功查得数 via the version's /quota route.

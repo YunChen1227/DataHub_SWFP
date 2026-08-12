@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { getToken, setToken, getVersion, setVersion, VERSIONS } from './api.js'
+import { getToken, setToken } from './api.js'
 import Login from './pages/Login.jsx'
 import Users from './pages/Users.jsx'
 import Audits from './pages/Audits.jsx'
@@ -9,18 +9,9 @@ const TABS = [
   { id: 'audits', label: '操作记录' },
 ]
 
-const VERSION_LABELS = { x1: 'X1', v9: 'V9', v8: 'V8', zlf: 'ZLF', blk: 'BLK', swfp: 'SWFP', rlbd1: 'RLBD1', rlbd2: 'RLBD2', sfzhy: 'SFZHY', xfjy: 'XFJY', tsfx: 'TSFX', lxf: 'LXF' }
-
-// 共享 license 的路由：v8/v9 同属 v8v9 域，license 互通但统计/日志各自独立。
-const SHARED_LICENSE_HINT = {
-  v8: '（与 V9 共用同一套 license / appKey / secret，统计与日志各自独立）',
-  v9: '（与 V8 共用同一套 license / appKey / secret，统计与日志各自独立）',
-}
-
 export default function App() {
   const [authed, setAuthed] = useState(!!getToken())
   const [tab, setTab] = useState('users')
-  const [version, setVer] = useState(getVersion())
 
   if (!authed) {
     return <Login onLogin={() => setAuthed(true)} />
@@ -31,15 +22,10 @@ export default function App() {
     setAuthed(false)
   }
 
-  const switchVersion = (v) => {
-    setVersion(v)
-    setVer(v)
-  }
-
   return (
     <>
       <header className="app-header">
-        <h1>DataHub 管理后台</h1>
+        <h1>DataHub_SWFP 管理后台</h1>
         <nav className="nav">
           {TABS.map((t) => (
             <button
@@ -51,24 +37,11 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="version-switch" role="group" aria-label="版本切换">
-          {VERSIONS.map((v) => (
-            <button
-              key={v}
-              className={'btn small' + (version === v ? '' : ' ghost')}
-              onClick={() => switchVersion(v)}
-              title={'切换到 ' + VERSION_LABELS[v] + ' 路由' + (SHARED_LICENSE_HINT[v] || '（独立数据库：license / 用户 / 统计 / 日志完全独立）')}
-            >
-              {VERSION_LABELS[v]}
-            </button>
-          ))}
-        </div>
         <button className="btn ghost small" onClick={logout}>退出登录</button>
       </header>
       <div className="container">
-        {/* version 作为 key：切换版本时强制重挂载，重新拉取该版本作用域的数据 */}
-        {tab === 'users' && <Users key={'users-' + version} version={version} />}
-        {tab === 'audits' && <Audits key={'audits-' + version} version={version} />}
+        {tab === 'users' && <Users />}
+        {tab === 'audits' && <Audits />}
       </div>
     </>
   )
