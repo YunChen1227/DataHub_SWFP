@@ -11,12 +11,45 @@ import (
 	"github.com/datahub/relay/internal/domain/quota"
 )
 
-// bookTask 是一次请求响应后的记账工作单：台账结算（可选）+ 审计落库。
-// 结算与审计对构造下游响应毫无贡献，从关键路径剥离（DESIGN 异步记账）。
+// bookTask 是一次请求响应后的记账工作单：台账结算（可选）+ 逐源明细 + 审计落库。
+// 三者对构造下游响应毫无贡献，从关键路径剥离（DESIGN 异步记账）。
 type bookTask struct {
 	token    *quota.ReserveToken    // 与 decision 成对；nil = 无需结算（鉴权/参数失败、幂等重放、PENDING）
 	decision *model.BillingDecision // 上游确定结论；PENDING 场景为 nil（台账留待复查/对账结算）
+	sources  []model.SourceCall     // 逐源寻源轨迹（含 skipped）；无上游调用的路径为空
 	rec      *model.AuditRecord     // 恒非 nil：每次请求都写审计
+}
+
+// settleInput 组装结算输入。busiCode 取审计记录里的最终下游业务码——它在响应
+// 映射完成后才确定，正好由本任务（响应写回后执行）带上。
+func (t bookTask) settleInput() quota.SettleInput {
+	in := quota.SettleInput{Decision: t.decision, Sources: t.sources}
+	if t.rec != nil {
+		in.BusiCode = t.rec.BusiCode
+	}
+	return in
+}
+
+// callRecords 把轨迹转成逐源明细行。关联键与台账同构 (appKey, version, reqid)，
+// 另带 requestId 供后台按请求下钻。
+func (t bookTask) callRecords() []*model.UpstreamCallRecord {
+	if len(t.sources) == 0 || t.rec == nil {
+		return nil
+	}
+	out := make([]*model.UpstreamCallRecord, 0, len(t.sources))
+	now := time.Now()
+	for _, c := range t.sources {
+		out = append(out, &model.UpstreamCallRecord{
+			SourceCall: c,
+			AppKey:     t.rec.AppKey,
+			Version:    t.rec.Version,
+			Reqid:      t.rec.Reqid,
+			RequestID:  t.rec.RequestID,
+			Billable:   c.Status == model.CallOK,
+			CreatedAt:  now,
+		})
+	}
+	return out
 }
 
 // Bookkeeper 把结算 + 审计移出请求关键路径：Handle 构造完响应即入队返回，
@@ -36,6 +69,7 @@ type bookTask struct {
 type Bookkeeper struct {
 	quota *quota.Service
 	audit port.AuditRepository
+	calls port.UpstreamCallRepository // 逐源明细；nil 时跳过（未装配/测试）
 	log   *slog.Logger
 
 	mu     sync.RWMutex // 保护 closed 与 tasks 的发送/关闭竞态
@@ -66,6 +100,13 @@ func NewBookkeeper(q *quota.Service, audit port.AuditRepository, queueSize, work
 			}
 		}()
 	}
+	return b
+}
+
+// WithUpstreamCalls 挂接逐源明细仓储（upstream_call 表）。未挂接时不落明细，
+// 台账里的汇总列仍然可用。
+func (b *Bookkeeper) WithUpstreamCalls(r port.UpstreamCallRepository) *Bookkeeper {
+	b.calls = r
 	return b
 }
 
@@ -105,8 +146,17 @@ func (b *Bookkeeper) process(t bookTask) {
 	defer cancel()
 
 	if b.quota != nil && t.token != nil && t.decision != nil {
-		if err := b.quota.Settle(ctx, t.token, t.decision); err != nil {
+		if err := b.quota.Settle(ctx, t.token, t.settleInput()); err != nil {
 			b.log.Error("async settle failed", "reqid", t.token.Reqid, "err", err)
+		}
+	}
+	// 逐源明细与结算解耦：PENDING/失败路径没有结算，但上游成本照样已经发生，
+	// 明细必须落库，否则对账时看不到这笔支出。
+	if b.calls != nil {
+		if rows := t.callRecords(); len(rows) > 0 {
+			if err := b.calls.AppendUpstreamCalls(ctx, rows); err != nil {
+				b.log.Error("async upstream calls append failed", "requestId", t.rec.RequestID, "err", err)
+			}
 		}
 	}
 	if b.audit != nil && t.rec != nil {

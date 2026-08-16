@@ -6,10 +6,11 @@ package model
 import "fmt"
 
 // QueryCommand is the parsed SWFP client request body. 必填 creditCode（统一社会
-// 信用代码，对齐上游证通 entcreditapi args.creditCode）；可选 scope 控制是否调用
-// 可选源5 销项数据。
+// 信用代码，对齐上游证通 entcreditapi args.creditCode）；可选 dataType 声明本次
+// 要哪些维度（invoice/tax/both，缺省 both）；可选 scope 控制是否调用可选源。
 type QueryCommand struct {
 	CreditCode string `json:"creditCode"`
+	DataType   string `json:"dataType"`
 	Scope      string `json:"scope"`
 }
 
@@ -31,15 +32,19 @@ type LicenseView struct {
 	AppKey     string
 	ClientUUID string
 	Status     string // ACTIVE / SUSPENDED / EXPIRED
+	// Rates 是该客户的合同价（三档，单位分）；某档为 0 时由全局缺省兜底。
+	Rates FeeRates
 }
 
 // Active reports whether the license may call the service.
 func (l *LicenseView) Active() bool { return l != nil && l.Status == "ACTIVE" }
 
-// UpstreamRequest carries the parameters the upstream client needs.
+// UpstreamRequest carries the parameters the upstream client needs. Want 是本次
+// 请求的维度（寻源引擎据此选优先级列表；空集按全维度处理）。
 type UpstreamRequest struct {
 	CreditCode string
 	Scope      string
+	Want       DimSet
 	Reqid      string
 }
 
@@ -59,6 +64,11 @@ type UpstreamResult struct {
 	Range  string // 收入模型评分
 	Verify string // 上游签名 (伽马为空)
 	LogID  string
+
+	// 以下三项由串行寻源引擎 (upstream.Sourcer) 填充，单源直通路由留零值。
+	Got     DimSet       // 本次实际查得的维度 = 计费依据
+	Sources []SourceCall // 逐源寻源轨迹（含未调用的源）
+	CostFen int64        // 本次上游总成本（分）
 }
 
 // RequeryResult is the outcome of an idempotent re-query (DESIGN §7.3).
@@ -84,6 +94,11 @@ type UpstreamError struct {
 	UID   string
 	LogID string
 	Err   error // 可选底层原因
+
+	// 全部源失败时同样要能拿到每源标识与已经产生的成本——钱已经花了，不能因为
+	// 本次对下游不计费就在库里看不见（亏损单必须可对账）。
+	Sources []SourceCall
+	CostFen int64
 }
 
 func (e *UpstreamError) Error() string {
@@ -118,10 +133,15 @@ const (
 //
 // The two are kept separate so the口径 can diverge by config (DESIGN §7.4):
 // 999 查无结果 is Resolved=true, Returned=false.
+// Standard/AmountFen 是本次的收费标准与应收金额，由【实际查得内容】(Result.Got)
+// 决定；CostFen 是本次上游总成本，两者一起构成单笔毛利。
 type BillingDecision struct {
-	Resolved bool
-	Returned bool
-	Result   *UpstreamResult
+	Resolved  bool
+	Returned  bool
+	Result    *UpstreamResult
+	Standard  FeeStandard
+	AmountFen int64
+	CostFen   int64
 }
 
 // Ledger is the append-only billing record (DESIGN §11.3). Version 标记产生该
@@ -139,6 +159,32 @@ type Ledger struct {
 	UpstreamLogID  string
 	State          BillingState
 	CountedService bool
+
+	// 结算时回填（LedgerSettlement）：本次按哪档标准收、收多少、上游花了多少。
+	FeeStandard     FeeStandard
+	AmountFen       int64
+	UpstreamCostFen int64
+	SourceTotal     int
+	SourceOK        int
+	SourceErr       int
+}
+
+// LedgerSettlement 是一次结算要回填进台账的全部字段。它替代了原来
+// UpdateState(state, countedService) 的两个参数——新流程要落计费标准/金额/上游
+// 成本，以及一直建了却从未写入的四个上游对账列 (设计_多源计费与上游对账 §2.2)。
+type LedgerSettlement struct {
+	State           BillingState
+	CountedService  bool
+	FeeStandard     FeeStandard
+	AmountFen       int64
+	UpstreamCostFen int64
+	BusiCode        int
+	UpstreamCode    string
+	UpstreamUID     string
+	UpstreamLogID   string
+	SourceTotal     int
+	SourceOK        int
+	SourceErr       int
 }
 
 // ServiceQuotaView is the client-facing snapshot (DESIGN §5.2). 无额度限制，

@@ -89,6 +89,7 @@ func (s *Store) CreateUser(_ context.Context, d *model.UserDetail, secret string
 			AppKey:     d.AppKey,
 			ClientUUID: d.ClientUUID,
 			Status:     d.Status,
+			Rates:      d.Rates,
 		},
 		name:            d.Name,
 		mobile:          d.Mobile,
@@ -111,6 +112,15 @@ func (s *Store) UpdateUser(_ context.Context, licenseID, status, mobile string) 
 	}
 	rec.view.Status = status
 	rec.mobile = mobile
+	return nil
+}
+
+func (s *Store) SetRates(_ context.Context, licenseID string, rates model.FeeRates) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if rec := s.licenses[licenseID]; rec != nil {
+		rec.view.Rates = rates
+	}
 	return nil
 }
 
@@ -159,6 +169,7 @@ func (s *Store) userDetailLocked(licenseID, route string) *model.UserDetail {
 		ClientUUID:      rec.view.ClientUUID,
 		ServiceUsed:     q.serviceUsed,
 		TotalCalls:      q.totalCalls,
+		Rates:           rec.view.Rates,
 		SecretCreatedAt: rec.secretCreatedAt,
 		ValidTo:         rec.validTo,
 		CreatedAt:       rec.createdAt,

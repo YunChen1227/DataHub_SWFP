@@ -85,9 +85,13 @@ func main() {
 		fmt.Printf("首条税号 %s 探测(product=%s): OK code=%s msg=%s\n", cc, sources[0].Label, result.Code, result.Msg)
 	}
 
-	agg, err := upstream.NewAggregator(sources)
+	// 探针要打全部子源，不能被「命中即停」短路：把所有调用装进一个逻辑源
+	// （同一逻辑源内的调用互补、必须全部发出），即恢复旧聚合器的全量扇出行为。
+	agg, err := upstream.NewSourcer([]upstream.Source{{
+		Name: "probe", Provider: "entcredit", Provides: model.AllDims(), Calls: sources,
+	}}, 120*time.Second)
 	if err != nil {
-		fmt.Println("聚合器失败:", err)
+		fmt.Println("寻源器失败:", err)
 		os.Exit(1)
 	}
 
@@ -113,7 +117,7 @@ func main() {
 	fmt.Printf("\n合计有数据(001/002): %d/%d\n", hasData, len(creditCodes))
 }
 
-func loadSources() (endpoint, org, ak, sk string, sources []upstream.LabeledUpstream) {
+func loadSources() (endpoint, org, ak, sk string, sources []upstream.Call) {
 	endpoint = os.Getenv("SWFP_ENDPOINT")
 	org = os.Getenv("SWFP_ORG_CODE")
 	ak = os.Getenv("SWFP_ACCESS_KEY_ID")
@@ -188,7 +192,7 @@ func loadSources() (endpoint, org, ak, sk string, sources []upstream.LabeledUpst
 			SecretAccessKey: def(e.SecretAccessKey, sk),
 			Product:         e.Product,
 		}, httpClient)
-		sources = append(sources, upstream.LabeledUpstream{Label: label, Port: client})
+		sources = append(sources, upstream.Call{Label: label, Dims: model.AllDims(), Port: client})
 		fmt.Printf("  子源[%d] label=%s product=%s endpoint=%s\n", i, label, e.Product, base)
 	}
 	return endpoint, org, ak, sk, sources

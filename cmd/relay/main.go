@@ -39,7 +39,9 @@ type domainStorage struct {
 	auditRepo   port.AuditRepository
 	adminRepo   port.AdminUserRepository
 	userRepo    port.UserAdminRepository
-	secrets     port.SecretProvider
+	// upstreamCallRepo 落逐源明细 (upstream_call)：上游成本对账的原子记录。
+	upstreamCallRepo port.UpstreamCallRepository
+	secrets          port.SecretProvider
 	// auth 是本域共享的鉴权服务（license+secret 进程内缓存）。按域而非按路由建：
 	// v8/v9 共用 v8v9 域的同一实例，后台在任一路由改 license 都能命中同一份缓存
 	// 失效（admin.WithLicenseChangeHook → auth.Invalidate）。
@@ -254,7 +256,7 @@ func buildDomainStorage(ctx context.Context, cfg config, domain string, logger *
 		}
 		ds := &domainStorage{
 			licenseRepo: pg, ledgerRepo: pg, quotaRepo: rq, auditRepo: pg,
-			adminRepo: pg, userRepo: pg, secrets: secret.NewStore(pg),
+			adminRepo: pg, userRepo: pg, upstreamCallRepo: pg, secrets: secret.NewStore(pg),
 			cleanup: func() { rq.Close(); pg.Close() },
 		}
 		ds.auth = auth.New(ds.licenseRepo, ds.secrets, auth.Md5Verifier{})
@@ -264,7 +266,7 @@ func buildDomainStorage(ctx context.Context, cfg config, domain string, logger *
 		seedDemo(store, domain, cfg.demoAppSecret)
 		ds := &domainStorage{
 			licenseRepo: store, ledgerRepo: store, quotaRepo: store, auditRepo: store,
-			adminRepo: store, userRepo: store, secrets: secret.NewStore(store),
+			adminRepo: store, userRepo: store, upstreamCallRepo: store, secrets: secret.NewStore(store),
 			cleanup: func() {},
 		}
 		ds.auth = auth.New(ds.licenseRepo, ds.secrets, auth.Md5Verifier{})
@@ -278,21 +280,23 @@ func buildRouteStack(cfg config, route string, ds *domainStorage, httpClient *ht
 	vc := cfg.versions[route]
 	log := logger.With("route", route)
 
-	upClient, routeKind, err := buildUpstreams(route, vc.upstreams, httpClient, log)
+	upClient, routeKind, err := buildUpstreams(route, vc.upstreams, cfg.sourcingBudget, httpClient, log)
 	if err != nil {
 		return nil, err
 	}
 
 	authSvc := ds.auth // 域级共享（含 license 缓存；v8/v9 同域同缓存）
 	quotaSvc := quota.New(ds.quotaRepo, ds.ledgerRepo)
-	billSvc := billing.New(billing.DefaultTable())
+	billSvc := billing.New(billing.DefaultTable()).WithDefaultRates(cfg.defaultRates)
 	adminSvc := admin.New(route, ds.adminRepo, ds.userRepo, ds.auditRepo, admin.Config{
 		JWTSecret: cfg.adminJWTSecret,
 		TokenTTL:  cfg.adminTokenTTL,
-	}).WithLicenseChangeHook(authSvc.Invalidate) // 后台改密/停用/删除即时失效鉴权缓存
+	}).WithLicenseChangeHook(authSvc.Invalidate). // 后台改密/停用/删除即时失效鉴权缓存
+		WithUpstreamCalls(ds.upstreamCallRepo)     // 审计按源下钻（上游成本对账）
 	// 异步记账：结算 + 审计移出响应关键路径（每请求省 3-5 次串行 DB 写）；
 	// 队列满降级同步，优雅停机时 drain（见 main 的 shutdown 顺序）。
-	books := application.NewBookkeeper(quotaSvc, ds.auditRepo, 0, 0, log)
+	books := application.NewBookkeeper(quotaSvc, ds.auditRepo, 0, 0, log).
+		WithUpstreamCalls(ds.upstreamCallRepo)
 	orch := application.NewQueryOrchestrator(route, authSvc, quotaSvc, billSvc, upClient, ds.auditRepo, log).
 		WithBookkeeper(books)
 	// 网关校验口径必须与该路由上游的真实要求一致（必填字段前置拦截，不透传给
@@ -309,34 +313,103 @@ func buildRouteStack(cfg config, route string, ds *domainStorage, httpClient *ht
 	return &routeStack{orch: orch, admin: adminSvc, requery: requery, books: books}, nil
 }
 
-// buildUpstreams 把一条路由的上游子源列表装配成一个 port.UpstreamPort：逐条构建
-// 单源 client，套上 Aggregator (len==1 直通 / len>1 并发聚合)。返回聚合器与路由 kind
-// (=首个子源 kind，loadConfig 已校验同路由 kind 一致；供 parser 选择)。
-func buildUpstreams(route string, ucs []upstreamConfig, httpClient *http.Client, logger *slog.Logger) (port.UpstreamPort, string, error) {
+// buildUpstreams 把一条路由的上游条目装配成一个 port.UpstreamPort：逐条构建单源
+// client，按 source 归入逻辑源，交给串行寻源器 upstream.Sourcer（按优先级/成本
+// 排序、命中即停、缺项补齐）。返回寻源器与路由 kind (=首个条目 kind，loadConfig 已
+// 校验同路由 kind 一致；供 parser 选择)。
+func buildUpstreams(route string, ucs []upstreamConfig, budget time.Duration, httpClient *http.Client, logger *slog.Logger) (port.UpstreamPort, string, error) {
 	if len(ucs) == 0 {
 		// 路由未在配置中给出 (memory 模式常见)：合成一个按路由缺省 kind 的空 client，
 		// 保持"不崩溃"的历史行为——该 client 在被调用前不产生任何副作用。
 		ucs = []upstreamConfig{{kind: defaultKind(route)}}
 	}
-	sources := make([]upstream.LabeledUpstream, 0, len(ucs))
+	// 按配置顺序归组，保证同 (priority, 成本) 时的调用次序可预期。
+	var order []string
+	byName := map[string]*upstream.Source{}
 	for i, uc := range ucs {
 		client, err := buildClient(route, uc, httpClient, logger)
 		if err != nil {
 			return nil, "", err
 		}
-		sources = append(sources, upstream.LabeledUpstream{Label: labelFor(uc, i), Port: client, Optional: uc.optional})
+		label := labelFor(uc, i)
+		name := sourceOf(uc, label)
+		src := byName[name]
+		if src == nil {
+			src = &upstream.Source{
+				Name:     name,
+				Provider: uc.kind,
+				Provides: providesOf(uc, label),
+				Priority: uc.priority,
+				Optional: uc.optional,
+			}
+			byName[name] = src
+			order = append(order, name)
+		} else {
+			// 同一逻辑源的多次互补调用：能力取并集，优先级/可选性取更"靠前"的口径。
+			src.Provides = src.Provides.Union(providesOf(uc, label))
+			if uc.priority != 0 && (src.Priority == 0 || uc.priority < src.Priority) {
+				src.Priority = uc.priority
+			}
+			src.Optional = src.Optional && uc.optional
+		}
+		src.Calls = append(src.Calls, upstream.Call{
+			Label:   label,
+			Dims:    providesOf(uc, label),
+			CostFen: uc.costFen,
+			CostOn:  uc.costOn,
+			Port:    client,
+		})
 	}
-	agg, err := upstream.NewAggregator(sources)
+	sources := make([]upstream.Source, 0, len(order))
+	for _, n := range order {
+		sources = append(sources, *byName[n])
+	}
+	sourcer, err := upstream.NewSourcer(sources, budget)
 	if err != nil {
 		return nil, "", err
 	}
+	logger.Info("upstream sourcing wired", "detail", sourcer.Active())
 	// swfp 有明确的下游返回值文档 (docs/税票分析接口文档.xlsx)：套契约映射层，把
-	// 聚合分段结果整理为 xlsx 两段结构 + 按源分组 + sourceStatus（严格白名单）。
-	// 其余路由无返回值文档，保持原样透传聚合结果。
+	// 分段结果整理为 xlsx 两段结构 + 按源分组 + sourceStatus（严格白名单）。
+	// 其余路由无返回值文档，保持原样透传分段结果。
 	if route == "swfp" {
-		return upstream.NewSwfpContract(agg), ucs[0].kind, nil
+		return upstream.NewSwfpContract(sourcer), ucs[0].kind, nil
 	}
-	return agg, ucs[0].kind, nil
+	return sourcer, ucs[0].kind, nil
+}
+
+// sourceOf 决定条目所属的逻辑源名。显式 source 优先；否则按段名推导——证通的
+// 发票聚合 part1/part2 (invoice1/invoice2) 是互补字段，必须同属一个逻辑源一起调用，
+// 否则「命中即停」会在 part1 命中后跳过 part2，下游拿到的字段比改造前更少。
+func sourceOf(uc upstreamConfig, label string) string {
+	if uc.source != "" {
+		return uc.source
+	}
+	switch label {
+	case "invoice1", "invoice2":
+		return "ent_invoice"
+	case "tax1", "tax2":
+		return "ent_tax"
+	}
+	return label
+}
+
+// providesOf 推导条目覆盖的数据维度：显式 provides 优先，否则按段名
+// (invoice*/sales→发票, tax*→税务)。销项数据 (源5) 归入发票维度——它出的是
+// 开票汇总，落在契约的「发票数据聚合」段。
+func providesOf(uc upstreamConfig, label string) model.DimSet {
+	switch uc.provides {
+	case model.DataTypeInvoice:
+		return model.DimSet{Invoice: true}
+	case model.DataTypeTax:
+		return model.DimSet{Tax: true}
+	case model.DataTypeBoth:
+		return model.AllDims()
+	}
+	if strings.HasPrefix(label, "tax") {
+		return model.DimSet{Tax: true}
+	}
+	return model.DimSet{Invoice: true}
 }
 
 // labelFor 决定子源在聚合 range 里的段名：显式 label 优先；entcredit 未指定时按

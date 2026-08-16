@@ -9,7 +9,9 @@
 // 同一惯例）：
 //   - 92500233MA60R5KW8M → 四产品全部查得 (resultCode=00000, Status=4)
 //   - 91110000EMPTYEMPT0 → 四产品全部查无 (resultCode=00000, Status=1)
-//   - 91110000PARTFA0001 → P0130083 返回错误，其余查得（下游聚合为 002）
+//   - 91110000PARTFA0001 → P0130083 返回错误，其余查得（下游同源另一半仍查得）
+//   - 91110000FPEMPTY001 → 发票聚合(P0130081/83) 查无、税务查得（下游回落源5 补发票）
+//   - 91110000TAXEMP0001 → 税务聚合(P0130082/84) 查无、发票查得（下游按单发票计费）
 //   - 验签失败 / 版本号缺失 → 对应文档附录错误码 (E1010 / E1005)
 package main
 
@@ -44,9 +46,11 @@ var (
 )
 
 const (
-	creditCodeNormal  = "92500233MA60R5KW8M"
-	creditCodeEmpty   = "91110000EMPTYEMPT0"
-	creditCodePartial = "91110000PARTFA0001"
+	creditCodeNormal   = "92500233MA60R5KW8M"
+	creditCodeEmpty    = "91110000EMPTYEMPT0"
+	creditCodePartial  = "91110000PARTFA0001"
+	creditCodeInvEmpty = "91110000FPEMPTY001" // 仅发票聚合查无（税务照常查得）
+	creditCodeTaxEmpty = "91110000TAXEMP0001" // 仅税务聚合查无（发票照常查得）
 
 	requestURI = "/ectcispserver/api/entcreditapi/query"
 )
@@ -214,14 +218,23 @@ func main() {
 			return
 		}
 
-		switch {
-		case argsMap.CreditCode == creditCodeEmpty:
+		empty := func() {
 			writeJSON(w, map[string]any{
 				"orderNo":    msgID,
 				"resultCode": "00000",
 				"resultDesc": "成功",
 				"resultData": map[string]any{argsMap.ProdCode + "Status": "1"},
 			})
+		}
+		isInvoiceProd := argsMap.ProdCode == "P0130081" || argsMap.ProdCode == "P0130083"
+
+		switch {
+		case argsMap.CreditCode == creditCodeEmpty:
+			empty()
+		case argsMap.CreditCode == creditCodeInvEmpty && isInvoiceProd:
+			empty() // 发票聚合查无 → 下游回落源5 补发票维度
+		case argsMap.CreditCode == creditCodeTaxEmpty && !isInvoiceProd:
+			empty() // 税务聚合查无 → 下游只得发票维度，按【单发票】计费
 		case argsMap.CreditCode == creditCodePartial && argsMap.ProdCode == "P0130083":
 			writeJSON(w, map[string]any{"resultCode": "E0400", "resultDesc": "查询征信数据出错", "orderNo": msgID})
 		default:

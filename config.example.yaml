@@ -12,9 +12,19 @@ addr: ":8080"
 
 upstream:
   timeout: "4s"
+  # budget：一次请求内所有上游调用的总时延预算。寻源改为「按优先级串行、命中即停」
+  # 后最坏情况是逐源相加，必须有总闸门，预算耗尽即不再尝试下一个源（轨迹里记原因）。
+  budget: "9s"
 
 billing:
   requeryInterval: "10s"
+  # rates：三档收费标准的全局缺省单价（单位分）。收费标准按【实际查得的维度】判定：
+  # 两项皆得走 bothFen、仅发票走 invoiceFen、仅税务走 taxFen、皆无不计费。
+  # 客户在 license 上有合同价时优先取合同价，仅缺失的档位由此兜底。
+  rates:
+    bothFen: 0
+    invoiceFen: 0
+    taxFen: 0
 
 admin:
   bootstrapUser: "admin"
@@ -47,9 +57,24 @@ redis_base: &redis_base
 
 versions:
   swfp:
+    # 寻源属性（每条 = 一次上游调用）：
+    #   source   逻辑源名。同名条目属于同一个逻辑源，是「优先级列表的单位」与
+    #            「本次已请求过」的去重键；同源内的多次调用互补，必须一起发出
+    #            （证通发票聚合 part1/part2 各出一半字段，拆开会丢字段）。
+    #   provides 该源能提供的维度：invoice / tax / both。两维皆有即【综合源】，
+    #            两项请求时先走综合源列表（当前上游无此类产品，故暂无 both）。
+    #   priority 越小越先调用；同优先级按成本从低到高。
+    #   costFen  该次调用的上游成本（分），用于对账与「先便宜后贵」排序。
+    #   costOn   hit=仅查得计成本（缺省）/ call=调用即计成本，按各上游商务条款配。
+    # 缺省推导：不写 source/provides 时按 label 推导 (invoice*/sales→发票源,
+    # tax*→税务源; invoice1+invoice2→ent_invoice, tax1+tax2→ent_tax)，老配置可不改。
     upstreams:
       - kind: "entcredit"
         label: "invoice1"
+        source: "ent_invoice"
+        provides: "invoice"
+        priority: 1
+        costFen: 0
         product: "P0130081"
         baseURL: "REPLACE_WITH_SWFP_UPSTREAM_ENDPOINT"
         orgCode: "REPLACE_WITH_SWFP_ORG_CODE"
@@ -57,6 +82,10 @@ versions:
         secretAccessKey: "REPLACE_WITH_SWFP_SECRET_ACCESS_KEY"
       - kind: "entcredit"
         label: "invoice2"
+        source: "ent_invoice"
+        provides: "invoice"
+        priority: 1
+        costFen: 0
         product: "P0130083"
         baseURL: "REPLACE_WITH_SWFP_UPSTREAM_ENDPOINT"
         orgCode: "REPLACE_WITH_SWFP_ORG_CODE"
@@ -64,6 +93,10 @@ versions:
         secretAccessKey: "REPLACE_WITH_SWFP_SECRET_ACCESS_KEY"
       - kind: "entcredit"
         label: "tax1"
+        source: "ent_tax"
+        provides: "tax"
+        priority: 1
+        costFen: 0
         product: "P0130082"
         baseURL: "REPLACE_WITH_SWFP_UPSTREAM_ENDPOINT"
         orgCode: "REPLACE_WITH_SWFP_ORG_CODE"
@@ -71,13 +104,23 @@ versions:
         secretAccessKey: "REPLACE_WITH_SWFP_SECRET_ACCESS_KEY"
       - kind: "entcredit"
         label: "tax2"
+        source: "ent_tax"
+        provides: "tax"
+        priority: 1
+        costFen: 0
         product: "P0130084"
         baseURL: "REPLACE_WITH_SWFP_UPSTREAM_ENDPOINT"
         orgCode: "REPLACE_WITH_SWFP_ORG_CODE"
         accessKeyId: "REPLACE_WITH_SWFP_ACCESS_KEY_ID"
         secretAccessKey: "REPLACE_WITH_SWFP_SECRET_ACCESS_KEY"
+      # 源5 销项数据：同供发票维度但优先级更低，故仅在证通发票源未拿到数据时才会
+      # 被调用（scope=basic 时一律不调用）。
       - kind: "salesdata"
         label: "sales"
+        source: "sales"
+        provides: "invoice"
+        priority: 9
+        costFen: 0
         optional: true
         baseURL: "http://api2.crestv.com:32313/api/ws"
         appId: "REPLACE_WITH_SALESDATA_APP_ID"

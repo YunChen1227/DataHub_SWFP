@@ -9,7 +9,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// upstreamConfig holds one SWFP upstream sub-source (entcredit or salesdata).
+// upstreamConfig holds one SWFP upstream sub-source (entcredit or salesdata)。
+// 一个条目 = 一次上游调用；多个条目可通过 source 归入同一个「逻辑源」（互补调用，
+// 必须一起发出，见 upstream.Source）。
 type upstreamConfig struct {
 	kind    string // entcredit | salesdata
 	baseURL string
@@ -21,6 +23,13 @@ type upstreamConfig struct {
 	product         string
 	label           string
 	optional        bool
+
+	// 寻源属性（缺省值由 label 推导，见 sourceOf/providesOf，老配置无需改动）。
+	source   string // 逻辑源名：寻源优先级列表的单位，也是「已请求过」去重的键
+	provides string // invoice | tax | both：该源能提供的维度
+	priority int    // 越小越先调用；同优先级按成本从低到高
+	costFen  int64  // 该次调用的上游成本（分）
+	costOn   string // hit=仅查得计成本（缺省）/ call=调用即计成本
 }
 
 type dbConfig struct {
@@ -65,6 +74,8 @@ type config struct {
 	addr string
 
 	upstreamTimeout time.Duration
+	sourcingBudget  time.Duration // 一次请求内全部上游调用的总时延预算（串行寻源）
+	defaultRates    model.FeeRates
 	requeryInterval time.Duration
 	demoAppSecret   string
 	demoSeed        bool
@@ -111,6 +122,11 @@ type fileUpstream struct {
 	Product         string `yaml:"product"`
 	Label           string `yaml:"label"`
 	Optional        bool   `yaml:"optional"`
+	Source          string `yaml:"source"`
+	Provides        string `yaml:"provides"`
+	Priority        int    `yaml:"priority"`
+	CostFen         int64  `yaml:"costFen"`
+	CostOn          string `yaml:"costOn"`
 }
 
 type fileDatabase struct {
@@ -142,9 +158,19 @@ type fileConfig struct {
 	Addr     string `yaml:"addr"`
 	Upstream struct {
 		Timeout duration `yaml:"timeout"`
+		// budget 是一次请求内全部上游调用的总时延预算：串行寻源最坏情况是逐源
+		// 相加，必须有总闸门，否则命中靠后的源会把下游拖到超时。
+		Budget duration `yaml:"budget"`
 	} `yaml:"upstream"`
 	Billing struct {
 		RequeryInterval duration `yaml:"requeryInterval"`
+		// rates 是三档收费标准的全局缺省单价（分）；license 上有合同价时优先取
+		// 合同价，仅缺失的档位由此兜底。
+		Rates struct {
+			BothFen    int64 `yaml:"bothFen"`
+			InvoiceFen int64 `yaml:"invoiceFen"`
+			TaxFen     int64 `yaml:"taxFen"`
+		} `yaml:"rates"`
 	} `yaml:"billing"`
 	Admin struct {
 		BootstrapUser string   `yaml:"bootstrapUser"`
@@ -187,6 +213,12 @@ func loadConfig() (config, error) {
 	cfg := config{
 		addr:            def(fc.Addr, ":8080"),
 		upstreamTimeout: durOr(fc.Upstream.Timeout, 4*time.Second),
+		sourcingBudget:  durOr(fc.Upstream.Budget, 9*time.Second),
+		defaultRates: model.FeeRates{
+			BothFen:    fc.Billing.Rates.BothFen,
+			InvoiceFen: fc.Billing.Rates.InvoiceFen,
+			TaxFen:     fc.Billing.Rates.TaxFen,
+		},
 		requeryInterval: durOr(fc.Billing.RequeryInterval, 10*time.Second),
 		demoAppSecret:   def(fc.Demo.AppSecret, "demo-app-secret"),
 		demoSeed:        demoSeedOr(fc.Demo.Seed, false),
@@ -253,6 +285,11 @@ func toUpstreamConfig(fu fileUpstream, version string) upstreamConfig {
 		product:         fu.Product,
 		label:           fu.Label,
 		optional:        fu.Optional,
+		source:          fu.Source,
+		provides:        fu.Provides,
+		priority:        fu.Priority,
+		costFen:         fu.CostFen,
+		costOn:          fu.CostOn,
 	}
 }
 

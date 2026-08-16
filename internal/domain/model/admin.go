@@ -24,6 +24,7 @@ type UserDetail struct {
 	ClientUUID      string    `json:"clientUuid"`
 	ServiceUsed     int64     `json:"serviceUsed"`     // 累计成功查得数 (当前路由作用域)
 	TotalCalls      int64     `json:"totalCalls"`      // 累计调用上游次数 (当前路由作用域)
+	Rates           FeeRates  `json:"rates"`           // 三档合同价（分）；0 = 走全局缺省
 	SecretCreatedAt time.Time `json:"secretCreatedAt"` // 当前密钥创建/轮换时间
 	ValidTo         time.Time `json:"validTo"`         // 授权过期日期
 	CreatedAt       time.Time `json:"createdAt"`
@@ -48,7 +49,14 @@ type AuditRecord struct {
 	UpstreamUID    string    `json:"upstreamUid"`
 	UpstreamLogID  string    `json:"upstreamLogId"`
 	Billed         bool      `json:"billed"` // 是否查得数据（计入成功查得数）
-	LatencyMs      int64     `json:"latencyMs"`
+	// 新寻源/计费口径：请求了哪些维度、实际查得哪些维度、按哪档标准收多少、
+	// 上游花了多少（逐源明细在 upstream_call，按 requestId 下钻）。
+	ReqScope        string `json:"reqScope"`    // invoice+tax / invoice / tax
+	DataScope       string `json:"dataScope"`   // 实际查得维度
+	FeeStandard     string `json:"feeStandard"` // both/invoice/tax/none
+	AmountFen       int64  `json:"amountFen"`
+	UpstreamCostFen int64  `json:"upstreamCostFen"`
+	LatencyMs       int64  `json:"latencyMs"`
 	NameMask       string    `json:"nameMask"`
 	IDCardMask     string    `json:"idCardMask"`
 	MobileMask     string    `json:"mobileMask"`

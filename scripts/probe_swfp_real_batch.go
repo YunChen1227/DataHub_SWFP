@@ -71,15 +71,18 @@ func main() {
 
 	// 聚合四产品
 	fmt.Println("\n== 四产品聚合 (911101055695184024) ==")
-	sources := make([]upstream.LabeledUpstream, 0, 4)
+	calls := make([]upstream.Call, 0, 4)
 	for _, p := range products {
 		client := upstream.NewEntCredit(upstream.EntCreditConfig{
 			Endpoint: endpoint, OrgCode: orgCode, AccessKeyID: ak,
 			SecretAccessKey: sk, Product: p.code,
 		}, httpClient)
-		sources = append(sources, upstream.LabeledUpstream{Label: p.label, Port: client})
+		calls = append(calls, upstream.Call{Label: p.label, Dims: model.AllDims(), Port: client})
 	}
-	agg, _ := upstream.NewAggregator(sources)
+	// 探针要打全部子源，不能被「命中即停」短路：全部调用装进一个逻辑源。
+	agg, _ := upstream.NewSourcer([]upstream.Source{{
+		Name: "probe", Provider: "entcredit", Provides: model.AllDims(), Calls: calls,
+	}}, 120*time.Second)
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 	res, err := agg.Query(ctx, &model.UpstreamRequest{CreditCode: "911101055695184024", Reqid: "agg-probe"})

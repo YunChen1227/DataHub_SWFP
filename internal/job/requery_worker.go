@@ -89,7 +89,9 @@ func (w *RequeryWorker) resolve(ctx context.Context, l *model.Ledger) {
 
 	decision := w.billing.FromRequery(rr)
 	token := &quota.ReserveToken{LicenseID: lic.LicenseID, Route: l.Version, LedgerID: l.ID, Reqid: l.Reqid}
-	if err := w.quota.Settle(ctx, token, decision); err != nil {
+	// 复查只回答「上游那笔是否成交」，不含维度信息，故无 Sources、不定档计费标准：
+	// 台账维持原有的 fee_standard/amount，只推进状态与计数。
+	if err := w.quota.Settle(ctx, token, quota.SettleInput{Decision: decision, BusiCode: l.BusiCode}); err != nil {
 		log.Error("settle from requery failed", "err", err)
 		return
 	}

@@ -17,6 +17,19 @@ function fmtDate(v) {
   return d.toLocaleString()
 }
 
+// yuan 把「分」显示为元；0 表示该档未单独定价，走全局缺省费率。
+function yuan(v) {
+  if (!v) return '缺省'
+  return (v / 100).toFixed(2)
+}
+
+// rateInput 把输入的「元」换算回分（整数），空值/非法值按 0（走全局缺省）处理。
+function rateInput(v) {
+  const n = Number(v)
+  if (!isFinite(n) || n <= 0) return 0
+  return Math.round(n * 100)
+}
+
 export default function Users() {
   const [users, setUsers] = useState([])
   const [err, setErr] = useState('')
@@ -68,6 +81,11 @@ export default function Users() {
       await api.updateUser(editing.licenseId, {
         status: editing.status,
         mobile: editing.mobile || '',
+        rates: {
+          bothFen: rateInput(editing.rateBoth),
+          invoiceFen: rateInput(editing.rateInvoice),
+          taxFen: rateInput(editing.rateTax),
+        },
       })
       setEditing(null)
       load()
@@ -141,6 +159,7 @@ export default function Users() {
               <tr>
                 <th>uuid</th><th>名称</th><th>手机号</th><th>状态</th>
                 <th>调用次数</th><th>成功查得数</th>
+                <th>发票+税务(元)</th><th>单发票(元)</th><th>单税务(元)</th>
                 <th>密钥创建时间</th><th>过期日期</th><th>创建时间</th><th>操作</th>
               </tr>
             </thead>
@@ -153,18 +172,34 @@ export default function Users() {
                   <td><span className={'badge ' + u.status}>{u.status}</span></td>
                   <td><strong>{u.totalCalls}</strong></td>
                   <td><strong>{u.serviceUsed}</strong></td>
+                  <td>{yuan(u.rates?.bothFen)}</td>
+                  <td>{yuan(u.rates?.invoiceFen)}</td>
+                  <td>{yuan(u.rates?.taxFen)}</td>
                   <td className="muted">{fmtDate(u.secretCreatedAt)}</td>
                   <td className="muted">{fmtDate(u.validTo)}</td>
                   <td className="muted">{fmtDate(u.createdAt)}</td>
                   <td className="row-actions">
-                    <button className="btn ghost small" onClick={() => setEditing({ ...u })}>编辑</button>
+                    <button
+                      className="btn ghost small"
+                      onClick={() =>
+                        setEditing({
+                          ...u,
+                          // 合同价在弹窗里按「元」编辑，保存时换算回分。
+                          rateBoth: u.rates?.bothFen ? u.rates.bothFen / 100 : '',
+                          rateInvoice: u.rates?.invoiceFen ? u.rates.invoiceFen / 100 : '',
+                          rateTax: u.rates?.taxFen ? u.rates.taxFen / 100 : '',
+                        })
+                      }
+                    >
+                      编辑
+                    </button>
                     <button className="btn ghost small" onClick={() => rotate(u)}>轮换密钥</button>
                     <button className="btn danger small" onClick={() => remove(u)}>删除</button>
                   </td>
                 </tr>
               ))}
               {users.length === 0 && (
-                <tr><td colSpan="10" className="muted">暂无用户</td></tr>
+                <tr><td colSpan="13" className="muted">暂无用户</td></tr>
               )}
             </tbody>
           </table>
@@ -186,6 +221,43 @@ export default function Users() {
             <div className="field">
               <label>手机号</label>
               <input value={editing.mobile || ''} onChange={(e) => setEditing({ ...editing, mobile: e.target.value })} placeholder="13800001234" />
+            </div>
+            <p className="muted">
+              合同价按【实际查得的维度】分三档计费（单位元，留空 = 走全局缺省费率）：
+              两项皆得走「发票+税务」档，只查得一项走对应单项档，皆无不计费。
+            </p>
+            <div className="field">
+              <label>合同价 · 发票+税务</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editing.rateBoth}
+                onChange={(e) => setEditing({ ...editing, rateBoth: e.target.value })}
+                placeholder="缺省"
+              />
+            </div>
+            <div className="field">
+              <label>合同价 · 单发票</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editing.rateInvoice}
+                onChange={(e) => setEditing({ ...editing, rateInvoice: e.target.value })}
+                placeholder="缺省"
+              />
+            </div>
+            <div className="field">
+              <label>合同价 · 单税务</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editing.rateTax}
+                onChange={(e) => setEditing({ ...editing, rateTax: e.target.value })}
+                placeholder="缺省"
+              />
             </div>
             <div className="field">
               <label>调用次数</label>

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -29,6 +30,7 @@ func (s *Server) registerAdminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /admin/api/{ver}/users/{id}/rotate-secret", s.requireAdmin(s.adminRotateSecret))
 
 	mux.HandleFunc("GET /admin/api/{ver}/audits", s.requireAdmin(s.adminListAudits))
+	mux.HandleFunc("GET /admin/api/{ver}/audits/{requestId}/calls", s.requireAdmin(s.adminListUpstreamCalls))
 
 	if s.spaDir != "" {
 		mux.HandleFunc("GET /admin/", s.serveSPA)
@@ -135,6 +137,8 @@ func (s *Server) adminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Status string `json:"status"`
 		Mobile string `json:"mobile"`
+		// rates 缺省(null) = 不改合同价；给出则整份覆盖（某档 0 = 该档走全局缺省费率）。
+		Rates *model.FeeRates `json:"rates"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeAdminError(w, http.StatusBadRequest, "请求体解析失败")
@@ -143,6 +147,7 @@ func (s *Server) adminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	u, err := svc.UpdateUser(r.Context(), r.PathValue("id"), admin.UpdateUserInput{
 		Status: in.Status,
 		Mobile: in.Mobile,
+		Rates:  in.Rates,
 	})
 	if err != nil {
 		writeAdminError(w, http.StatusBadRequest, err.Error())
@@ -218,6 +223,26 @@ func (s *Server) adminListAudits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeAdminJSON(w, http.StatusOK, map[string]any{"audits": audits})
+}
+
+// adminListUpstreamCalls 按 requestId 下钻某次请求的逐源调用明细：调了哪些源、各源
+// 自己的上游订单号/请求号、耗时与成本，以及未调用的源与跳过原因——上游成本对账
+// 与「为什么这单只按单发票收费」的一手证据。
+func (s *Server) adminListUpstreamCalls(w http.ResponseWriter, r *http.Request) {
+	svc, ok := s.adminFor(w, r)
+	if !ok {
+		return
+	}
+	calls, err := svc.ListUpstreamCalls(r.Context(), r.PathValue("requestId"))
+	if err != nil {
+		if errors.Is(err, admin.ErrUpstreamCallsUnavailable) {
+			writeAdminJSON(w, http.StatusOK, map[string]any{"calls": []*model.UpstreamCallRecord{}})
+			return
+		}
+		writeAdminError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeAdminJSON(w, http.StatusOK, map[string]any{"calls": calls})
 }
 
 // --- SPA static serving (§16.0) ---

@@ -42,9 +42,12 @@ func (s *Store) Close() { s.pool.Close() }
 // --- port.LicenseRepository ---
 
 func (s *Store) FindByAppKey(ctx context.Context, appKey string) (*model.LicenseView, error) {
-	const q = `SELECT license_id, app_key, client_uuid, status FROM license WHERE app_key=$1`
+	const q = `SELECT license_id, app_key, client_uuid, status,
+		COALESCE(rate_both_fen,0), COALESCE(rate_invoice_fen,0), COALESCE(rate_tax_fen,0)
+		FROM license WHERE app_key=$1`
 	var v model.LicenseView
-	err := s.pool.QueryRow(ctx, q, appKey).Scan(&v.LicenseID, &v.AppKey, &v.ClientUUID, &v.Status)
+	err := s.pool.QueryRow(ctx, q, appKey).Scan(&v.LicenseID, &v.AppKey, &v.ClientUUID, &v.Status,
+		&v.Rates.BothFen, &v.Rates.InvoiceFen, &v.Rates.TaxFen)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -72,10 +75,13 @@ func (s *Store) GetAppSecret(ctx context.Context, licenseID string) (string, err
 // 一条 SELECT 同时取回，替代 FindByAppKey + GetAppSecret 两次往返，见
 // auth.licenseWithSecretFinder）。查无返回 (nil, "", nil)。
 func (s *Store) FindByAppKeyWithSecret(ctx context.Context, appKey string) (*model.LicenseView, string, error) {
-	const q = `SELECT license_id, app_key, client_uuid, status, app_secret_enc FROM license WHERE app_key=$1`
+	const q = `SELECT license_id, app_key, client_uuid, status, app_secret_enc,
+		COALESCE(rate_both_fen,0), COALESCE(rate_invoice_fen,0), COALESCE(rate_tax_fen,0)
+		FROM license WHERE app_key=$1`
 	var v model.LicenseView
 	var secret string
-	err := s.pool.QueryRow(ctx, q, appKey).Scan(&v.LicenseID, &v.AppKey, &v.ClientUUID, &v.Status, &secret)
+	err := s.pool.QueryRow(ctx, q, appKey).Scan(&v.LicenseID, &v.AppKey, &v.ClientUUID, &v.Status, &secret,
+		&v.Rates.BothFen, &v.Rates.InvoiceFen, &v.Rates.TaxFen)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, "", nil
 	}
@@ -89,18 +95,23 @@ func (s *Store) FindByAppKeyWithSecret(ctx context.Context, appKey string) (*mod
 
 const ledgerCols = `id, app_key, COALESCE(version,''), COALESCE(trade_no,''), reqid, request_id,
 	COALESCE(upstream_code,''), COALESCE(busi_code,0), COALESCE(upstream_uid,''),
-	COALESCE(upstream_logid,''), state, counted_service`
+	COALESCE(upstream_logid,''), state, counted_service,
+	COALESCE(fee_standard,''), COALESCE(amount_fen,0), COALESCE(upstream_cost_fen,0),
+	COALESCE(source_total,0), COALESCE(source_ok,0), COALESCE(source_err,0)`
 
 func scanLedger(row pgx.Row) (*model.Ledger, error) {
 	var l model.Ledger
-	var state string
+	var state, feeStandard string
 	err := row.Scan(&l.ID, &l.AppKey, &l.Version, &l.TradeNo, &l.Reqid, &l.RequestID,
 		&l.UpstreamCode, &l.BusiCode, &l.UpstreamUID, &l.UpstreamLogID,
-		&state, &l.CountedService)
+		&state, &l.CountedService,
+		&feeStandard, &l.AmountFen, &l.UpstreamCostFen,
+		&l.SourceTotal, &l.SourceOK, &l.SourceErr)
 	if err != nil {
 		return nil, err
 	}
 	l.State = model.BillingState(state)
+	l.FeeStandard = model.FeeStandard(feeStandard)
 	return &l, nil
 }
 
@@ -127,11 +138,28 @@ func (s *Store) Append(ctx context.Context, l *model.Ledger) error {
 	).Scan(&l.ID)
 }
 
-func (s *Store) UpdateState(ctx context.Context, id int64, state model.BillingState, countedService bool) error {
+// Settle 回填终态 + 计费结论 + 上游对账值。上游标识用 NULLIF 保护：复查/无轨迹
+// 场景传空串时不覆盖已有值（宁可保留旧标识，不能把对账线索抹成空）。
+func (s *Store) Settle(ctx context.Context, id int64, st model.LedgerSettlement) error {
+	// 空值不覆盖：复查/对账路径只回答「上游那笔是否成交」，不带维度与成本信息，
+	// 不能把首次结算写下的计费标准/应收金额/上游成本清零。
 	const q = `UPDATE billing_ledger
-		SET state=$2, counted_service=$3, settled_at=now()
+		SET state=$2, counted_service=$3, settled_at=now(),
+		    fee_standard=COALESCE(NULLIF($4,''), fee_standard),
+		    amount_fen=CASE WHEN $4<>'' THEN $5 ELSE amount_fen END,
+		    upstream_cost_fen=CASE WHEN $6>0 THEN $6 ELSE upstream_cost_fen END,
+		    busi_code=COALESCE(NULLIF($7,0), busi_code),
+		    upstream_code=COALESCE(NULLIF($8,''), upstream_code),
+		    upstream_uid=COALESCE(NULLIF($9,''), upstream_uid),
+		    upstream_logid=COALESCE(NULLIF($10,''), upstream_logid),
+		    source_total=CASE WHEN $11>0 THEN $11 ELSE source_total END,
+		    source_ok=CASE WHEN $11>0 THEN $12 ELSE source_ok END,
+		    source_err=CASE WHEN $11>0 THEN $13 ELSE source_err END
 		WHERE id=$1`
-	_, err := s.pool.Exec(ctx, q, id, string(state), countedService)
+	_, err := s.pool.Exec(ctx, q, id, string(st.State), st.CountedService,
+		string(st.FeeStandard), st.AmountFen, st.UpstreamCostFen,
+		st.BusiCode, st.UpstreamCode, st.UpstreamUID, st.UpstreamLogID,
+		st.SourceTotal, st.SourceOK, st.SourceErr)
 	return err
 }
 

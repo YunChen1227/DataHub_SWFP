@@ -81,14 +81,27 @@ func (s *Service) Begin(ctx context.Context, lic *model.LicenseView, route, reqi
 	return &ReserveToken{LicenseID: lic.LicenseID, Route: route, LedgerID: l.ID, Reqid: reqid}, nil, nil
 }
 
+// SettleInput 是一次结算的输入：上游确定结论 + 下游业务码 + 逐源轨迹。轨迹用于
+// 汇总台账的上游代表标识与源计数（明细本身由 Bookkeeper 落 upstream_call 子表）。
+type SettleInput struct {
+	Decision *model.BillingDecision
+	BusiCode int
+	Sources  []model.SourceCall
+}
+
 // Settle is the §7.3 step 2 terminal settlement based on the确定结论.
 //   - d.Result != nil → 上游已应答 (查得/查无, = CalledUpstream) → 累计调用次数。
 //   - Resolved → ledger BILLED; 查得数据(Returned) 时累计成功查得数。
 //   - Unresolved → ledger UNBILLED。
 //
+// 结算同时回填计费标准/应收金额/上游总成本，以及一直建了却从未写入的四个上游对账
+// 列（设计_多源计费与上游对账 §2.2）。上游成本无条件回填——即便本次对下游不计费
+// （查无/全失败），钱也已经花了，亏损单必须在库里看得见。
+//
 // 计数按 token.Route 独立 (共享 license 的 v8/v9 互不影响)。每个台账仅结算一次
 // (同步路径或复查 worker)，故计数不会重复。
-func (s *Service) Settle(ctx context.Context, token *ReserveToken, d *model.BillingDecision) error {
+func (s *Service) Settle(ctx context.Context, token *ReserveToken, in SettleInput) error {
+	d := in.Decision
 	if token == nil || d == nil {
 		return errs.New(errs.BusiDataRequestErr, "无效结算上下文")
 	}
@@ -97,13 +110,32 @@ func (s *Service) Settle(ctx context.Context, token *ReserveToken, d *model.Bill
 			return errs.Wrap(errs.BusiDataRequestErr, "调用次数累计失败", err)
 		}
 	}
+	sum := model.SummarizeSources(in.Sources)
+	st := model.LedgerSettlement{
+		State:           model.StateUnbilled,
+		FeeStandard:     d.Standard,
+		AmountFen:       d.AmountFen,
+		UpstreamCostFen: d.CostFen,
+		BusiCode:        in.BusiCode,
+		UpstreamCode:    sum.Code,
+		UpstreamUID:     sum.UID,
+		UpstreamLogID:   sum.LogID,
+		SourceTotal:     sum.Total,
+		SourceOK:        sum.OK,
+		SourceErr:       sum.Err,
+	}
+	// 逐源轨迹缺失时（单源直通/复查路径）退回用结论里的上游标识，保证三列不空。
+	if len(in.Sources) == 0 && d.Result != nil {
+		st.UpstreamCode, st.UpstreamUID, st.UpstreamLogID = d.Result.Code, d.Result.UID, d.Result.LogID
+	}
 	if d.Resolved {
+		st.State = model.StateBilled
+		st.CountedService = d.Returned
 		if d.Returned {
 			if err := s.quota.IncServiceUsed(ctx, token.LicenseID, token.Route); err != nil {
 				return errs.Wrap(errs.BusiDataRequestErr, "成功查得数累计失败", err)
 			}
 		}
-		return s.ledger.UpdateState(ctx, token.LedgerID, model.StateBilled, d.Returned)
 	}
-	return s.ledger.UpdateState(ctx, token.LedgerID, model.StateUnbilled, false)
+	return s.ledger.Settle(ctx, token.LedgerID, st)
 }

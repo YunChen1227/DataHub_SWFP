@@ -35,10 +35,18 @@ type LedgerRepository interface {
 	FindByReqid(ctx context.Context, appKey, route, reqid string) (*model.Ledger, error)
 	// Append inserts a new PENDING ledger and back-fills the assigned ID.
 	Append(ctx context.Context, l *model.Ledger) error
-	// UpdateState settles a ledger to BILLED/UNBILLED with the 成功查得 flag.
-	UpdateState(ctx context.Context, id int64, state model.BillingState, countedService bool) error
+	// Settle 终态化台账：状态 + 成功查得标记 + 计费标准/金额 + 上游成本与代表标识。
+	Settle(ctx context.Context, id int64, s model.LedgerSettlement) error
 	// ListByState powers the re-query worker and reconciliation job.
 	ListByState(ctx context.Context, state model.BillingState, limit int) ([]*model.Ledger, error)
+}
+
+// UpstreamCallRepository 存「每个上游子源一行」的调用明细：一次 swfp 查询产生多行,
+// 各带自己的上游订单号/请求号与成本，供向各家上游分别对账（1:N 关系装不进台账的
+// 一对上游标识列，必须独立子表——设计_多源计费与上游对账 §2.1）。
+type UpstreamCallRepository interface {
+	AppendUpstreamCalls(ctx context.Context, calls []*model.UpstreamCallRecord) error
+	ListUpstreamCalls(ctx context.Context, f model.UpstreamCallFilter) ([]*model.UpstreamCallRecord, error)
 }
 
 // UpstreamPort talks to a data provider (DESIGN §6). The active provider is
@@ -82,6 +90,8 @@ type UserAdminRepository interface {
 	// is passed in; the adapter is responsible for at-rest encryption, §11.4).
 	CreateUser(ctx context.Context, d *model.UserDetail, secret string) error
 	UpdateUser(ctx context.Context, licenseID string, status string, mobile string) error
+	// SetRates 更新该客户的三档合同价（单位分；某档 0 = 走全局缺省费率）。
+	SetRates(ctx context.Context, licenseID string, rates model.FeeRates) error
 	DeleteUser(ctx context.Context, licenseID string) error
 	RotateSecret(ctx context.Context, licenseID, secret string) error
 }

@@ -69,7 +69,7 @@ func main() {
 	}
 
 	httpClient := &http.Client{Timeout: 30 * time.Second}
-	sources := make([]upstream.LabeledUpstream, 0, len(ups))
+	calls := make([]upstream.Call, 0, len(ups))
 	for i, u := range ups {
 		if u.BaseURL == "" || u.OrgCode == "" {
 			fmt.Printf("配置缺少 swfp 子源 %d 的 baseURL/orgCode\n", i)
@@ -86,16 +86,20 @@ func main() {
 			SecretAccessKey: u.SecretAccessKey,
 			Product:         u.Product,
 		}, httpClient)
-		sources = append(sources, upstream.LabeledUpstream{Label: label, Port: client})
+		calls = append(calls, upstream.Call{Label: label, Dims: model.AllDims(), Port: client})
 		fmt.Printf("  子源[%d] label=%s product=%s endpoint=%s\n", i, label, u.Product, u.BaseURL)
 	}
-	agg, err := upstream.NewAggregator(sources)
+	// 探针要打全部子源，不能被「命中即停」短路：把所有调用装进一个逻辑源
+	// （同一逻辑源内的调用互补、必须全部发出），即恢复旧聚合器的全量扇出行为。
+	agg, err := upstream.NewSourcer([]upstream.Source{{
+		Name: "probe", Provider: "entcredit", Provides: model.AllDims(), Calls: calls,
+	}}, 60*time.Second)
 	if err != nil {
-		fmt.Println("构建聚合器失败:", err)
+		fmt.Println("构建寻源器失败:", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("== 探测开始: %d 个子源 creditCode=%s ==\n", len(sources), creditCode)
+	fmt.Printf("== 探测开始: %d 个子源 creditCode=%s ==\n", len(calls), creditCode)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

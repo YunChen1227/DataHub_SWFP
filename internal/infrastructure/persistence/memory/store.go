@@ -47,6 +47,9 @@ type Store struct {
 	audits []*model.AuditRecord
 	admins map[string]*model.AdminUser // username -> admin
 
+	upstreamCalls    []*model.UpstreamCallRecord // 逐源明细（追加式）
+	upstreamCallKeys map[string]struct{}         // appKey|version|reqid|label 去重
+
 	seq      int64
 	auditSeq int64
 	adminSeq int64
@@ -61,6 +64,8 @@ func New() *Store {
 		ledgerByReqid: make(map[string]*model.Ledger),
 		ledgerByID:    make(map[int64]*model.Ledger),
 		admins:        make(map[string]*model.AdminUser),
+
+		upstreamCallKeys: make(map[string]struct{}),
 	}
 }
 
@@ -200,12 +205,38 @@ func (s *Store) Append(_ context.Context, l *model.Ledger) error {
 	return nil
 }
 
-func (s *Store) UpdateState(_ context.Context, id int64, state model.BillingState, countedService bool) error {
+func (s *Store) Settle(_ context.Context, id int64, st model.LedgerSettlement) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if l := s.ledgerByID[id]; l != nil {
-		l.State = state
-		l.CountedService = countedService
+	l := s.ledgerByID[id]
+	if l == nil {
+		return nil
+	}
+	l.State = st.State
+	l.CountedService = st.CountedService
+	// 与 pg 的 Settle 一致：空值不覆盖。复查路径不带维度/成本信息，不能把首次
+	// 结算写下的标准、金额、成本与源计数清零。
+	if st.FeeStandard != "" {
+		l.FeeStandard = st.FeeStandard
+		l.AmountFen = st.AmountFen
+	}
+	if st.UpstreamCostFen > 0 {
+		l.UpstreamCostFen = st.UpstreamCostFen
+	}
+	if st.SourceTotal > 0 {
+		l.SourceTotal, l.SourceOK, l.SourceErr = st.SourceTotal, st.SourceOK, st.SourceErr
+	}
+	if st.BusiCode != 0 {
+		l.BusiCode = st.BusiCode
+	}
+	if st.UpstreamCode != "" {
+		l.UpstreamCode = st.UpstreamCode
+	}
+	if st.UpstreamUID != "" {
+		l.UpstreamUID = st.UpstreamUID
+	}
+	if st.UpstreamLogID != "" {
+		l.UpstreamLogID = st.UpstreamLogID
 	}
 	return nil
 }

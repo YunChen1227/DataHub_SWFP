@@ -1,12 +1,14 @@
 # DataHub_SWFP
 
-SWFP（税务发票聚合）API 转接服务。对外提供统一网关信封（`appKey/sign/encryptionType/body` + MD5 加签），对内并发聚合 4 路证通 entcredit 产品码 + 可选源5 销项数据（salesdata），输出按 `docs/税票分析接口文档.xlsx` 契约整理。
+SWFP（税务发票聚合）API 转接服务。对外提供统一网关信封（`appKey/sign/encryptionType/body` + MD5 加签），对内按**优先级串行寻源**（命中即停）调用证通 entcredit 与源5 销项数据（salesdata），输出按 `docs/税票分析接口文档.xlsx` 契约整理。
+
+计费按**实际查得的维度**定档（发票+税务 / 单发票 / 单税务 / 查无不计费），并逐源记录上游成本与寻源轨迹用于对账。
 
 ## 路由
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/v1/openapi/zlx/querySrmxSWFP` | 主查询（入参 `creditCode`，可选 `scope=all\|basic`） |
+| POST | `/v1/openapi/zlx/querySrmxSWFP` | 主查询（入参 `creditCode`，可选 `dataType=invoice\|tax\|both`、`scope=all\|basic`） |
 | GET | `/v1/openapi/zlx/quotaSWFP` | 配额/统计 |
 | GET | `/healthz` | 健康检查 |
 | POST | `/admin/api/login` | 管理后台登录 |
@@ -62,12 +64,16 @@ docs/               SWFP 上下游文档与契约
 
 ## 上游子源
 
-| 段名 | kind | 产品/说明 |
-|------|------|-----------|
-| invoice1 | entcredit | P0130081 发票 part1 |
-| invoice2 | entcredit | P0130083 发票 part2 |
-| tax1 | entcredit | P0130082 税务 part1 |
-| tax2 | entcredit | P0130084 税务 part2 |
-| sales | salesdata | 源5 销项（optional，`scope=basic` 时跳过） |
+配置里每条上游是一次**调用**，`source` 相同的调用属于同一个**逻辑源**（一起发出、一起判定、去重时算一个）：
+
+| 逻辑源 | 段名 | kind | 提供维度 | 优先级 | 说明 |
+|--------|------|------|----------|--------|------|
+| ent_invoice | invoice1 / invoice2 | entcredit | 发票 | 1 | P0130081 + P0130083（part1/part2 互补） |
+| ent_tax | tax1 / tax2 | entcredit | 税务 | 1 | P0130082 + P0130084（part1/part2 互补） |
+| sales | sales | salesdata | 发票 | 9 | 源5 销项（optional，`scope=basic` 跳过；仅在 ent_invoice 未查得时兜底） |
+
+寻源顺序按 `priority` 升序，同优先级按配置顺序。请求两项时先走综合源（能同时提供两维度的源，当前配置为空），再按缺项分别遍历发票源与税务源，已调用过的逻辑源不重复调用。
+
+响应 `result.range` 额外给出 `sourceStatus`（各源 ok/empty/error/skipped）、`dataScope`（实得维度）与 `feeStandard`（本次计费档位）。
 
 详细设计见 `docs/DESIGN.md`。

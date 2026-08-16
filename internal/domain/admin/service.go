@@ -19,6 +19,8 @@ var (
 	ErrInvalidCredentials = errors.New("用户名或密码错误")
 	ErrUserNotFound       = errors.New("用户不存在")
 	ErrValidation         = errors.New("参数校验失败")
+	// ErrUpstreamCallsUnavailable：未装配逐源明细仓储（或未给 requestId）时的下钻请求。
+	ErrUpstreamCallsUnavailable = errors.New("逐源明细不可用")
 )
 
 // Config holds admin session knobs.
@@ -35,7 +37,9 @@ type Service struct {
 	admins port.AdminUserRepository
 	users  port.UserAdminRepository
 	audits port.AuditRepository
-	cfg    Config
+	// calls 是逐源明细仓储（upstream_call），供审计按源下钻；可为 nil。
+	calls port.UpstreamCallRepository
+	cfg   Config
 	// onLicenseChange 在用户被修改/删除/轮换密钥后回调（参数为 appKey），用于
 	// 即时失效鉴权层的 license 缓存（auth.Service.Invalidate），保证停用/换钥
 	// 不必等缓存 TTL 过期。可为 nil。
@@ -163,10 +167,12 @@ func (s *Service) CreateUser(ctx context.Context, in CreateUserInput) (*CreateUs
 	return &CreateUserResult{User: detail, Secret: secret}, nil
 }
 
-// UpdateUserInput carries the editable fields (empty value = leave unchanged).
+// UpdateUserInput carries the editable fields (empty value = leave unchanged)。
+// Rates 为 nil 时不改合同价；非 nil 时整份覆盖（某档填 0 = 该档走全局缺省费率）。
 type UpdateUserInput struct {
 	Status string
 	Mobile string
+	Rates  *model.FeeRates
 }
 
 func (s *Service) UpdateUser(ctx context.Context, licenseID string, in UpdateUserInput) (*model.UserDetail, error) {
@@ -187,6 +193,11 @@ func (s *Service) UpdateUser(ctx context.Context, licenseID string, in UpdateUse
 	}
 	if err := s.users.UpdateUser(ctx, licenseID, status, mobile); err != nil {
 		return nil, err
+	}
+	if in.Rates != nil {
+		if err := s.users.SetRates(ctx, licenseID, *in.Rates); err != nil {
+			return nil, err
+		}
 	}
 	s.notifyLicenseChange(cur.AppKey)
 	return s.users.GetUser(ctx, licenseID, s.route)
@@ -233,4 +244,27 @@ func (s *Service) ListAudits(ctx context.Context, f model.AuditFilter) ([]*model
 	// 按本后台服务的路由作用域过滤：共享 license 的 v8/v9 操作日志互不混淆。
 	f.Version = s.route
 	return s.audits.ListAudits(ctx, f)
+}
+
+// WithUpstreamCalls 挂接逐源明细仓储，开启审计的「按源下钻」。
+func (s *Service) WithUpstreamCalls(r port.UpstreamCallRepository) *Service {
+	s.calls = r
+	return s
+}
+
+// ListUpstreamCalls 返回某次请求的逐源调用明细（成本对账的原子记录）：调了哪些源、
+// 各自的上游订单号/请求号、耗时与成本，以及未调用的源和跳过的原因。
+func (s *Service) ListUpstreamCalls(ctx context.Context, requestID string) ([]*model.UpstreamCallRecord, error) {
+	if s.calls == nil {
+		return nil, ErrUpstreamCallsUnavailable
+	}
+	requestID = strings.TrimSpace(requestID)
+	if requestID == "" {
+		return nil, ErrUpstreamCallsUnavailable
+	}
+	return s.calls.ListUpstreamCalls(ctx, model.UpstreamCallFilter{
+		Version:   s.route,
+		RequestID: requestID,
+		Limit:     200,
+	})
 }

@@ -16,8 +16,9 @@ import (
 // 统一社会信用代码 (GB 32100)：18 位，字符集不含 I/O/S/V/Z。
 var creditCodeRe = regexp.MustCompile(`^[0-9A-HJ-NPQRTUWXY]{2}\d{6}[0-9A-HJ-NPQRTUWXY]{10}$`)
 
-// ParseCreditCode 校验 swfp 入参：creditCode 必填；scope 可选 (all/basic)。
-// 失败返回 busiCode 1007，不调上游/不计费。
+// ParseCreditCode 校验 swfp 入参：creditCode 必填；dataType 可选
+// (invoice/tax/both，缺省 both——老下游不传该字段时维度与改造前一致)；
+// scope 可选 (all/basic)。失败返回 busiCode 1007，不调上游/不计费。
 func ParseCreditCode(cmd *model.QueryCommand) (*model.UpstreamRequest, error) {
 	if cmd == nil {
 		return nil, errs.New(errs.BusiDataRequestErr, "请求体为空")
@@ -25,6 +26,14 @@ func ParseCreditCode(cmd *model.QueryCommand) (*model.UpstreamRequest, error) {
 	creditCode := strings.ToUpper(strings.TrimSpace(cmd.CreditCode))
 	if !creditCodeRe.MatchString(creditCode) {
 		return nil, errs.New(errs.BusiDataRequestErr, "creditCode 格式非法")
+	}
+	dataType := strings.ToLower(strings.TrimSpace(cmd.DataType))
+	switch dataType {
+	case "", model.DataTypeBoth:
+		dataType = model.DataTypeBoth
+	case model.DataTypeInvoice, model.DataTypeTax:
+	default:
+		return nil, errs.New(errs.BusiDataRequestErr, "dataType 取值非法, 须为 invoice / tax / both")
 	}
 	scope := strings.ToLower(strings.TrimSpace(cmd.Scope))
 	switch scope {
@@ -37,6 +46,7 @@ func ParseCreditCode(cmd *model.QueryCommand) (*model.UpstreamRequest, error) {
 	return &model.UpstreamRequest{
 		CreditCode: creditCode,
 		Scope:      scope,
+		Want:       model.DimSetOf(dataType),
 		Reqid:      NewReqid(),
 	}, nil
 }

@@ -22,14 +22,20 @@ import (
 //	  "发票数据聚合": { "nsrjbxx": {"源1": {...}, "源2": {...}},
 //	                    "kphzxxList": {"源1": [...], "源2": [...], "源5": [...]}, ... },
 //	  "税务数据聚合": { "nsrjbxx": {"源3": {...}, "源4": {...}}, "lrbxxList": {...}, ... },
-//	  "sourceStatus": { "源1": "ok", ..., "源5": "error" }
+//	  "sourceStatus": { "源1": "ok", "源2": "ok", "源5": "skipped" },
+//	  "dataScope":    { "发票": true, "税务": false },
+//	  "feeStandard":  "invoice"
 //	}
 //
 // 每个 xlsx 顶层字段的值按数据源分组（源1..源5，对下游隐匿真实上游），各源数据
-// 不合并不去重，冲突由下游自行采信。sourceStatus 标记本次实际调用的各源状态
-// (ok=查得 / empty=查无 / error=失败)，scope=basic 跳过的源不出现。
+// 不合并不去重，冲突由下游自行采信。sourceStatus 标记各源本次的状态
+// (ok=查得 / empty=查无 / error=失败 / skipped=未调用——串行寻源命中即停，被更
+// 高优先级源短路掉的源即为 skipped)。
 //
-// 计费判定 (001/999/002) 仍由 Aggregator 按既有判定表完成，本层只改写 range 内容，
+// dataScope/feeStandard 是本次【实际查得的维度】与据此判定的收费标准：请求两项而
+// 只查得发票时业务码仍为 001，但按【单发票】计费，下游凭这两个字段自查即可。
+//
+// 计费判定 (001/999/002) 仍由寻源器 (sourcing.go) 完成，本层只改写 range 内容，
 // 不触碰上游调用与归一逻辑。
 type SwfpContract struct {
 	inner port.UpstreamPort
@@ -47,6 +53,15 @@ var swfpSourceAlias = map[string]string{
 	"tax1":     "源3", // 税务数据聚合-part1
 	"tax2":     "源4", // 税务数据聚合-part2
 	"sales":    "源5", // 销项数据（月度汇总，可选源）
+}
+
+// SourceAlias 返回段名对下游的脱敏编号；未登记的段名原样返回（兜底不丢数据）。
+// 寻源器 (sourcing.go) 与本契约层共用这一份映射，避免两处漂移。
+func SourceAlias(label string) string {
+	if a := swfpSourceAlias[label]; a != "" {
+		return a
+	}
+	return label
 }
 
 // ---- xlsx 字段白名单（docs/税票分析接口文档.xlsx，逐字段核对）----
@@ -154,7 +169,7 @@ func (c *SwfpContract) Query(ctx context.Context, req *model.UpstreamRequest) (*
 	if (res.Code != "001" && res.Code != "002") || res.Range == "" {
 		return res, nil
 	}
-	mapped, mErr := mapSwfpRange(res.Range, req.CreditCode)
+	mapped, mErr := mapSwfpRange(res.Range, req.CreditCode, res.Got)
 	if mErr != nil {
 		// 契约映射失败属我方内部错误：不改判定结论，保底透出原始分段（好过丢数据），
 		// 并在错误里留痕（该情况仅在聚合器输出结构异常时出现）。
@@ -170,9 +185,11 @@ func (c *SwfpContract) Requery(ctx context.Context, reqid string) (*model.Requer
 	return c.inner.Requery(ctx, reqid)
 }
 
-// mapSwfpRange 把聚合器的分段 JSON ({label:{status,data,error}}) 改写为 xlsx 契约
-// 结构。creditCode 用于补齐源5 条目里的 nsrsbh (纳税人识别号 = 查询主体)。
-func mapSwfpRange(rangeJSON, creditCode string) (string, error) {
+// mapSwfpRange 把寻源器的分段 JSON ({label:{status,data,error}}) 改写为 xlsx 契约
+// 结构。creditCode 用于补齐源5 条目里的 nsrsbh (纳税人识别号 = 查询主体)；got 是
+// 本次实际查得的维度，据此向下游明示 dataScope 与 feeStandard（部分查得时业务码
+// 仍是 001，客户凭这两个字段自查本次按哪档标准收费）。
+func mapSwfpRange(rangeJSON, creditCode string, got model.DimSet) (string, error) {
 	var sections map[string]aggSection
 	dec := json.NewDecoder(bytes.NewReader([]byte(rangeJSON)))
 	if err := dec.Decode(&sections); err != nil {
@@ -184,12 +201,9 @@ func mapSwfpRange(rangeJSON, creditCode string) (string, error) {
 	status := map[string]string{}
 
 	for label, sec := range sections {
-		alias := swfpSourceAlias[label]
-		if alias == "" {
-			alias = label // 未登记段名兜底：原样透出，避免丢数据
-		}
+		alias := SourceAlias(label)
 		status[alias] = sec.Status
-		if sec.Status != "ok" || len(sec.Data) == 0 {
+		if sec.Status != model.CallOK || len(sec.Data) == 0 {
 			continue
 		}
 		data, err := decodeNumberMap(sec.Data)
@@ -212,6 +226,11 @@ func mapSwfpRange(rangeJSON, creditCode string) (string, error) {
 		"发票数据聚合": invoice,
 		"税务数据聚合": tax,
 		"sourceStatus": status,
+		"dataScope": map[string]bool{
+			"发票": got.Invoice,
+			"税务": got.Tax,
+		},
+		"feeStandard": string(model.StandardOf(got)),
 	}
 	buf, err := json.Marshal(out)
 	if err != nil {

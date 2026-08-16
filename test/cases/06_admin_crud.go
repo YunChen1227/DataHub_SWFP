@@ -84,6 +84,23 @@ func main() {
 	gotStatus, _ := pm["status"].(string)
 	rec.Check("更新用户(停用)", "status=SUSPENDED", stp == 200 && gotStatus == "SUSPENDED", pr)
 
+	// 8b. 改：三档合同价。rates 整份覆盖，某档 0 表示该档走全局缺省费率。
+	strt, rtm, rtr := harness.Call(http.MethodPatch, adminBase+"/users/"+licenseID,
+		map[string]any{"rates": map[string]any{"bothFen": 888, "invoiceFen": 555, "taxFen": 0}}, auth)
+	rates, _ := rtm["rates"].(map[string]any)
+	both, _ := rates["bothFen"].(float64)
+	inv, _ := rates["invoiceFen"].(float64)
+	tax, _ := rates["taxFen"].(float64)
+	rec.Check("更新用户(合同价)", "bothFen=888 invoiceFen=555 taxFen=0",
+		strt == 200 && both == 888 && inv == 555 && tax == 0, rtr)
+
+	// 只改 status 时不应把已设的合同价冲掉（rates 缺省 = 不改）。
+	_, km, kr := harness.Call(http.MethodPatch, adminBase+"/users/"+licenseID,
+		map[string]any{"status": "ACTIVE"}, auth)
+	kept, _ := km["rates"].(map[string]any)
+	keptBoth, _ := kept["bothFen"].(float64)
+	rec.Check("合同价不被无关更新冲掉", "bothFen 仍为 888", keptBoth == 888, kr)
+
 	// 9. 审计：按 appKey 过滤 + PII 掩码（用 demo 主账户，确保有记录）
 	_, am, ar := harness.Call(http.MethodGet, adminBase+"/audits?appKey="+harness.AppKey+"&limit=200", nil, auth)
 	audits, _ := am["audits"].([]any)

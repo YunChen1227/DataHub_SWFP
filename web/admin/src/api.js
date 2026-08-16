@@ -59,4 +59,7 @@ export const api = {
   deleteUser: (id) => req('DELETE', '/users/' + encodeURIComponent(id)),
   rotateSecret: (id) => req('POST', '/users/' + encodeURIComponent(id) + '/rotate-secret'),
   listAudits: (query) => req('GET', '/audits' + (query || '')),
+  // 逐源明细：某次请求调了哪些源、各源的上游订单号/请求号、耗时与成本。
+  listUpstreamCalls: (requestId) =>
+    req('GET', '/audits/' + encodeURIComponent(requestId) + '/calls'),
 }
