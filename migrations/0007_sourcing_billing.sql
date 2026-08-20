@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS upstream_call (
     version       VARCHAR(16) NOT NULL DEFAULT '',
     reqid         VARCHAR(32) NOT NULL,
     request_id    VARCHAR(64) NOT NULL,
-    seq            INT         NOT NULL DEFAULT 0,      -- 本次请求内的调用顺序 (1 起; skipped 为 0)
+    seq            INT         NOT NULL DEFAULT 0,      -- 本次请求内的调用顺序 (1 起, skipped 为 0)
     source_name    VARCHAR(32) NOT NULL,                -- 逻辑源名（寻源优先级列表的单位）
     source_label   VARCHAR(32) NOT NULL,                -- 契约段名 invoice1/invoice2/tax1/tax2/sales
     source_alias   VARCHAR(16) NOT NULL DEFAULT '',     -- 对下游脱敏编号 源1..源5

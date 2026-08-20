@@ -17,7 +17,7 @@
 #   ./scripts/restart.sh                          # 默认 CONFIG_FILE=config.aliyun.prod.yaml
 #   SKIP_WEB=1 ./scripts/restart.sh               # 前端没改动时跳过 npm 构建（更快）
 #   CONFIG_FILE=config.yaml ./scripts/restart.sh  # 指定其它配置
-#   ADDR=:8080 ./scripts/restart.sh               # 健康检查端口与配置 addr 不同时可覆盖
+#   ADDR=:8081 ./scripts/restart.sh               # 覆盖端口（缺省读配置文件的 addr）
 #
 # 首次使用：chmod +x scripts/restart.sh（需已安装 go 与 node/npm）
 
@@ -28,8 +28,6 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_DIR"
 
 CONFIG_FILE="${CONFIG_FILE:-config.aliyun.prod.yaml}"
-ADDR="${ADDR:-:8080}"
-PORT="${ADDR##*:}"
 BIN="$REPO_DIR/bin/relay"
 PID_FILE="$REPO_DIR/relay.pid"
 LOG_DIR="$REPO_DIR/logs"
@@ -42,6 +40,22 @@ log() { echo "[$(date '+%F %T')] $*"; }
 fail() { log "错误: $*" >&2; exit 1; }
 
 [ -f "$CONFIG_FILE" ] || fail "配置文件 $CONFIG_FILE 不存在（工作目录 $REPO_DIR）"
+
+# 监听端口以配置文件的顶层 addr 为准（ADDR 环境变量可覆盖）。绝不能硬编码默认值：
+# PORT 同时用于「按端口清理残留进程」，同机部署多个 relay 时若取错端口，会把另一个
+# 服务当成残留进程杀掉（历史事故：SWFP 用默认 8080 扫，杀掉了跑在 8080 的主服务）。
+if [ -n "${ADDR:-}" ]; then
+    ADDR_SRC="ADDR 环境变量"
+else
+    ADDR="$(sed -nE 's/^addr:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/p' "$CONFIG_FILE" | head -n1)"
+    ADDR_SRC="$CONFIG_FILE 的 addr"
+    [ -n "$ADDR" ] || fail "无法从 $CONFIG_FILE 解析顶层 addr，请显式指定 ADDR=:端口"
+fi
+PORT="${ADDR##*:}"
+case "$PORT" in
+    ''|*[!0-9]*) fail "端口非法: ADDR=$ADDR (取自 $ADDR_SRC)" ;;
+esac
+log "监听端口 $PORT (addr=$ADDR, 取自 $ADDR_SRC)"
 
 # --- 1. 编译后端（先于杀进程：编译失败不影响正在运行的旧服务） ---
 log "== 1/5 编译后端 =="

@@ -76,14 +76,13 @@ func ApplyMigrations(ctx context.Context, pool *pgxpool.Pool, dir string) error 
 	return nil
 }
 
-// splitStatements strips '--' comment lines and splits SQL on ';'.
+// splitStatements strips '--' comments and splits SQL on ';'. 行尾注释必须一并剥离
+// 再切分：注释里的 ';'（如列说明 "(1 起; skipped 为 0)"）否则会把 CREATE TABLE
+// 截成两半，前半段未闭合，报 "syntax error at end of input" (42601)。
 func splitStatements(sqlText string) []string {
 	var b strings.Builder
 	for _, line := range strings.Split(sqlText, "\n") {
-		if strings.HasPrefix(strings.TrimSpace(line), "--") {
-			continue
-		}
-		b.WriteString(line)
+		b.WriteString(stripLineComment(line))
 		b.WriteString("\n")
 	}
 	var out []string
@@ -93,6 +92,21 @@ func splitStatements(sqlText string) []string {
 		}
 	}
 	return out
+}
+
+// stripLineComment drops a trailing '--' comment. 单引号字符串内的 '--' 不算注释
+// （'' 是 SQL 的转义写法，连续两次翻转状态即为正确处理）。
+func stripLineComment(line string) string {
+	inQuote := false
+	for i := 0; i < len(line); i++ {
+		switch {
+		case line[i] == '\'':
+			inQuote = !inQuote
+		case !inQuote && line[i] == '-' && i+1 < len(line) && line[i+1] == '-':
+			return line[:i]
+		}
+	}
+	return line
 }
 
 // SeedDemo inserts the 域's dev demo license idempotently so the e2e/admin
