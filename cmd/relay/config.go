@@ -76,6 +76,7 @@ type config struct {
 	upstreamTimeout time.Duration
 	sourcingBudget  time.Duration // 一次请求内全部上游调用的总时延预算（串行寻源）
 	defaultRates    model.FeeRates
+	freeWindow      string // 主体年度计费的免费期长度（Postgres interval 字面量）
 	requeryInterval time.Duration
 	demoAppSecret   string
 	demoSeed        bool
@@ -171,6 +172,10 @@ type fileConfig struct {
 			InvoiceFen int64 `yaml:"invoiceFen"`
 			TaxFen     int64 `yaml:"taxFen"`
 		} `yaml:"rates"`
+		// freeWindow 是主体年度计费的免费期长度，**Postgres 日历 interval 字面量**
+		// （缺省 "1 year"）。周年制：2026-12-28 首次计费则免到 2027-12-28。必须用
+		// 日历 interval 而非固定小时数，否则闰年会差一天。
+		FreeWindow string `yaml:"freeWindow"`
 	} `yaml:"billing"`
 	Admin struct {
 		BootstrapUser string   `yaml:"bootstrapUser"`
@@ -219,6 +224,7 @@ func loadConfig() (config, error) {
 			InvoiceFen: fc.Billing.Rates.InvoiceFen,
 			TaxFen:     fc.Billing.Rates.TaxFen,
 		},
+		freeWindow:      def(fc.Billing.FreeWindow, model.DefaultFreeWindow),
 		requeryInterval: durOr(fc.Billing.RequeryInterval, 10*time.Second),
 		demoAppSecret:   def(fc.Demo.AppSecret, "demo-app-secret"),
 		demoSeed:        demoSeedOr(fc.Demo.Seed, false),

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/datahub/relay/internal/domain/billing"
 	"github.com/datahub/relay/internal/domain/model"
 	"github.com/datahub/relay/internal/domain/port"
 	"github.com/datahub/relay/internal/domain/quota"
@@ -18,16 +19,38 @@ type bookTask struct {
 	decision *model.BillingDecision // 上游确定结论；PENDING 场景为 nil（台账留待复查/对账结算）
 	sources  []model.SourceCall     // 逐源寻源轨迹（含 skipped）；无上游调用的路径为空
 	rec      *model.AuditRecord     // 恒非 nil：每次请求都写审计
+	// 主体年度计费的输入：查的哪家企业 + 该客户的三档合同价（免费期扣减后要按剩下的
+	// 类目重算金额）。参数校验失败的路径两者皆空。
+	creditCode string
+	rates      model.FeeRates
 }
 
 // settleInput 组装结算输入。busiCode 取审计记录里的最终下游业务码——它在响应
 // 映射完成后才确定，正好由本任务（响应写回后执行）带上。
 func (t bookTask) settleInput() quota.SettleInput {
-	in := quota.SettleInput{Decision: t.decision, Sources: t.sources}
+	in := quota.SettleInput{Decision: t.decision, Sources: t.sources, CreditCode: t.creditCode}
 	if t.rec != nil {
 		in.BusiCode = t.rec.BusiCode
 	}
 	return in
+}
+
+// applyChargeToAudit 把主体计费结论回填进审计记录。必须在 AppendAudit 之前调用。
+//
+// Billed 的语义在此改变：它不再等于「是否查得数据」(FoundData，那是 busiCode 10)，
+// 而是「本次是否真的收了钱」。于是 FoundData=true 且 Billed=false 就是一次免费期
+// 命中——这正是「计费与查得统计彻底分开」的落地形态。
+func (t bookTask) applyChargeToAudit() {
+	if t.rec == nil || t.decision == nil {
+		return
+	}
+	d := t.decision
+	t.rec.FeeStandard = string(d.Standard)
+	t.rec.AmountFen = d.AmountFen
+	t.rec.ChargedScope = d.Charged.String()
+	t.rec.CoveredScope = d.Covered.String()
+	t.rec.ChargeState = d.ChargeState
+	t.rec.Billed = d.ChargeState == model.ChargeCharged
 }
 
 // callRecords 把轨迹转成逐源明细行。关联键与台账同构 (appKey, version, reqid)，
@@ -72,6 +95,12 @@ type Bookkeeper struct {
 	calls port.UpstreamCallRepository // 逐源明细；nil 时跳过（未装配/测试）
 	log   *slog.Logger
 
+	// 主体年度计费；subjects 或 billing 为 nil 时整个判定跳过，decision 保持
+	// Decide 给出的按次计费毛口径（未装配时的退化行为，见 WithSubjectBilling）。
+	subjects   port.SubjectBillingRepository
+	billing    *billing.Service
+	freeWindow string // Postgres interval 字面量；空则用 model.DefaultFreeWindow
+
 	mu     sync.RWMutex // 保护 closed 与 tasks 的发送/关闭竞态
 	closed bool
 	tasks  chan bookTask
@@ -110,6 +139,16 @@ func (b *Bookkeeper) WithUpstreamCalls(r port.UpstreamCallRepository) *Bookkeepe
 	return b
 }
 
+// WithSubjectBilling 挂接主体年度计费：免费期仓储 + 计费服务 + 免费期长度
+// （Postgres interval 字面量，如 "1 year"）。
+//
+// **不挂接即退化为按次计费**——每次查得都按实得维度足额收费，免费期形同不存在。
+// 生产装配必须调用本方法，否则会重复向客户收费。
+func (b *Bookkeeper) WithSubjectBilling(r port.SubjectBillingRepository, bill *billing.Service, window string) *Bookkeeper {
+	b.subjects, b.billing, b.freeWindow = r, bill, window
+	return b
+}
+
 // Submit 入队一个记账任务；队列满或已关闭时同步执行（背压降级，不丢任务）。
 func (b *Bookkeeper) Submit(t bookTask) {
 	b.mu.RLock()
@@ -145,6 +184,10 @@ func (b *Bookkeeper) process(t bookTask) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// 主体年度计费必须最先执行：它会重算 decision 的收费标准与应收金额，而下面的
+	// Settle（写台账 + 计费计数器）与 AppendAudit 都要落这两个值。
+	b.chargeSubject(ctx, t)
+
 	if b.quota != nil && t.token != nil && t.decision != nil {
 		if err := b.quota.Settle(ctx, t.token, t.settleInput()); err != nil {
 			b.log.Error("async settle failed", "reqid", t.token.Reqid, "err", err)
@@ -163,5 +206,68 @@ func (b *Bookkeeper) process(t bookTask) {
 		if err := b.audit.AppendAudit(ctx, t.rec); err != nil {
 			b.log.Error("async audit append failed", "requestId", t.rec.RequestID, "err", err)
 		}
+	}
+}
+
+// chargeSubject 执行主体年度计费判定，并把结论回填进 decision 与审计记录。
+//
+// 判定只看**实得类目**：查无(999)、部分源异常无实得(002)、全源失败一律不动窗口，
+// 也不产生应收。复查路径（Requery）不携带维度信息，同样落在这条分支上。
+func (b *Bookkeeper) chargeSubject(ctx context.Context, t bookTask) {
+	if b.subjects == nil || b.billing == nil || t.decision == nil || t.token == nil {
+		return // 未装配主体计费：保持 Decide 的按次计费毛口径
+	}
+	d := t.decision
+	if t.creditCode == "" || d.Result == nil || d.Result.Got.Empty() {
+		b.billing.ApplyCoverage(d, nil, t.rates) // 无实得类目 → NOCHARGE，不改金额
+		t.applyChargeToAudit()
+		return
+	}
+
+	res, err := b.subjects.ApplyCoverage(ctx, model.CoverageRequest{
+		LicenseID:  t.token.LicenseID,
+		Route:      t.token.Route,
+		CreditCode: t.creditCode,
+		Got:        d.Result.Got,
+		Reqid:      t.token.Reqid,
+		RequestID:  t.rec.RequestID,
+		Window:     b.freeWindow,
+	})
+	if err != nil {
+		// fail-closed：宁可暂时少收，绝不因一次 DB 抖动给客户重复收费。台账带着
+		// credit_code + reqid 落 DEFERRED，由对账任务重放那条幂等的原子 SQL 补记。
+		billing.MarkCoverageDeferred(d)
+		t.applyChargeToAudit()
+		b.log.Error("主体计费判定失败，本次按 0 收并标 DEFERRED 待对账补记",
+			"reqid", t.token.Reqid, "requestId", t.rec.RequestID, "err", err)
+		return
+	}
+
+	b.billing.ApplyCoverage(d, res, t.rates)
+	t.applyChargeToAudit()
+	if d.Charged.Empty() {
+		return // 全部类目命中免费期：不写计费流水
+	}
+
+	// 计费流水与免费期状态解耦：它的每一列都能从台账恢复，故落库失败只记日志、
+	// 不回滚已推进的窗口（回滚反而会导致下一次请求重复计费）。
+	if err := b.subjects.RecordCharge(ctx, &model.SubjectCharge{
+		LicenseID:       t.token.LicenseID,
+		AppKey:          t.rec.AppKey,
+		Route:           t.token.Route,
+		CreditCode:      t.creditCode,
+		Reqid:           t.token.Reqid,
+		RequestID:       t.rec.RequestID,
+		LedgerID:        t.token.LedgerID,
+		Charged:         d.Charged,
+		Covered:         d.Covered,
+		FeeStandard:     d.Standard,
+		AmountFen:       d.AmountFen,
+		UpstreamCostFen: d.CostFen,
+		Kind:            res.Kind(),
+		WindowTo:        res.WindowTo(),
+	}); err != nil {
+		b.log.Error("计费流水落库失败（免费期已推进，台账仍可对账）",
+			"reqid", t.token.Reqid, "requestId", t.rec.RequestID, "err", err)
 	}
 }

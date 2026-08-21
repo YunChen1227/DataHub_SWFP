@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/datahub/relay/internal/application"
 	"github.com/datahub/relay/internal/common/appctx"
@@ -46,6 +47,7 @@ func (s *Server) Routes() http.Handler {
 		suffix := strings.ToUpper(v) // x1->X1, v9->V9, v8->V8
 		mux.HandleFunc("POST /v1/openapi/zlx/querySrmx"+suffix, s.handleQuery(st))
 		mux.HandleFunc("GET /v1/openapi/zlx/quota"+suffix, s.handleQuota(st))
+		mux.HandleFunc("GET /v1/openapi/zlx/coverage"+suffix, s.handleCoverage(st))
 	}
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -96,6 +98,24 @@ type quotaResponse struct {
 	Status      string `json:"status,omitempty"`
 	ServiceUsed int64  `json:"serviceUsed"` // 成功查得数据次数（累计）
 	TotalCalls  int64  `json:"totalCalls"`  // 调用上游次数（累计）
+	// Billing 是计费口径统计（主体年度计费）。它与上面两个**调用口径**的数
+	// 互不换算：免费期内的查询照常累加 serviceUsed/totalCalls 却不产生计费，
+	// 所以 chargedTotal 既不等于 totalCalls 也不等于 serviceUsed。
+	Billing billingCounters `json:"billing"`
+}
+
+// billingCounters 是对客可见的三个计费类目 + 累计应收。客户只看见「发票计费 /
+// 税务计费 / 税务发票计费」三档——我们最终从哪个上游取到数据、调了几个源、各自
+// 花了多少成本，都由我们自己承担，不向客户展示、也只向客户计一次费。
+//
+// 单独定义而不复用 model.BillingCounters：这是对外的接口契约，不能因为领域类型
+// 将来新增内部字段（如 freeHits 这类成本指标）而意外泄露给客户。
+type billingCounters struct {
+	ChargedInvoice int64 `json:"chargedInvoice"` // 发票计费笔数
+	ChargedTax     int64 `json:"chargedTax"`     // 税务计费笔数
+	ChargedBoth    int64 `json:"chargedBoth"`    // 税务发票计费笔数
+	ChargedTotal   int64 `json:"chargedTotal"`   // 三者之和
+	AmountFen      int64 `json:"amountFen"`      // 累计应收（分）
 }
 
 // handleQuota serves GET /v1/openapi/zlx/quota{X1,V9,V8} (本服务扩展). 鉴权同主接口
@@ -118,6 +138,69 @@ func (s *Server) handleQuota(st *VersionStack) http.HandlerFunc {
 			Status:      view.Status,
 			ServiceUsed: view.Used,
 			TotalCalls:  view.Calls,
+			Billing: billingCounters{
+				ChargedInvoice: view.Billing.ChargedInvoice,
+				ChargedTax:     view.Billing.ChargedTax,
+				ChargedBoth:    view.Billing.ChargedBoth,
+				ChargedTotal:   view.Billing.ChargedTotal,
+				AmountFen:      view.Billing.AmountFen,
+			},
+		})
+	}
+}
+
+// coverageResponse 是主体免费期自查响应。客户凭它自证「这次为什么没扣费」：
+// 某家企业的发票/税务分别是否在免费期内、免到哪天。
+type coverageResponse struct {
+	ErrorCode  string            `json:"errorCode"`
+	ErrorMsg   string            `json:"errorMsg"`
+	CreditCode string            `json:"creditCode,omitempty"`
+	Invoice    *categoryCoverage `json:"invoice,omitempty"`
+	Tax        *categoryCoverage `json:"tax,omitempty"`
+}
+
+// categoryCoverage 是单个计费类目的免费期。chargeCount 是该主体该类目历史计费轮数
+// （每满一年续期一次即 +1），客户可用它核对跨年账单。
+type categoryCoverage struct {
+	Covered     bool   `json:"covered"`
+	ChargedAt   string `json:"chargedAt,omitempty"`
+	ExpiresAt   string `json:"expiresAt,omitempty"`
+	ChargeCount int    `json:"chargeCount"`
+}
+
+func toCategoryCoverage(c model.CategoryCoverage) *categoryCoverage {
+	out := &categoryCoverage{Covered: c.Covered, ChargeCount: c.ChargeCount}
+	if !c.ChargedAt.IsZero() {
+		out.ChargedAt = c.ChargedAt.Format(time.RFC3339)
+		out.ExpiresAt = c.ExpiresAt.Format(time.RFC3339)
+	}
+	return out
+}
+
+// handleCoverage serves GET /v1/openapi/zlx/coverage{SUFFIX} (本服务扩展)。鉴权同
+// 主接口，creditCode 从信封 body 读取（与查询接口同一个归一化口径）。
+func (s *Server) handleCoverage(st *VersionStack) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		var env envelope
+		_ = json.Unmarshal(raw, &env)
+		var cmd model.QueryCommand
+		if len(env.Body) > 0 {
+			_ = json.Unmarshal(env.Body, &cmd)
+		}
+
+		cov, err := st.Orch.CoverageQuery(r.Context(), signedFrom(&env), cmd.CreditCode)
+		if err != nil {
+			ae := errs.AsAppError(err)
+			writeJSON(w, coverageResponse{ErrorCode: errs.ErrorCode(ae.Busi), ErrorMsg: ae.Msg})
+			return
+		}
+		writeJSON(w, coverageResponse{
+			ErrorCode:  errs.ErrorCodeOK,
+			ErrorMsg:   "success",
+			CreditCode: cov.CreditCode,
+			Invoice:    toCategoryCoverage(cov.Invoice),
+			Tax:        toCategoryCoverage(cov.Tax),
 		})
 	}
 }

@@ -7,6 +7,7 @@
 # 仅 SWFP 路由：
 #   POST /v1/openapi/zlx/querySrmxSWFP
 #   GET  /v1/openapi/zlx/quotaSWFP
+#   GET  /v1/openapi/zlx/coverageSWFP   主体免费期自查（客户凭它自证本次为何未扣费）
 
 addr: ":8080"
 
@@ -18,9 +19,21 @@ upstream:
 
 billing:
   requeryInterval: "10s"
-  # rates：三档收费标准的全局缺省单价（单位分）。收费标准按【实际查得的维度】判定：
-  # 两项皆得走 bothFen、仅发票走 invoiceFen、仅税务走 taxFen、皆无不计费。
+  # freeWindow：主体年度计费的免费期长度（见 docs/设计_主体年度计费.md）。
+  # 同一客户 + 同一社会信用代码 + 同一类目（发票/税务），首次查得计费一次，
+  # 此后本窗口内无论查多少次都不再计费；到期后下一次查得重新计费并开新窗口。
+  #
+  # 取值必须是 Postgres 日历 interval 字面量，按【周年制】：2026-12-28 首次计费
+  # 则免到 2027-12-28。不要写成固定小时数（如 "8760 hours"）——闰年会差一天，
+  # 客户会在 2 月 29 日附近发现被提前收费。
+  freeWindow: "1 year"
+  # rates：三档收费标准的全局缺省单价（单位分）。收费标准按【本次真正产生应收的
+  # 类目】判定 = 实际查得的维度 − 还在免费期内的维度：两项皆收走 bothFen、
+  # 仅发票走 invoiceFen、仅税务走 taxFen、全部命中免费期则不计费。
   # 客户在 license 上有合同价时优先取合同价，仅缺失的档位由此兜底。
+  #
+  # 注意「先查得发票、后来补到税务」时按 taxFen 单价收，不是 bothFen 与
+  # invoiceFen 的差价——免费期不改变定价档位，只决定哪些类目进入计费。
   rates:
     bothFen: 0
     invoiceFen: 0

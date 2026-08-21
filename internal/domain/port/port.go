@@ -26,6 +26,16 @@ type QuotaRepository interface {
 	TotalCalls(ctx context.Context, licenseID, route string) (calls int64, err error)
 	// IncTotalCalls increments the 调用上游次数 by 1 for (license, route).
 	IncTotalCalls(ctx context.Context, licenseID, route string) error
+
+	// --- 计费口径（与上面的调用口径严格分开，互不换算）---
+	// 免费期内的查询照常累加 ServiceUsed/TotalCalls，但不产生计费，所以
+	// BillingCounters 与 ServiceUsed/TotalCalls 之间没有任何加减关系。
+
+	// BillingCounters reads 该客户的计费统计：三档标准各自的计费笔数 + 累计应收。
+	BillingCounters(ctx context.Context, licenseID, route string) (model.BillingCounters, error)
+	// AddBilling 累加一笔计费：standard 对应档位的笔数 +1、累计应收 += amountFen。
+	// 必须原子，避免并发漏计。standard 为 none 时不应调用。
+	AddBilling(ctx context.Context, licenseID, route string, standard model.FeeStandard, amountFen int64) error
 }
 
 // LedgerRepository is the append-only billing台账 store (DESIGN §11.3).
@@ -47,6 +57,27 @@ type LedgerRepository interface {
 type UpstreamCallRepository interface {
 	AppendUpstreamCalls(ctx context.Context, calls []*model.UpstreamCallRecord) error
 	ListUpstreamCalls(ctx context.Context, f model.UpstreamCallFilter) ([]*model.UpstreamCallRecord, error)
+}
+
+// SubjectBillingRepository 实现「主体年度计费」的免费期状态机 (设计_主体年度计费.md)：
+// 同一客户 + 同一社会信用代码 + 同一类目，首次查得计费一次，此后一年内免费。
+//
+// ApplyCoverage 是唯一的money-critical原子操作，实现方**必须**保证并发下「恰好一次
+// 计费」：两个请求同时命中同一个尚未计费的主体时，只能有一个 verdict 的 Charged 为
+// true。PG 实现依赖单条 INSERT ... ON CONFLICT DO UPDATE 的行级锁，不需要应用层锁。
+//
+// RecordCharge 与它分开是有意的：前者是必须原子的判定，后者是可重建的追加写流水
+// （billing_charge 的每一列都能从 billing_ledger 恢复），失败只记日志不阻塞结算。
+type SubjectBillingRepository interface {
+	// ApplyCoverage 对 req.Got 里的每个类目判定并推进免费期窗口，返回逐类目结论。
+	// Got 为空集时返回空结果且不写库（查无/失败不动窗口）。
+	ApplyCoverage(ctx context.Context, req model.CoverageRequest) (*model.CoverageResult, error)
+	// RecordCharge 追加一条计费事件；按 (licenseID, route, reqid) 幂等。
+	RecordCharge(ctx context.Context, c *model.SubjectCharge) error
+	// SubjectCoverage 读某主体两个类目的免费期状态（对客自查 + 后台）。
+	SubjectCoverage(ctx context.Context, licenseID, route, creditCode string) (*model.SubjectCoverage, error)
+	// CountActiveCoverage 返回该客户当前处于免费期的主体数（去重后的企业家数）。
+	CountActiveCoverage(ctx context.Context, licenseID, route string) (int64, error)
 }
 
 // UpstreamPort talks to a data provider (DESIGN §6). The active provider is

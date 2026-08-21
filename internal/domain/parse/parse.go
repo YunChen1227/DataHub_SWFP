@@ -23,9 +23,9 @@ func ParseCreditCode(cmd *model.QueryCommand) (*model.UpstreamRequest, error) {
 	if cmd == nil {
 		return nil, errs.New(errs.BusiDataRequestErr, "请求体为空")
 	}
-	creditCode := strings.ToUpper(strings.TrimSpace(cmd.CreditCode))
-	if !creditCodeRe.MatchString(creditCode) {
-		return nil, errs.New(errs.BusiDataRequestErr, "creditCode 格式非法")
+	creditCode, err := NormalizeCreditCode(cmd.CreditCode)
+	if err != nil {
+		return nil, err
 	}
 	dataType := strings.ToLower(strings.TrimSpace(cmd.DataType))
 	switch dataType {
@@ -49,6 +49,18 @@ func ParseCreditCode(cmd *model.QueryCommand) (*model.UpstreamRequest, error) {
 		Want:       model.DimSetOf(dataType),
 		Reqid:      NewReqid(),
 	}, nil
+}
+
+// NormalizeCreditCode 归一化并校验统一社会信用代码。它同时是**主体年度计费的计费
+// 键归一化函数**：免费期窗口按 (license, creditCode, category) 判定，同一家企业的
+// 大小写/空格差异必须收敛到同一个键，否则客户会为同一主体被重复计费。查询接口与
+// 免费期自查接口共用本函数，正是为了保证两侧算出同一个键。
+func NormalizeCreditCode(raw string) (string, error) {
+	code := strings.ToUpper(strings.TrimSpace(raw))
+	if !creditCodeRe.MatchString(code) {
+		return "", errs.New(errs.BusiDataRequestErr, "creditCode 格式非法")
+	}
+	return code, nil
 }
 
 var reqidSeq atomic.Uint64

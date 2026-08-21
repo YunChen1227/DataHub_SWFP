@@ -19,6 +19,12 @@ import (
 type quotaRow struct {
 	serviceUsed int64 // 累计成功查得数（busiCode 10）
 	totalCalls  int64 // 累计调用上游次数（CalledUpstream）
+	// 计费口径（主体年度计费）：三档标准各自的计费笔数 + 累计应收。与上面两个
+	// 调用口径的计数互不换算——免费期内的查询累加 serviceUsed 但不碰这些。
+	billInvoice int64
+	billTax     int64
+	billBoth    int64
+	amountFen   int64
 }
 
 // licenseRec is the store-internal aggregate for a普通用户 (DESIGN §7.1/§16.2).
@@ -50,6 +56,11 @@ type Store struct {
 	upstreamCalls    []*model.UpstreamCallRecord // 逐源明细（追加式）
 	upstreamCallKeys map[string]struct{}         // appKey|version|reqid|label 去重
 
+	// 主体年度计费（subject_store.go）：免费期窗口 + 计费事件流水。
+	coverage   map[string]*coverageRec // licenseID|route|creditCode|category
+	charges    []*model.SubjectCharge
+	chargeKeys map[string]struct{} // licenseID|route|reqid 幂等去重
+
 	seq      int64
 	auditSeq int64
 	adminSeq int64
@@ -66,6 +77,9 @@ func New() *Store {
 		admins:        make(map[string]*model.AdminUser),
 
 		upstreamCallKeys: make(map[string]struct{}),
+
+		coverage:   make(map[string]*coverageRec),
+		chargeKeys: make(map[string]struct{}),
 	}
 }
 
@@ -179,6 +193,39 @@ func (s *Store) IncTotalCalls(_ context.Context, licenseID, route string) error 
 	return nil
 }
 
+func (s *Store) BillingCounters(_ context.Context, licenseID, route string) (model.BillingCounters, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	q := s.quotas[quotaKey(licenseID, route)]
+	if q == nil {
+		return model.BillingCounters{}, nil
+	}
+	return model.BillingCounters{
+		ChargedInvoice: q.billInvoice,
+		ChargedTax:     q.billTax,
+		ChargedBoth:    q.billBoth,
+		AmountFen:      q.amountFen,
+	}, nil
+}
+
+func (s *Store) AddBilling(_ context.Context, licenseID, route string, standard model.FeeStandard, amountFen int64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	q := s.quotaRowLocked(licenseID, route)
+	switch standard {
+	case model.FeeBoth:
+		q.billBoth++
+	case model.FeeInvoice:
+		q.billInvoice++
+	case model.FeeTax:
+		q.billTax++
+	default:
+		return nil // none：不计费，不累加也不累计金额
+	}
+	q.amountFen += amountFen
+	return nil
+}
+
 // --- port.LedgerRepository ---
 
 func ledgerKey(appKey, version, reqid string) string { return appKey + "|" + version + "|" + reqid }
@@ -237,6 +284,19 @@ func (s *Store) Settle(_ context.Context, id int64, st model.LedgerSettlement) e
 	}
 	if st.UpstreamLogID != "" {
 		l.UpstreamLogID = st.UpstreamLogID
+	}
+	// 主体年度计费的四列，同样空值不覆盖。
+	if st.CreditCode != "" {
+		l.CreditCode = st.CreditCode
+	}
+	if st.ChargedScope != "" {
+		l.ChargedScope = st.ChargedScope
+	}
+	if st.CoveredScope != "" {
+		l.CoveredScope = st.CoveredScope
+	}
+	if st.ChargeState != "" {
+		l.ChargeState = st.ChargeState
 	}
 	return nil
 }

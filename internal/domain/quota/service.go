@@ -31,7 +31,10 @@ func New(quota port.QuotaRepository, ledger port.LedgerRepository) *Service {
 }
 
 // ServiceQuotaView powers the /quota route (DESIGN §5.2). 无额度限制，按路由
-// 独立返回累计成功查得数 (used) 与累计调用上游次数 (calls)。
+// 独立返回累计成功查得数 (used) 与累计调用上游次数 (calls)，以及独立的计费口径统计。
+//
+// 两组数据**严格分开**：免费期内的查询照常累加 used/calls 却不产生计费，所以
+// Billing.ChargedTotal 与 Calls 之间没有任何加减关系，不要试图互相推导。
 func (s *Service) ServiceQuotaView(ctx context.Context, lic *model.LicenseView, route string) (*model.ServiceQuotaView, error) {
 	used, err := s.quota.ServiceUsed(ctx, lic.LicenseID, route)
 	if err != nil {
@@ -41,7 +44,12 @@ func (s *Service) ServiceQuotaView(ctx context.Context, lic *model.LicenseView, 
 	if err != nil {
 		return nil, errs.Wrap(errs.BusiDataRequestErr, "查询失败", err)
 	}
-	return &model.ServiceQuotaView{Status: lic.Status, Used: used, Calls: calls}, nil
+	bill, err := s.quota.BillingCounters(ctx, lic.LicenseID, route)
+	if err != nil {
+		return nil, errs.Wrap(errs.BusiDataRequestErr, "查询失败", err)
+	}
+	bill.ChargedTotal = bill.ChargedInvoice + bill.ChargedTax + bill.ChargedBoth
+	return &model.ServiceQuotaView{Status: lic.Status, Used: used, Calls: calls, Billing: bill}, nil
 }
 
 // Begin is the §7.3 step 1: idempotency check + open a PENDING ledger.
@@ -87,6 +95,8 @@ type SettleInput struct {
 	Decision *model.BillingDecision
 	BusiCode int
 	Sources  []model.SourceCall
+	// CreditCode 是本次查询的主体（统一社会信用代码），落台账用于解释计费结论。
+	CreditCode string
 }
 
 // Settle is the §7.3 step 2 terminal settlement based on the确定结论.
@@ -123,6 +133,17 @@ func (s *Service) Settle(ctx context.Context, token *ReserveToken, in SettleInpu
 		SourceTotal:     sum.Total,
 		SourceOK:        sum.OK,
 		SourceErr:       sum.Err,
+		CreditCode:      in.CreditCode,
+		ChargedScope:    d.Charged.String(),
+		CoveredScope:    d.Covered.String(),
+		ChargeState:     d.ChargeState,
+	}
+	// 计费口径的计数器与「成功查得数」完全解耦：只有本次真的产生应收才累加。
+	// 免费期内的查询走的是下面的 IncServiceUsed，不碰这里。
+	if d.ChargeState == model.ChargeCharged && d.Standard != model.FeeNone {
+		if err := s.quota.AddBilling(ctx, token.LicenseID, token.Route, d.Standard, d.AmountFen); err != nil {
+			return errs.Wrap(errs.BusiDataRequestErr, "计费计数累计失败", err)
+		}
 	}
 	// 逐源轨迹缺失时（单源直通/复查路径）退回用结论里的上游标识，保证三列不空。
 	if len(in.Sources) == 0 && d.Result != nil {

@@ -142,6 +142,15 @@ type BillingDecision struct {
 	Standard  FeeStandard
 	AmountFen int64
 	CostFen   int64
+
+	// 主体年度计费（billing.Service.ApplyCoverage 填充，见 subject.go）：Decide 先按
+	// 实得维度给出毛口径的 Standard/AmountFen，随后 ApplyCoverage 把其中「还在免费期」
+	// 的类目扣掉并重算金额。Charged 是真正产生应收的类目，Covered 是查得了但免费的
+	// 类目，两者之并恒等于 Result.Got。未装配主体计费仓储时三者保持零值，
+	// Standard/AmountFen 即退化为按次计费。
+	Charged     DimSet
+	Covered     DimSet
+	ChargeState ChargeState
 }
 
 // Ledger is the append-only billing record (DESIGN §11.3). Version 标记产生该
@@ -167,6 +176,14 @@ type Ledger struct {
 	SourceTotal     int
 	SourceOK        int
 	SourceErr       int
+
+	// 主体年度计费：本次查的是哪家企业、为哪些类目收了钱、哪些类目命中免费期，
+	// 以及计费标识。有了这四列，台账的每一行都能自解释「本次为什么收/没收钱」，
+	// 不必回头 join 免费期表。
+	CreditCode   string
+	ChargedScope string // invoice+tax / invoice / tax / none
+	CoveredScope string
+	ChargeState  ChargeState
 }
 
 // LedgerSettlement 是一次结算要回填进台账的全部字段。它替代了原来
@@ -185,6 +202,13 @@ type LedgerSettlement struct {
 	SourceTotal     int
 	SourceOK        int
 	SourceErr       int
+
+	// 主体年度计费的四列。与上游标识同理走「空值不覆盖」：复查/对账路径不带这些
+	// 信息，不能把首次结算写下的值抹掉。
+	CreditCode   string
+	ChargedScope string
+	CoveredScope string
+	ChargeState  ChargeState
 }
 
 // ServiceQuotaView is the client-facing snapshot (DESIGN §5.2). 无额度限制，
@@ -193,6 +217,9 @@ type ServiceQuotaView struct {
 	Status string
 	Used   int64 // 成功查得数据次数（累计，busiCode 10）
 	Calls  int64 // 调用上游次数（累计，CalledUpstream）
+	// Billing 是计费口径统计，与上面两个调用口径的数**互不换算**：免费期内的查询
+	// 照常累加 Used/Calls 但不计费，所以 ChargedTotal 不等于 Calls 也不等于 Used。
+	Billing BillingCounters
 }
 
 // QueryResponse is the unified client response envelope

@@ -173,14 +173,17 @@ func (s *Store) AppendAudit(ctx context.Context, rec *model.AuditRecord) error {
 		(request_id, version, app_key, trade_no, reqid, client_ip, called_upstream, found_data,
 		 busi_code, busi_msg, upstream_code, upstream_uid, upstream_logid, billed,
 		 latency_ms, name_mask, id_card_mask, mobile_mask, err_msg,
-		 req_scope, data_scope, fee_standard, amount_fen, upstream_cost_fen)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+		 req_scope, data_scope, fee_standard, amount_fen, upstream_cost_fen,
+		 credit_code, charged_scope, covered_scope, charge_state)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,
+		        $25,$26,$27,$28)
 		RETURNING id, created_at`
 	return s.pool.QueryRow(ctx, q,
 		rec.RequestID, rec.Version, rec.AppKey, rec.TradeNo, rec.Reqid, rec.ClientIP, rec.CalledUpstream, rec.FoundData,
 		rec.BusiCode, rec.BusiMsg, rec.UpstreamCode, rec.UpstreamUID, rec.UpstreamLogID, rec.Billed,
 		rec.LatencyMs, rec.NameMask, rec.IDCardMask, rec.MobileMask, rec.ErrMsg,
 		rec.ReqScope, rec.DataScope, rec.FeeStandard, rec.AmountFen, rec.UpstreamCostFen,
+		rec.CreditCode, rec.ChargedScope, rec.CoveredScope, string(rec.ChargeState),
 	).Scan(&rec.ID, &rec.CreatedAt)
 }
 
@@ -192,7 +195,9 @@ func (s *Store) ListAudits(ctx context.Context, f model.AuditFilter) ([]*model.A
 		COALESCE(name_mask,''), COALESCE(id_card_mask,''), COALESCE(mobile_mask,''),
 		COALESCE(err_msg,''), created_at,
 		COALESCE(req_scope,''), COALESCE(data_scope,''), COALESCE(fee_standard,''),
-		COALESCE(amount_fen,0), COALESCE(upstream_cost_fen,0)
+		COALESCE(amount_fen,0), COALESCE(upstream_cost_fen,0),
+		COALESCE(credit_code,''), COALESCE(charged_scope,''), COALESCE(covered_scope,''),
+		COALESCE(charge_state,'')
 		FROM audit_log WHERE 1=1`
 	args := []any{}
 	n := 0
@@ -235,13 +240,16 @@ func (s *Store) ListAudits(ctx context.Context, f model.AuditFilter) ([]*model.A
 	var out []*model.AuditRecord
 	for rows.Next() {
 		var r model.AuditRecord
+		var chargeState string
 		if err := rows.Scan(&r.ID, &r.RequestID, &r.Version, &r.AppKey, &r.TradeNo, &r.Reqid,
 			&r.ClientIP, &r.CalledUpstream, &r.FoundData, &r.BusiCode,
 			&r.BusiMsg, &r.UpstreamCode, &r.UpstreamUID, &r.UpstreamLogID, &r.Billed, &r.LatencyMs,
 			&r.NameMask, &r.IDCardMask, &r.MobileMask, &r.ErrMsg, &r.CreatedAt,
-			&r.ReqScope, &r.DataScope, &r.FeeStandard, &r.AmountFen, &r.UpstreamCostFen); err != nil {
+			&r.ReqScope, &r.DataScope, &r.FeeStandard, &r.AmountFen, &r.UpstreamCostFen,
+			&r.CreditCode, &r.ChargedScope, &r.CoveredScope, &chargeState); err != nil {
 			return nil, err
 		}
+		r.ChargeState = model.ChargeState(chargeState)
 		out = append(out, &r)
 	}
 	return out, rows.Err()

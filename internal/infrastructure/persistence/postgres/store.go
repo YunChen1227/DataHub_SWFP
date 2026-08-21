@@ -97,21 +97,26 @@ const ledgerCols = `id, app_key, COALESCE(version,''), COALESCE(trade_no,''), re
 	COALESCE(upstream_code,''), COALESCE(busi_code,0), COALESCE(upstream_uid,''),
 	COALESCE(upstream_logid,''), state, counted_service,
 	COALESCE(fee_standard,''), COALESCE(amount_fen,0), COALESCE(upstream_cost_fen,0),
-	COALESCE(source_total,0), COALESCE(source_ok,0), COALESCE(source_err,0)`
+	COALESCE(source_total,0), COALESCE(source_ok,0), COALESCE(source_err,0),
+	COALESCE(credit_code,''), COALESCE(charged_scope,''), COALESCE(covered_scope,''),
+	COALESCE(charge_state,'')`
 
 func scanLedger(row pgx.Row) (*model.Ledger, error) {
 	var l model.Ledger
-	var state, feeStandard string
+	var state, feeStandard, chargeState string
 	err := row.Scan(&l.ID, &l.AppKey, &l.Version, &l.TradeNo, &l.Reqid, &l.RequestID,
 		&l.UpstreamCode, &l.BusiCode, &l.UpstreamUID, &l.UpstreamLogID,
 		&state, &l.CountedService,
 		&feeStandard, &l.AmountFen, &l.UpstreamCostFen,
-		&l.SourceTotal, &l.SourceOK, &l.SourceErr)
+		&l.SourceTotal, &l.SourceOK, &l.SourceErr,
+		&l.CreditCode, &l.ChargedScope, &l.CoveredScope, &chargeState)
 	if err != nil {
 		return nil, err
 	}
 	l.State = model.BillingState(state)
 	l.FeeStandard = model.FeeStandard(feeStandard)
+	// credit_code 一并读出，让对账任务能凭它重放 DEFERRED 行的免费期判定。
+	l.ChargeState = model.ChargeState(chargeState)
 	return &l, nil
 }
 
@@ -154,12 +159,17 @@ func (s *Store) Settle(ctx context.Context, id int64, st model.LedgerSettlement)
 		    upstream_logid=COALESCE(NULLIF($10,''), upstream_logid),
 		    source_total=CASE WHEN $11>0 THEN $11 ELSE source_total END,
 		    source_ok=CASE WHEN $11>0 THEN $12 ELSE source_ok END,
-		    source_err=CASE WHEN $11>0 THEN $13 ELSE source_err END
+		    source_err=CASE WHEN $11>0 THEN $13 ELSE source_err END,
+		    credit_code=COALESCE(NULLIF($14,''), credit_code),
+		    charged_scope=COALESCE(NULLIF($15,''), charged_scope),
+		    covered_scope=COALESCE(NULLIF($16,''), covered_scope),
+		    charge_state=COALESCE(NULLIF($17,''), charge_state)
 		WHERE id=$1`
 	_, err := s.pool.Exec(ctx, q, id, string(st.State), st.CountedService,
 		string(st.FeeStandard), st.AmountFen, st.UpstreamCostFen,
 		st.BusiCode, st.UpstreamCode, st.UpstreamUID, st.UpstreamLogID,
-		st.SourceTotal, st.SourceOK, st.SourceErr)
+		st.SourceTotal, st.SourceOK, st.SourceErr,
+		st.CreditCode, st.ChargedScope, st.CoveredScope, string(st.ChargeState))
 	return err
 }
 
@@ -227,4 +237,64 @@ func (s *Store) TotalCallsCount(ctx context.Context, licenseID, route string) (i
 // AddTotalCalls write-throughs a 调用次数 delta for (license, route).
 func (s *Store) AddTotalCalls(ctx context.Context, licenseID, route string, delta int64) error {
 	return s.addCount(ctx, licenseID, route, "CALL", delta)
+}
+
+// 计费口径的四个 dim（主体年度计费）。quota 表本就是 (license_id, route, dim) 三元
+// 主键 + 通用 UPSERT，加维度**不需要任何 DDL**——这也是把计费统计放进 quota 而不是
+// 另建计数表的原因。
+const (
+	dimBillInvoice = "BILL_INVOICE" // 按 invoice 档计费的笔数
+	dimBillTax     = "BILL_TAX"     // 按 tax 档计费的笔数
+	dimBillBoth    = "BILL_BOTH"    // 按 both 档计费的笔数
+	dimAmountFen   = "AMOUNT_FEN"   // 累计应收（分）
+)
+
+// billingDim 把收费标准映射到计数维度；none 无对应维度（不计费）。
+func billingDim(standard model.FeeStandard) (string, bool) {
+	switch standard {
+	case model.FeeBoth:
+		return dimBillBoth, true
+	case model.FeeInvoice:
+		return dimBillInvoice, true
+	case model.FeeTax:
+		return dimBillTax, true
+	default:
+		return "", false
+	}
+}
+
+// BillingCountersOf reads 该客户的计费统计（durable 镜像，供 Redis 冷启动 seed 与后台读取）。
+func (s *Store) BillingCountersOf(ctx context.Context, licenseID, route string) (model.BillingCounters, error) {
+	var out model.BillingCounters
+	for _, p := range []struct {
+		dim string
+		dst *int64
+	}{
+		{dimBillInvoice, &out.ChargedInvoice},
+		{dimBillTax, &out.ChargedTax},
+		{dimBillBoth, &out.ChargedBoth},
+		{dimAmountFen, &out.AmountFen},
+	} {
+		n, err := s.countOf(ctx, licenseID, route, p.dim)
+		if err != nil {
+			return model.BillingCounters{}, err
+		}
+		*p.dst = n
+	}
+	return out, nil
+}
+
+// AddBillingCount write-throughs 一笔计费：档位笔数 +1、累计应收 += amountFen。
+func (s *Store) AddBillingCount(ctx context.Context, licenseID, route string, standard model.FeeStandard, amountFen int64) error {
+	dim, ok := billingDim(standard)
+	if !ok {
+		return nil
+	}
+	if err := s.addCount(ctx, licenseID, route, dim, 1); err != nil {
+		return err
+	}
+	if amountFen == 0 {
+		return nil
+	}
+	return s.addCount(ctx, licenseID, route, dimAmountFen, amountFen)
 }

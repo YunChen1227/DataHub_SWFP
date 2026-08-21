@@ -41,7 +41,9 @@ type domainStorage struct {
 	userRepo    port.UserAdminRepository
 	// upstreamCallRepo 落逐源明细 (upstream_call)：上游成本对账的原子记录。
 	upstreamCallRepo port.UpstreamCallRepository
-	secrets          port.SecretProvider
+	// subjectRepo 是主体年度计费的免费期状态机 (billing_coverage/billing_charge)。
+	subjectRepo port.SubjectBillingRepository
+	secrets     port.SecretProvider
 	// auth 是本域共享的鉴权服务（license+secret 进程内缓存）。按域而非按路由建：
 	// v8/v9 共用 v8v9 域的同一实例，后台在任一路由改 license 都能命中同一份缓存
 	// 失效（admin.WithLicenseChangeHook → auth.Invalidate）。
@@ -256,7 +258,8 @@ func buildDomainStorage(ctx context.Context, cfg config, domain string, logger *
 		}
 		ds := &domainStorage{
 			licenseRepo: pg, ledgerRepo: pg, quotaRepo: rq, auditRepo: pg,
-			adminRepo: pg, userRepo: pg, upstreamCallRepo: pg, secrets: secret.NewStore(pg),
+			adminRepo: pg, userRepo: pg, upstreamCallRepo: pg, subjectRepo: pg,
+			secrets: secret.NewStore(pg),
 			cleanup: func() { rq.Close(); pg.Close() },
 		}
 		ds.auth = auth.New(ds.licenseRepo, ds.secrets, auth.Md5Verifier{})
@@ -266,7 +269,8 @@ func buildDomainStorage(ctx context.Context, cfg config, domain string, logger *
 		seedDemo(store, domain, cfg.demoAppSecret)
 		ds := &domainStorage{
 			licenseRepo: store, ledgerRepo: store, quotaRepo: store, auditRepo: store,
-			adminRepo: store, userRepo: store, upstreamCallRepo: store, secrets: secret.NewStore(store),
+			adminRepo: store, userRepo: store, upstreamCallRepo: store, subjectRepo: store,
+			secrets: secret.NewStore(store),
 			cleanup: func() {},
 		}
 		ds.auth = auth.New(ds.licenseRepo, ds.secrets, auth.Md5Verifier{})
@@ -295,10 +299,14 @@ func buildRouteStack(cfg config, route string, ds *domainStorage, httpClient *ht
 		WithUpstreamCalls(ds.upstreamCallRepo)     // 审计按源下钻（上游成本对账）
 	// 异步记账：结算 + 审计移出响应关键路径（每请求省 3-5 次串行 DB 写）；
 	// 队列满降级同步，优雅停机时 drain（见 main 的 shutdown 顺序）。
+	// 主体年度计费挂在记账器上：判定要在结算/审计之前重算收费标准与金额。
+	// 不挂接即退化为按次计费（每次查得都足额收费），故这里不做条件装配。
 	books := application.NewBookkeeper(quotaSvc, ds.auditRepo, 0, 0, log).
-		WithUpstreamCalls(ds.upstreamCallRepo)
+		WithUpstreamCalls(ds.upstreamCallRepo).
+		WithSubjectBilling(ds.subjectRepo, billSvc, cfg.freeWindow)
 	orch := application.NewQueryOrchestrator(route, authSvc, quotaSvc, billSvc, upClient, ds.auditRepo, log).
-		WithBookkeeper(books)
+		WithBookkeeper(books).
+		WithSubjectBilling(ds.subjectRepo) // 只读：客户自查免费期
 	// 网关校验口径必须与该路由上游的真实要求一致（必填字段前置拦截，不透传给
 	// 上游报错）。默认 parse.Parse (mobile必/idCard必/name选) 仅适用于与经济能力
 	// 同口径的上游 (gama/income)。聚合路由所有子源 kind 一致 (loadConfig 已校验)，

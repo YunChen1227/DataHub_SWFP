@@ -34,21 +34,25 @@ type UserDetail struct {
 // append-only and keyed by requestId for cross-referencing the billing ledger
 // and the [requestId]-prefixed logs (§9).
 type AuditRecord struct {
-	ID             int64     `json:"id"`
-	RequestID      string    `json:"requestId"`
-	Version        string    `json:"version"` // 路由名 (x1/v9/v8/zlf/blk)，区分共享 license 的 v8/v9
-	AppKey         string    `json:"appKey"`
-	TradeNo        string    `json:"tradeNo"`
-	Reqid          string    `json:"reqid"`
-	ClientIP       string    `json:"clientIp"`
-	CalledUpstream bool      `json:"calledUpstream"` // 是否成功调用上游
-	FoundData      bool      `json:"foundData"`      // 是否查得数据 (busiCode 10)
-	BusiCode       int       `json:"busiCode"`
-	BusiMsg        string    `json:"busiMsg"`
-	UpstreamCode   string    `json:"upstreamCode"`
-	UpstreamUID    string    `json:"upstreamUid"`
-	UpstreamLogID  string    `json:"upstreamLogId"`
-	Billed         bool      `json:"billed"` // 是否查得数据（计入成功查得数）
+	ID             int64  `json:"id"`
+	RequestID      string `json:"requestId"`
+	Version        string `json:"version"` // 路由名 (x1/v9/v8/zlf/blk)，区分共享 license 的 v8/v9
+	AppKey         string `json:"appKey"`
+	TradeNo        string `json:"tradeNo"`
+	Reqid          string `json:"reqid"`
+	ClientIP       string `json:"clientIp"`
+	CalledUpstream bool   `json:"calledUpstream"` // 是否成功调用上游
+	FoundData      bool   `json:"foundData"`      // 是否查得数据 (busiCode 10)
+	BusiCode       int    `json:"busiCode"`
+	BusiMsg        string `json:"busiMsg"`
+	UpstreamCode   string `json:"upstreamCode"`
+	UpstreamUID    string `json:"upstreamUid"`
+	UpstreamLogID  string `json:"upstreamLogId"`
+	// Billed 的语义自「主体年度计费」起改为**本次是否真的收了钱**
+	// (ChargeState == CHARGED)。它原先等于 FoundData（都来自 busiCode 10，完全重复）。
+	// FoundData 保持「是否查得数据」不变，于是同一行里 FoundData=true 且 Billed=false
+	// 就是一次免费期命中——这是「计费与查得统计彻底分开」的落地形态。
+	Billed bool `json:"billed"`
 	// 新寻源/计费口径：请求了哪些维度、实际查得哪些维度、按哪档标准收多少、
 	// 上游花了多少（逐源明细在 upstream_call，按 requestId 下钻）。
 	ReqScope        string `json:"reqScope"`    // invoice+tax / invoice / tax
@@ -56,12 +60,17 @@ type AuditRecord struct {
 	FeeStandard     string `json:"feeStandard"` // both/invoice/tax/none
 	AmountFen       int64  `json:"amountFen"`
 	UpstreamCostFen int64  `json:"upstreamCostFen"`
-	LatencyMs       int64  `json:"latencyMs"`
-	NameMask       string    `json:"nameMask"`
-	IDCardMask     string    `json:"idCardMask"`
-	MobileMask     string    `json:"mobileMask"`
-	ErrMsg         string    `json:"errMsg"`
-	CreatedAt      time.Time `json:"createdAt"`
+	// 主体年度计费：本次查的企业、为哪些类目收了钱、哪些类目命中免费期、计费标识。
+	CreditCode   string      `json:"creditCode"`
+	ChargedScope string      `json:"chargedScope"`
+	CoveredScope string      `json:"coveredScope"`
+	ChargeState  ChargeState `json:"chargeState"`
+	LatencyMs    int64       `json:"latencyMs"`
+	NameMask     string      `json:"nameMask"`
+	IDCardMask   string      `json:"idCardMask"`
+	MobileMask   string      `json:"mobileMask"`
+	ErrMsg       string      `json:"errMsg"`
+	CreatedAt    time.Time   `json:"createdAt"`
 }
 
 // AuditFilter narrows an audit query (DESIGN §16.3). AppKeys (任一匹配) 支持按
