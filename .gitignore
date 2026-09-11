@@ -4,11 +4,19 @@ relay.exe
 *.exe~
 *.out
 *~
+# Linux 编译产物。必须用 / 锚定仓库根：不带斜杠的 relay 会连 cmd/relay/ 源码目录
+# 一起匹配，以后往那里新加的文件会被静默忽略。
+/relay
+/bin/
+
+# Runtime state（restart.sh 写的 pid 文件）
+/relay.pid
 
 # Runtime logs
 relay.log
 relay.err
 *.log
+/logs/
 
 # Admin SPA build/deps
 web/admin/node_modules/
