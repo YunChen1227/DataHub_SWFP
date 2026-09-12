@@ -312,8 +312,9 @@ func buildRouteStack(cfg config, route string, ds *domainStorage, httpClient *ht
 	// 同口径的上游 (gama/income)。聚合路由所有子源 kind 一致 (loadConfig 已校验)，
 	// 故按路由 kind 选校验器即可。
 	switch routeKind {
-	case upstream.ProviderEntCredit:
-		// swfp 入参对齐上游证通 entcreditapi 的 args.creditCode。
+	case upstream.ProviderEntCredit, upstream.ProviderCTax:
+		// swfp 入参对齐上游的企业标识：证通 entcreditapi 的 args.creditCode 与
+		// 税票数据查询C 的 param.identity 同为统一社会信用代码。
 		orch.WithParser(parse.ParseCreditCode)
 	}
 	requery := job.NewRequeryWorker(ds.ledgerRepo, ds.licenseRepo, upClient, billSvc, quotaSvc, cfg.requeryInterval, log)
@@ -414,6 +415,9 @@ func providesOf(uc upstreamConfig, label string) model.DimSet {
 	case model.DataTypeBoth:
 		return model.AllDims()
 	}
+	if label == "ctax" {
+		return model.AllDims() // 源6 税票数据查询C 是综合源：一次同时给发票与税务
+	}
 	if strings.HasPrefix(label, "tax") {
 		return model.DimSet{Tax: true}
 	}
@@ -431,6 +435,9 @@ func labelFor(uc upstreamConfig, idx int) string {
 	}
 	if uc.kind == upstream.ProviderSalesData {
 		return "sales" // swfp 契约层按此段名映射为源5
+	}
+	if uc.kind == upstream.ProviderCTax {
+		return "ctax" // swfp 契约层按此段名映射为源6
 	}
 	return fmt.Sprintf("%s%d", uc.kind, idx+1)
 }
@@ -455,6 +462,11 @@ func buildClient(version string, uc upstreamConfig, httpClient *http.Client, log
 			AppID:   uc.appID,
 			AppKey:  uc.appSecret,
 		}, httpClient)
+		return client, nil
+	case upstream.ProviderCTax:
+		// swfp 源6 税票数据查询C (惠众征信)：文档只定义裸 JSON 信封，没有任何
+		// 鉴权凭证，故只需 baseURL (不含 /c/tax)。
+		client := upstream.NewCTax(upstream.CTaxConfig{BaseURL: uc.baseURL}, httpClient)
 		return client, nil
 	default:
 		return nil, fmt.Errorf("version %s: unknown upstream kind %q", version, uc.kind)

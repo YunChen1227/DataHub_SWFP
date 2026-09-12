@@ -48,7 +48,21 @@ func salesData() string {
 	"redTaxAmtMonth":0,"nullifiedInvoiceAmtMonth":0,"nullifiedInvoiceCntMonth":0,"nullTaxAmtMonth":0}]}`
 }
 
-// contractPorts 编排五个上游桩的返回值，用于构造不同寻源场景。
+// ctaxData 构造一份源6 (税票数据查询C) 明细：发票段 + 税务段各一，其中利润表/
+// 资产负债表带一层嵌套 data（表8/表10 的项目行），契约层需与父级拍平；
+// yxhpje 是 xlsx 之外的字段，应被白名单剔除。
+func ctaxData() string {
+	return `{"nsrjbxx":{"nsrsbh":"` + testCreditCode + `","nsrmc":"某某公司","hybmdl":"651"},
+	"kphzxx":[{"ssyf":"2026-05","kpqj":"2026-05-31","nsrsbh":"` + testCreditCode + `",
+	  "ljkpcs":"12","kpje":"888.00","ljse":"115.44","yxhpje":"-10.00"}],
+	"lrbxx":[{"nsrsbh":"` + testCreditCode + `","sbrq":"2026-04","sssjq":"2026-01-01","sssjz":"2026-03-31",
+	  "data":[{"xmmc":"营业收入","sqje":"9000.00","bys":"3000.00","bnljje":"10000.00"},
+	          {"xmmc":"营业成本","sqje":"6000.00","bys":"2000.00","bnljje":"7000.00"}]}],
+	"zcfzbxx":[{"nsrsbh":"` + testCreditCode + `","sbrq":"2026-04","cwbblxdm":"101","zlbsxlmc":"资产负债表",
+	  "data":[{"ewbxh":"1","zcxmmc":"货币资金","qmyezc":"5000.00","ncyezc":"4000.00"}]}]}`
+}
+
+// contractPorts 编排各上游桩的返回值，用于构造不同寻源场景。
 type contractPorts struct {
 	invoicePort fakePort // 证通发票聚合（一个逻辑源的两次互补调用共用同一桩）
 	taxPort     fakePort
@@ -261,5 +275,121 @@ func TestSwfpContractPartialFailure(t *testing.T) {
 	}
 	if _, present := out.Tax["zsbxxList"]["源3"]; !present {
 		t.Fatalf("成功源数据缺失")
+	}
+}
+
+// buildCTaxContract 组一个「源6 综合源 + 证通两个逻辑源」的寻源器 + 契约层。
+func buildCTaxContract(t *testing.T, ctaxPort fakePort) *SwfpContract {
+	t.Helper()
+	p := defaultContractPorts()
+	s, err := NewSourcer([]Source{
+		{Name: "ctax", Provider: "ctax", Provides: model.AllDims(), Priority: 1,
+			Calls: []Call{{Label: "ctax", Dims: model.AllDims(), Port: ctaxPort}}},
+		{Name: "ent_invoice", Provider: "entcredit", Provides: model.DimSet{Invoice: true}, Priority: 1,
+			Calls: []Call{
+				{Label: "invoice1", Dims: model.DimSet{Invoice: true}, Port: p.invoicePort},
+				{Label: "invoice2", Dims: model.DimSet{Invoice: true}, Port: p.invoicePort},
+			}},
+		{Name: "ent_tax", Provider: "entcredit", Provides: model.DimSet{Tax: true}, Priority: 1,
+			Calls: []Call{
+				{Label: "tax1", Dims: model.DimSet{Tax: true}, Port: p.taxPort},
+				{Label: "tax2", Dims: model.DimSet{Tax: true}, Port: p.taxPort},
+			}},
+	}, 0)
+	if err != nil {
+		t.Fatalf("NewSourcer: %v", err)
+	}
+	return NewSwfpContract(s)
+}
+
+// TestSwfpContractCTax 源6 (综合源) 一次拿全两维：证通四源全部 skipped，源6 的数据
+// 按段分写进两个契约段，嵌套的利润表/资产负债表项目行与父级拍平成 xlsx 的一维列表。
+func TestSwfpContractCTax(t *testing.T) {
+	ctaxPort := fakePort{res: &model.UpstreamResult{
+		Code: "001", Msg: "成功", Range: ctaxData(), Got: model.AllDims(),
+	}}
+	res, out := queryContract(t, buildCTaxContract(t, ctaxPort), model.ScopeAll)
+	if res.Code != "001" || out.FeeStandard != string(model.FeeBoth) {
+		t.Fatalf("want 001/both, got %s/%q", res.Code, out.FeeStandard)
+	}
+	if out.SourceStatus["源6"] != model.CallOK {
+		t.Fatalf("源6 应为 ok: %v", out.SourceStatus)
+	}
+	for _, s := range []string{"源1", "源2", "源3", "源4"} {
+		if out.SourceStatus[s] != model.CallSkipped {
+			t.Fatalf("综合源命中后 %s 应为 skipped: %v", s, out.SourceStatus)
+		}
+	}
+
+	// 发票段：kphzxx → kphzxxList，xlsx 外字段剔除、缺失字段补空。
+	var kphz []map[string]string
+	if err := json.Unmarshal(out.Invoice["kphzxxList"]["源6"], &kphz); err != nil {
+		t.Fatalf("kphzxxList.源6: %v", err)
+	}
+	if kphz[0]["kpje"] != "888.00" || kphz[0]["hpje"] != "" {
+		t.Fatalf("kphzxxList.源6 映射/补空不符: %v", kphz[0])
+	}
+	if _, leaked := kphz[0]["yxhpje"]; leaked {
+		t.Fatalf("xlsx 外字段 yxhpje 泄漏: %v", kphz[0])
+	}
+
+	// 税务段 lrbxxList：父级(报送期间) × 项目行(表8) 拍平成两条。
+	var lrb []map[string]string
+	if err := json.Unmarshal(out.Tax["lrbxxList"]["源6"], &lrb); err != nil {
+		t.Fatalf("lrbxxList.源6: %v", err)
+	}
+	if len(lrb) != 2 {
+		t.Fatalf("利润表应按项目行拍平成 2 条, got %d: %v", len(lrb), lrb)
+	}
+	if lrb[0]["xmmc"] != "营业收入" || lrb[0]["sssjz"] != "2026-03-31" || lrb[0]["bnljje"] != "10000.00" {
+		t.Fatalf("利润表拍平后应同时含父级与项目行字段: %v", lrb[0])
+	}
+	if _, leaked := lrb[0]["data"]; leaked {
+		t.Fatalf("嵌套 data 节点不应作为契约字段透出: %v", lrb[0])
+	}
+
+	var zcfzb []map[string]string
+	if err := json.Unmarshal(out.Tax["zcfzbxxList"]["源6"], &zcfzb); err != nil {
+		t.Fatalf("zcfzbxxList.源6: %v", err)
+	}
+	if zcfzb[0]["zcxmmc"] != "货币资金" || zcfzb[0]["cwbblxdm"] != "101" || zcfzb[0]["qmyeqy"] != "" {
+		t.Fatalf("资产负债表拍平/补空不符: %v", zcfzb[0])
+	}
+
+	// nsrjbxx 在 xlsx 两个 sheet 同构，本次两维皆得故两段都给。
+	for _, seg := range []map[string]map[string]json.RawMessage{out.Invoice, out.Tax} {
+		if _, ok := seg["nsrjbxx"]["源6"]; !ok {
+			t.Fatalf("两维皆得时 nsrjbxx 应同时出现在两段: %v", seg["nsrjbxx"])
+		}
+	}
+}
+
+// TestSwfpContractCTaxTaxOnlyGap 源6 只拿回税务时：发票维度回落证通发票源，源6 的
+// 基本信息不落进发票段（免得下游看见发票段有数据、却发现该维度另有出处/计费口径）。
+func TestSwfpContractCTaxTaxOnlyGap(t *testing.T) {
+	taxOnly := `{"nsrjbxx":{"nsrsbh":"` + testCreditCode + `","nsrmc":"某某公司"},
+	"sbsj":[{"nsrsbh":"` + testCreditCode + `","sbrq":"2026-04-15","sfzl":"增值税","ynse":"1300.00"}]}`
+	ctaxPort := fakePort{res: &model.UpstreamResult{
+		Code: "001", Msg: "成功", Range: taxOnly, Got: model.DimSet{Tax: true},
+	}}
+	res, out := queryContract(t, buildCTaxContract(t, ctaxPort), model.ScopeAll)
+	if res.Code != "001" || out.FeeStandard != string(model.FeeBoth) {
+		t.Fatalf("补齐后应 001/both, got %s/%q", res.Code, out.FeeStandard)
+	}
+	if out.SourceStatus["源6"] != model.CallOK || out.SourceStatus["源1"] != model.CallOK {
+		t.Fatalf("源6 得税务 + 源1 补发票: %v", out.SourceStatus)
+	}
+	if out.SourceStatus["源3"] != model.CallSkipped {
+		t.Fatalf("税务已由源6 满足，源3 应为 skipped: %v", out.SourceStatus)
+	}
+	var sbsj []map[string]string
+	if err := json.Unmarshal(out.Tax["sbsjList"]["源6"], &sbsj); err != nil {
+		t.Fatalf("sbsjList.源6: %v", err)
+	}
+	if sbsj[0]["sfzl"] != "增值税" || sbsj[0]["sssjq"] != "" {
+		t.Fatalf("sbsjList.源6 映射/补空不符: %v", sbsj[0])
+	}
+	if _, present := out.Invoice["nsrjbxx"]["源6"]; present {
+		t.Fatalf("源6 本次未贡献发票段，其 nsrjbxx 不应落进发票段")
 	}
 }

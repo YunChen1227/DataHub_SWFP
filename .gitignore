@@ -38,3 +38,6 @@ docs/租赁分*
 
 # Accidental local build/copy artifacts
 tmp-*.js
+
+# macOS Finder metadata
+.DS_Store

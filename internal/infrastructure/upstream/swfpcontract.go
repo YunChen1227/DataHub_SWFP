@@ -27,7 +27,7 @@ import (
 //	  "feeStandard":  "invoice"
 //	}
 //
-// 每个 xlsx 顶层字段的值按数据源分组（源1..源5，对下游隐匿真实上游），各源数据
+// 每个 xlsx 顶层字段的值按数据源分组（源1..源6，对下游隐匿真实上游），各源数据
 // 不合并不去重，冲突由下游自行采信。sourceStatus 标记各源本次的状态
 // (ok=查得 / empty=查无 / error=失败 / skipped=未调用——串行寻源命中即停，被更
 // 高优先级源短路掉的源即为 skipped)。
@@ -53,6 +53,7 @@ var swfpSourceAlias = map[string]string{
 	"tax1":     "源3", // 税务数据聚合-part1
 	"tax2":     "源4", // 税务数据聚合-part2
 	"sales":    "源5", // 销项数据（月度汇总，可选源）
+	"ctax":     "源6", // 税票数据查询C（综合源：一次同时给发票+税务）
 }
 
 // SourceAlias 返回段名对下游的脱敏编号；未登记的段名原样返回（兜底不丢数据）。
@@ -138,6 +139,25 @@ var swfpSalesXyhzMap = map[string]string{
 	"fpse":      "nullTaxAmtMonth",
 }
 
+// 源6 (税票数据查询C) 的 data 段名 → xlsx 契约字段名 (docs/【税票数据查询c】接口
+// 文档.docx 表1 逐段核对)。该源与 xlsx 用的是同一套字段命名，段名只差 List 后缀，
+// 故段内字段无需逐个改名，仍按 xlsx 白名单过滤、缺失补空。
+var swfpCTaxInvoiceSections = map[string]string{
+	"kphzxx": "kphzxxList", // 表4  开票汇总信息
+	"spxx":   "spxxList",   // 表6  商品信息
+	"xyhzxx": "xyhzxxList", // 表11 下游汇总信息
+	"khxsdq": "khxsdqList", // 表12 客户销售地区
+	"syhzxx": "syhzxxList", // 表13 上游汇总信息
+}
+
+// 税务段同理；lrbxx/zcfzbxx 在该源里多一层嵌套 data 数组，需与父级拍平，见 ctaxRows。
+var swfpCTaxTaxSections = map[string]string{
+	"sbsj":    "sbsjList",    // 表2  申报数据
+	"zsbxx":   "zsbxxList",   // 表3  征收信息
+	"lrbxx":   "lrbxxList",   // 表7  利润表（父级）+ 表8 项目行（嵌套 data）
+	"zcfzbxx": "zcfzbxxList", // 表9  资产负债表（父级）+ 表10 项目行（嵌套 data）
+}
+
 // salesFieldAliases 收录源5 文档 (销项数据接口文档V1.0.docx) 自相矛盾的字段拼写：
 // 报文示例与字段表对同一字段给了两种写法，上游实际用哪种未经联调确认，两种都认。
 // key = 报文示例的写法（映射表里用的），value = 字段表的写法。
@@ -217,6 +237,8 @@ func mapSwfpRange(rangeJSON, creditCode string, got model.DimSet) (string, error
 			fillEntSection(tax, alias, data, "nsrswxx", swfpTaxLists)
 		case "sales":
 			fillSalesSection(invoice, alias, data, creditCode)
+		case "ctax":
+			fillCTaxSection(invoice, tax, alias, data)
 		default:
 			// 未知段：无契约映射依据，只标状态不透数据（严格白名单）。
 		}
@@ -329,6 +351,92 @@ func fillSalesSection(seg map[string]map[string]any, alias string, data map[stri
 		}
 		seg["xyhzxxList"][alias] = out
 	}
+}
+
+// fillCTaxSection 把源6 (税票数据查询C) 的明细分写进两个契约段：该源是综合源，
+// data 里同时可能带发票段 (表4/6/11/12/13) 与税务段 (表2/3/7/9)。
+//
+// nsrjbxx 只写进本源本次真正贡献了业务段的那个维度里：请求 dataType=invoice 时
+// 不把纳税人基本信息塞进税务段，免得下游看见税务段有数据、却发现 feeStandard 是
+// invoice。两维都没有业务段（只回了基本信息）时两段都给，不丢数据。
+func fillCTaxSection(invoice, tax map[string]map[string]any, alias string, data map[string]any) {
+	invFilled := false
+	for section, listName := range swfpCTaxInvoiceSections {
+		rows := ctaxRows(data[section], swfpInvoiceLists[listName])
+		if rows == nil {
+			continue
+		}
+		invoice[listName][alias] = rows
+		invFilled = invFilled || len(rows) > 0
+	}
+	taxFilled := false
+	for section, listName := range swfpCTaxTaxSections {
+		rows := ctaxRows(data[section], swfpTaxLists[listName])
+		if rows == nil {
+			continue
+		}
+		tax[listName][alias] = rows
+		taxFilled = taxFilled || len(rows) > 0
+	}
+
+	jb, ok := data["nsrjbxx"].(map[string]any)
+	if !ok {
+		return
+	}
+	row := pickFields(jb, swfpNsrjbxxFields)
+	if invFilled || !taxFilled {
+		invoice["nsrjbxx"][alias] = row
+	}
+	if taxFilled || !invFilled {
+		tax["nsrjbxx"][alias] = row
+	}
+}
+
+// ctaxRows 把源6 的一个业务段转成契约条目列表（按 xlsx 白名单过滤、缺失补空）。
+// 利润表/资产负债表 (表7/表9) 的条目内还有一层 data 数组装项目行 (表8/表10)，而
+// xlsx 的 lrbxxList/zcfzbxxList 是**拍平的一维列表**：父级的报送期间等字段 + 项目
+// 行字段同在一条里，故这里按 父级 × 项目行 展开。段缺失返回 nil（不在契约里出键）。
+func ctaxRows(section any, fields []string) []map[string]string {
+	items, ok := section.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]string, 0, len(items))
+	for _, it := range items {
+		parent, ok := it.(map[string]any)
+		if !ok {
+			continue
+		}
+		nested, _ := parent["data"].([]any)
+		if len(nested) == 0 {
+			out = append(out, pickFields(parent, fields))
+			continue
+		}
+		for _, n := range nested {
+			child, ok := n.(map[string]any)
+			if !ok {
+				continue
+			}
+			out = append(out, pickFields(flattenCTaxRow(parent, child), fields))
+		}
+	}
+	return out
+}
+
+// flattenCTaxRow 合并父级与嵌套项目行；父级的 data 节点本身不是契约字段，丢弃。
+// 同名字段以项目行为准（父级只带报送期间/报表类型这类表头字段）。
+func flattenCTaxRow(parent, child map[string]any) map[string]any {
+	merged := make(map[string]any, len(parent)+len(child))
+	for k, v := range parent {
+		if k == "data" {
+			continue
+		}
+		merged[k] = v
+	}
+	for k, v := range child {
+		merged[k] = v
+	}
+	return merged
 }
 
 // pickFields 按白名单抽取字段并全部转为字符串；缺失字段输出空串（Q6 口径）。

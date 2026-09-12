@@ -33,7 +33,7 @@ import (
 //     订单号/请求号与成本——不再像聚合器那样把 N 组标识归并成一对丢掉其余。
 type Sourcer struct {
 	sources  []Source
-	combined []Source // 能一次同时提供发票与税务的源（当前配置下可能为空）
+	combined []Source // 能一次同时提供发票与税务的源（如源6 税票数据查询C）
 	invoice  []Source
 	tax      []Source
 	budget   time.Duration
@@ -219,7 +219,7 @@ func (s *Sourcer) invoke(ctx context.Context, req *model.UpstreamRequest, tr *tr
 				Label:     c.Label,
 				Alias:     SourceAlias(c.Label),
 				Provider:  src.Provider,
-				Dims:      c.Dims,
+				Dims:      effectiveDims(c, res),
 				Status:    sec.Status,
 				Msg:       sec.Error,
 				LatencyMs: time.Since(start).Milliseconds(),
@@ -247,6 +247,25 @@ func (s *Sourcer) invoke(ctx context.Context, req *model.UpstreamRequest, tr *tr
 
 	tr.done[src.Name] = true
 	tr.commit(rows)
+}
+
+// effectiveDims 是这次调用**真正**覆盖的维度。配置里的 Dims 是该源"能提供什么"
+// (provides)，只决定它排在哪些优先级列表里；而计费只看"实际查得了什么"，两者对
+// 综合源并不等价：
+//
+//   - 单维请求（dataType=invoice）打到一个 provides=both 的源时，客户端只会向上游
+//     要那一维（税票数据查询C 的 type 入参），静态 both 会让本次按【发票+税务】
+//     档收费——向客户收没给到的数据的钱。
+//   - 两项请求打到综合源时，上游也可能只回其中一维（只有申报数据、没有开票数据）。
+//
+// 故子源可在 UpstreamResult.Got 里回填实得维度，此处优先采信；与配置 Dims 取交集
+// 是防呆：任何源都不能宣称超出自己 provides 的维度。未回填（既有单维源）时沿用
+// 配置 Dims，行为不变。
+func effectiveDims(c Call, res *model.UpstreamResult) model.DimSet {
+	if res == nil || res.Got.Empty() {
+		return c.Dims
+	}
+	return res.Got.Intersect(c.Dims)
 }
 
 // trace 是一次请求的寻源上下文：已调用源、逐源轨迹、累计实得维度与成本。

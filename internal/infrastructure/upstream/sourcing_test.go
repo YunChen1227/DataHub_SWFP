@@ -287,6 +287,93 @@ func TestSourcerFallbackWhenPrimaryEmpty(t *testing.T) {
 	}
 }
 
+// bothDim 是综合源（源6 税票数据查询C）的能力集：一次调用同时给发票 + 税务。
+var bothDim = model.AllDims()
+
+// combinedPort 是一个综合源桩：按 res.Got 回填「本次实际查得了哪些维度」，
+// 与 CTaxClient 的行为一致。
+func combinedPort(got model.DimSet, hits *int) fakePort {
+	return fakePort{res: &model.UpstreamResult{
+		Code: "001", Msg: "成功", Range: `{"nsrjbxx":{}}`, Got: got,
+	}, hits: hits}
+}
+
+// TestSourcerCombinedSatisfiesBoth 综合源的主路径（skill 要求首次接入必须覆盖）：
+// 两项请求先走综合源列表，它一次拿全两维即停——其余源全部 skipped，成本只算它一家。
+func TestSourcerCombinedSatisfiesBoth(t *testing.T) {
+	var comboHits, invHits, taxHits int
+	s, err := NewSourcer([]Source{
+		src("inv_a", invoiceDim, 1, 300, okPort(&invHits)),
+		src("tax_a", taxDim, 1, 300, okPort(&taxHits)),
+		src("combo", bothDim, 1, 400, combinedPort(model.AllDims(), &comboHits)),
+	}, 0)
+	if err != nil {
+		t.Fatalf("NewSourcer: %v", err)
+	}
+
+	res, callErr := s.Query(context.Background(), &model.UpstreamRequest{Reqid: "r11", Want: model.AllDims()})
+	if callErr != nil {
+		t.Fatalf("Query: %v", callErr)
+	}
+	if comboHits != 1 || invHits != 0 || taxHits != 0 {
+		t.Fatalf("综合源命中后单维源不应被调用: combo=%d inv=%d tax=%d", comboHits, invHits, taxHits)
+	}
+	if !res.Got.Both() || res.CostFen != 400 {
+		t.Fatalf("want 两项皆得/成本 400(仅综合源), got %s/%d", res.Got, res.CostFen)
+	}
+	if r := rowOf(t, res.Sources, "inv_a"); r.Status != model.CallSkipped || r.Reason == "" {
+		t.Fatalf("被综合源短路的源要留 skipped 轨迹与原因: %+v", r)
+	}
+}
+
+// TestSourcerCombinedPartialFillsGap 综合源只拿回一半时：缺的那一维由单维源补齐，
+// 综合源不得被重复调用（重复付费），且它那条轨迹只记真正拿到的维度。
+func TestSourcerCombinedPartialFillsGap(t *testing.T) {
+	var comboHits, invHits, taxHits int
+	s, _ := NewSourcer([]Source{
+		src("inv_a", invoiceDim, 1, 300, okPort(&invHits)),
+		src("tax_a", taxDim, 1, 300, okPort(&taxHits)),
+		src("combo", bothDim, 1, 400, combinedPort(taxDim, &comboHits)),
+	}, 0)
+
+	res, err := s.Query(context.Background(), &model.UpstreamRequest{Reqid: "r12", Want: model.AllDims()})
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	if comboHits != 1 {
+		t.Fatalf("综合源在一次请求内只能调一次(去重键=逻辑源名), got %d", comboHits)
+	}
+	if invHits != 1 || taxHits != 0 {
+		t.Fatalf("只应补齐缺失的发票维度: inv=%d tax=%d", invHits, taxHits)
+	}
+	if !res.Got.Both() {
+		t.Fatalf("补齐后应两项皆得, got %s", res.Got)
+	}
+	if r := rowOf(t, res.Sources, "combo"); r.Dims != taxDim {
+		t.Fatalf("综合源轨迹的维度应为实得维度 tax, got %s", r.Dims)
+	}
+}
+
+// TestSourcerCombinedSingleDimBillsOneDim 单维请求打到综合源时只能按那一维计费：
+// 静态 provides=both 若被当成实得维度，客户会为没给到的税务数据付钱（铁律：计费只看 Got）。
+func TestSourcerCombinedSingleDimBillsOneDim(t *testing.T) {
+	var comboHits int
+	s, _ := NewSourcer([]Source{
+		src("combo", bothDim, 1, 400, combinedPort(invoiceDim, &comboHits)),
+	}, 0)
+
+	res, err := s.Query(context.Background(), &model.UpstreamRequest{Reqid: "r13", Want: invoiceDim})
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	if comboHits != 1 {
+		t.Fatalf("综合源应被调用一次, got %d", comboHits)
+	}
+	if res.Got != invoiceDim || model.StandardOf(res.Got) != model.FeeInvoice {
+		t.Fatalf("单发票请求应按 invoice 档计费, got %s/%s", res.Got, model.StandardOf(res.Got))
+	}
+}
+
 // TestSourcerPriorityBeatsConfigOrder 优先级覆盖配置顺序；同优先级按成本从低到高。
 func TestSourcerPriorityBeatsConfigOrder(t *testing.T) {
 	var cheapHits, expensiveHits int

@@ -138,6 +138,18 @@ versions:
         baseURL: "http://api2.crestv.com:32313/api/ws"
         appId: "REPLACE_WITH_SALESDATA_APP_ID"
         appSecret: "REPLACE_WITH_SALESDATA_APP_KEY"
+      # 源6 税票数据查询C：唯一的【综合源】（provides: both）。两项请求时寻源器先
+      # 试综合源列表，它一次命中即可让证通四源全部 skipped；单维请求按 dataType 只
+      # 向它要那一维（type=1/2），计费仍只按实际查得的维度定档。
+      # 文档没有给出接口域名与鉴权方式，baseURL 需上游提供（只到 host/前缀，
+      # 不含 /c/tax）。
+      - kind: "ctax"
+        label: "ctax"
+        source: "ctax"
+        provides: "both"
+        priority: 1
+        costFen: 0
+        baseURL: "REPLACE_WITH_CTAX_BASE_URL"
     database:
       <<: *pg_base
       name: "datahub_swfp_db"

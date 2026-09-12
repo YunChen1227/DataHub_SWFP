@@ -1,7 +1,7 @@
 ﻿# DataHub_SWFP fixed test-suite entrypoint (Windows / PowerShell).
 #
 # Flow: make result dir test_res/<date> -> build + start mock_entcredit(:9116) +
-# mock_salesdata(:9121) + relay(:8080, live Aliyun PG+Redis or memory) -> wait
+# mock_salesdata(:9121) + mock_ctax(:9126) + relay(:8080, live Aliyun PG+Redis or memory) -> wait
 # /healthz -> run test/cases/*.go in order -> aggregate REPORT.md -> stop services.
 #
 # Usage:
@@ -51,12 +51,15 @@ $anyFail = $false
 try {
     $entcreditExe = Join-Path $resultDir "mock_entcredit.exe"
     $salesdataExe = Join-Path $resultDir "mock_salesdata.exe"
+    $ctaxExe      = Join-Path $resultDir "mock_ctax.exe"
     $relayExe     = Join-Path $resultDir "relay.exe"
     Write-Host "building mocks + relay ..."
     go build -o $entcreditExe ./scripts/mock_entcredit.go
     if ($LASTEXITCODE -ne 0) { throw "go build mock_entcredit failed" }
     go build -o $salesdataExe ./scripts/mock_salesdata.go
     if ($LASTEXITCODE -ne 0) { throw "go build mock_salesdata failed" }
+    go build -o $ctaxExe ./scripts/mock_ctax.go
+    if ($LASTEXITCODE -ne 0) { throw "go build mock_ctax failed" }
     go build -o $relayExe ./cmd/relay
     if ($LASTEXITCODE -ne 0) { throw "go build relay failed" }
 
@@ -76,6 +79,9 @@ try {
 
     $salesdata = Start-Process -FilePath $salesdataExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "mock_salesdata.log") -RedirectStandardError (Join-Path $resultDir "mock_salesdata.err.log")
     [void]$procs.Add($salesdata)
+
+    $ctax = Start-Process -FilePath $ctaxExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "mock_ctax.log") -RedirectStandardError (Join-Path $resultDir "mock_ctax.err.log")
+    [void]$procs.Add($ctax)
 
     $relay = Start-Process -FilePath $relayExe -WorkingDirectory $repo -PassThru -RedirectStandardOutput (Join-Path $resultDir "relay.log") -RedirectStandardError (Join-Path $resultDir "relay.err.log")
     [void]$procs.Add($relay)

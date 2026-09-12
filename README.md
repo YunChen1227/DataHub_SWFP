@@ -1,6 +1,6 @@
 # DataHub_SWFP
 
-SWFP（税务发票聚合）API 转接服务。对外提供统一网关信封（`appKey/sign/encryptionType/body` + MD5 加签），对内按**优先级串行寻源**（命中即停）调用证通 entcredit 与源5 销项数据（salesdata），输出按 `docs/税票分析接口文档.xlsx` 契约整理。
+SWFP（税务发票聚合）API 转接服务。对外提供统一网关信封（`appKey/sign/encryptionType/body` + MD5 加签），对内按**优先级串行寻源**（命中即停）调用证通 entcredit、源5 销项数据（salesdata）与源6 税票数据查询C（ctax，综合源），输出按 `docs/税票分析接口文档.xlsx` 契约整理。
 
 计费按**实际查得的维度**定档（发票+税务 / 单发票 / 单税务 / 查无不计费），并逐源记录上游成本与寻源轨迹用于对账。
 
@@ -29,6 +29,8 @@ go run ./cmd/relay
 go run ./scripts/mock_entcredit.go
 # 终端2: mock salesdata (:9121)
 go run ./scripts/mock_salesdata.go
+# 终端2.5: mock ctax (:9126)
+go run ./scripts/mock_ctax.go
 # 终端3: relay
 $env:CONFIG_FILE = "config.local.mem.yaml"; go run ./cmd/relay
 # 终端4: 测试套件
@@ -71,8 +73,11 @@ docs/               SWFP 上下游文档与契约
 | ent_invoice | invoice1 / invoice2 | entcredit | 发票 | 1 | P0130081 + P0130083（part1/part2 互补） |
 | ent_tax | tax1 / tax2 | entcredit | 税务 | 1 | P0130082 + P0130084（part1/part2 互补） |
 | sales | sales | salesdata | 发票 | 9 | 源5 销项（optional，`scope=basic` 跳过；仅在 ent_invoice 未查得时兜底） |
+| ctax | ctax | ctax | 发票 + 税务 | 1 | 源6 税票数据查询C（**综合源**：一次调用按 `type` 同时给两维；两项请求时先试它） |
 
-寻源顺序按 `priority` 升序，同优先级按配置顺序。请求两项时先走综合源（能同时提供两维度的源，当前配置为空），再按缺项分别遍历发票源与税务源，已调用过的逻辑源不重复调用。
+寻源顺序按 `priority` 升序，同优先级按**逻辑源总成本**升序，再按配置顺序。请求两项时先走综合源（能同时提供两维度的源，即源6），再按缺项分别遍历发票源与税务源，已调用过的逻辑源不重复调用。
+
+综合源的计费依据是它**本次真正带回的维度**（客户端在 `UpstreamResult.Got` 里回填，寻源器优先采信）：单维请求只向它要那一维，请求两项而只回一维时按单维档收费、缺的那维继续找别的源补。
 
 响应 `result.range` 额外给出 `sourceStatus`（各源 ok/empty/error/skipped）、`dataScope`（实得维度）与 `feeStandard`（本次计费档位）。
 

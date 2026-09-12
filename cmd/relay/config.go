@@ -9,11 +9,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// upstreamConfig holds one SWFP upstream sub-source (entcredit or salesdata)。
+// upstreamConfig holds one SWFP upstream sub-source (entcredit / salesdata / ctax)。
 // 一个条目 = 一次上游调用；多个条目可通过 source 归入同一个「逻辑源」（互补调用，
 // 必须一起发出，见 upstream.Source）。
 type upstreamConfig struct {
-	kind    string // entcredit | salesdata
+	kind    string // entcredit | salesdata | ctax
 	baseURL string
 	appID     string
 	appSecret string

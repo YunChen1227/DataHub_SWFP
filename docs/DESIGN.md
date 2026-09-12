@@ -5,7 +5,7 @@
 本服务是 **SWFP 税务发票聚合** 的 API 转接网关：
 
 - **对外**：统一信封（MD5 加签、`head/body` 响应），路由 `querySrmxSWFP` / `quotaSWFP`
-- **对内**：按优先级**串行寻源**（命中即停）调用证通 entcredit（发票/税务四产品码）+ 可选 salesdata（源5 销项），经 `SwfpContract` 按 `docs/税票分析接口文档.xlsx` 整理输出
+- **对内**：按优先级**串行寻源**（命中即停）调用证通 entcredit（发票/税务四产品码）+ 可选 salesdata（源5 销项）+ ctax（源6 税票数据查询C，综合源），经 `SwfpContract` 按 `docs/税票分析接口文档.xlsx` 整理输出
 
 ## 2. 入参
 
@@ -26,9 +26,9 @@
 
 ```
 Client → Relay → Sourcer
-   want=both  ├─ 2b 综合源列表（provides=发票+税务，当前配置为空）→ 两者皆得即停
-              ├─ 3  缺发票 → 遍历发票源 [ent_invoice(p1) → sales(p9)]，过滤已调用源
-              └─ 3  缺税务 → 遍历税务源 [ent_tax(p1)]，过滤已调用源
+   want=both  ├─ 2b 综合源列表（provides=发票+税务）[ctax] → 两者皆得即停
+              ├─ 3  缺发票 → 遍历发票源 [ctax(p1) → ent_invoice(p1) → sales(p9)]，过滤已调用源
+              └─ 3  缺税务 → 遍历税务源 [ctax(p1) → ent_tax(p1)]，过滤已调用源
    want=单项  └─ 2a 直接遍历该维度列表，命中即停
                  → SwfpContract → 下游 JSON
 ```
@@ -37,6 +37,10 @@ Client → Relay → Sourcer
 
 - **命中即停**：某维度已查得后，该维度更低优先级的源不再调用（省钱），轨迹里记为 `skipped`。
 - **不重复付费**：逻辑源名是去重键，综合源阶段调过的源在补齐阶段被过滤。
+- **实得维度以子源回填为准**：配置的 `provides` 只决定该源排在哪些列表里；综合源
+  （源6）一次可能只回一维，且单维请求只向它要那一维，故计费用它在
+  `UpstreamResult.Got` 里回填的实得维度（`effectiveDims`，与 `provides` 取交集防呆）。
+  若沿用静态 `provides=both`，单维请求会被按【发票+税务】档收费。
 - **总时延预算**：`upstream.budget`（缺省 9s）是本次全部上游调用的合计闸门；预算耗尽
   不再尝试下一个源并记录原因，避免串行把下游拖到超时。
 - **成本口径**：每次调用的 `costFen` 按源配置，`costOn=hit`（缺省，仅查得计费）
@@ -114,5 +118,6 @@ Client → Relay → Sourcer
 
 - 下游契约：`docs/税票分析接口文档.xlsx`
 - 客户手册：`docs/API_接口文档与使用手册_swfp.pdf`
-- 上游：发票/税务 part PDF、销项 `docs/销项数据接口文档V1.0.docx`
+- 上游：发票/税务 part PDF、销项 `docs/销项数据接口文档V1.0.docx`、
+  源6 `docs/【税票数据查询c】接口文档.docx`（一源一文档，协议互不套用）
 - 多源计费：`docs/设计_多源计费与上游对账.md`
