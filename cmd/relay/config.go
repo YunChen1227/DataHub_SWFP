@@ -13,16 +13,22 @@ import (
 // 一个条目 = 一次上游调用；多个条目可通过 source 归入同一个「逻辑源」（互补调用，
 // 必须一起发出，见 upstream.Source）。
 type upstreamConfig struct {
-	kind    string // entcredit | salesdata | ctax
-	baseURL string
-	appID     string
-	appSecret string
+	kind            string // entcredit | salesdata | ctax
+	baseURL         string
+	appID           string
+	appSecret       string
 	orgCode         string
 	accessKeyID     string
 	secretAccessKey string
 	product         string
 	label           string
 	optional        bool
+
+	// ctax（源6 税票数据查询C）专用凭证与授权信息。
+	token       string // 请求头 X-Token
+	authCode    string // body authCode：授权码（环境级凭证）
+	authTimeBeg string // body authTimeBeg：授权时间窗下界（缺省 2020-01-01）
+	authTimeEnd string // body authTimeEnd：授权时间窗上界（缺省当天）
 
 	// 寻源属性（缺省值由 label 推导，见 sourceOf/providesOf，老配置无需改动）。
 	source   string // 逻辑源名：寻源优先级列表的单位，也是「已请求过」去重的键
@@ -128,6 +134,12 @@ type fileUpstream struct {
 	Priority        int    `yaml:"priority"`
 	CostFen         int64  `yaml:"costFen"`
 	CostOn          string `yaml:"costOn"`
+
+	// ctax（源6）专用。
+	Token       string `yaml:"token"`
+	AuthCode    string `yaml:"authCode"`
+	AuthTimeBeg string `yaml:"authTimeBeg"`
+	AuthTimeEnd string `yaml:"authTimeEnd"`
 }
 
 type fileDatabase struct {
@@ -296,6 +308,10 @@ func toUpstreamConfig(fu fileUpstream, version string) upstreamConfig {
 		priority:        fu.Priority,
 		costFen:         fu.CostFen,
 		costOn:          fu.CostOn,
+		token:           fu.Token,
+		authCode:        fu.AuthCode,
+		authTimeBeg:     fu.AuthTimeBeg,
+		authTimeEnd:     fu.AuthTimeEnd,
 	}
 }
 

@@ -1,25 +1,29 @@
 //go:build ignore
 
-// Mock 税票数据查询C 上游 (惠众征信, docs/【税票数据查询c】接口文档.docx)，swfp
-// 源6 的全链路测试挡板。Run: go run scripts/mock_ctax.go
+// Mock 税票数据查询C 上游 (惠众征信)，swfp 源6 的全链路测试挡板。
+// Run: go run scripts/mock_ctax.go
 //
-// 严格复刻客户端的协议假设 (internal/infrastructure/upstream/ctax.go)：
+// 严格复刻**真实服务器**的协议 (internal/infrastructure/upstream/ctax.go，
+// 2026-09-13 用测试环境凭证联调所得，非文档 V1.0)：
 //
-//	POST /c/tax  {"param":{"identity":"…","type":"1|2|3"}}
-//	          →  {"result":{"code":"SYS200","msg":"查询成功","data":{…}}}
+//	POST /hzservice/sy/tax
+//	  Header: X-AppId / X-Token（缺失 → A20029）
+//	  Body:   {"identityId","type","authTimeBeg","authTimeEnd","authCode"}（缺任一 → A03001）
+//	       →  {"code":"200","msg":"...","orderNo":"...","data":{…}}
 //
-// 按 identity（= 下游 creditCode）驱动场景（与 mock_entcredit/mock_salesdata 同一惯例）：
-//   - 91110000CTAXALL001 → SYS200，按 type 返回两维/单维数据（综合源一次拿全）
-//   - 91110000CTAXTAX001 → SYS200，但只有税务段（发票维度需由证通发票源补齐）
-//   - 91110000CTAX500001 → 500 异常（该源失败）
-//   - 其余税号            → SYS404 查无数据
+// 按 identityId（= 下游 creditCode）驱动场景（与 mock_entcredit/mock_salesdata 同一惯例）：
+//   - 91110000CTAXALL001 → code=200，按 type 返回两维/单维数据（综合源一次拿全）
+//   - 91110000CTAXTAX001 → code=200，但只有税务段（发票维度需由证通发票源补齐）
+//   - 91110000CTAX500001 → code=203 授权信息校验失败（该源失败）
+//   - 其余税号            → code=404 查无数据
 //
 // ⚠ 其余税号一律查无是**有意**的：源6 是综合源，寻源器在两项请求时先试它，若它对
-// 既有场景税号也查得，证通/源5 的既有用例会全部被短路掉、断言全废。要验证"综合源
-// 命中即停"用上面专属的场景税号。
+// 既有场景税号也查得，证通/源5 的既有用例会全部被短路掉、断言全废。
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,20 +39,30 @@ func env(k, def string) string {
 	return def
 }
 
-var addr = env("CTAX_ADDR", ":9126")
+var (
+	addr  = env("CTAX_ADDR", ":9126")
+	appID = env("CTAX_APP_ID", "FMRJGBVB") // 与 config.local.mem.yaml 的 appId 一致
+	token = env("CTAX_TOKEN", "L0HsaFt5LBemICthuAsBHs2k8CPf9xrEDpNQXbSWyLde2A8B0tPbcjFoSSGVKWbO")
+	path  = env("CTAX_PATH", "/hzservice/sy/tax")
+)
 
 const (
 	creditAll  = "91110000CTAXALL001" // 两维皆查得
 	creditTax  = "91110000CTAXTAX001" // 只有税务段
-	creditFail = "91110000CTAX500001" // 上游异常
+	creditFail = "91110000CTAX500001" // 授权校验失败
 )
 
-// type 入参 (文档 §3)。
 const (
 	typeTax     = "1"
 	typeInvoice = "2"
 	typeBoth    = "3"
 )
+
+func orderNo() string {
+	b := make([]byte, 8)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}
 
 // invoiceData 是发票维度的业务段样例 (文档 表4/表6/表11/表12/表13)。
 func invoiceData(identity string) map[string]any {
@@ -152,57 +166,73 @@ func buildData(identity, queryType string, taxOnly bool) map[string]any {
 	return data
 }
 
-func respond(w http.ResponseWriter, code, msg string, data map[string]any) {
-	out := map[string]any{"code": code, "msg": msg}
+func write(w http.ResponseWriter, code, msg string, data map[string]any) {
+	out := map[string]any{"code": code, "msg": msg, "orderNo": orderNo()}
 	if data != nil {
 		out["data"] = data
 	}
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	_ = json.NewEncoder(w).Encode(map[string]any{"result": out})
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	_ = json.NewEncoder(w).Encode(out)
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {
+	// 鉴权头（真实服务器缺失即 A20029）。
+	if r.Header.Get("X-AppId") == "" || r.Header.Get("X-Token") == "" {
+		write(w, "A20029", "验证参数缺失,请检查X-AppId，X-Token", nil)
+		return
+	}
+	if r.Header.Get("X-AppId") != appID || r.Header.Get("X-Token") != token {
+		write(w, "A20029", "X-AppId/X-Token 校验失败", nil)
+		return
+	}
 	raw, _ := io.ReadAll(r.Body)
 	var req struct {
-		Param struct {
-			Identity string `json:"identity"`
-			Type     string `json:"type"`
-		} `json:"param"`
+		IdentityID  string `json:"identityId"`
+		Type        string `json:"type"`
+		AuthTimeBeg string `json:"authTimeBeg"`
+		AuthTimeEnd string `json:"authTimeEnd"`
+		AuthCode    string `json:"authCode"`
 	}
 	if err := json.Unmarshal(raw, &req); err != nil {
-		respond(w, "500", "报文解析失败", nil)
+		write(w, "A03001", "报文解析失败", nil)
 		return
 	}
-	p := req.Param
-	if p.Identity == "" || p.Type == "" {
-		respond(w, "500", "identity/type 为必填项", nil)
-		return
+	// 逐字段非空校验（真实服务器口径）。
+	for name, v := range map[string]string{
+		"identityId": req.IdentityID, "authTimeBeg": req.AuthTimeBeg,
+		"authTimeEnd": req.AuthTimeEnd, "authCode": req.AuthCode,
+	} {
+		if v == "" {
+			write(w, "A03001", "$."+name+"参数不能为空", nil)
+			return
+		}
 	}
-	switch p.Type {
+	switch req.Type {
 	case typeTax, typeInvoice, typeBoth:
 	default:
-		respond(w, "500", "type 取值非法", nil)
+		write(w, "A03001", "$.type参数不能为空", nil)
 		return
 	}
 
-	switch p.Identity {
+	switch req.IdentityID {
 	case creditAll:
-		respond(w, "SYS200", "查询成功", buildData(p.Identity, p.Type, false))
+		write(w, "200", "查询成功", buildData(req.IdentityID, req.Type, false))
 	case creditTax:
-		if p.Type == typeInvoice {
-			respond(w, "SYS404", "查无数据", nil) // 只有税务的主体，被问发票即查无
+		if req.Type == typeInvoice {
+			write(w, "404", "查无数据", nil) // 只有税务的主体，被问发票即查无
 			return
 		}
-		respond(w, "SYS200", "查询成功", buildData(p.Identity, p.Type, true))
+		write(w, "200", "查询成功", buildData(req.IdentityID, req.Type, true))
 	case creditFail:
-		respond(w, "500", "系统异常", nil)
+		write(w, "203", "授权信息校验失败", nil)
 	default:
-		respond(w, "SYS404", "查无数据", nil)
+		write(w, "404", "查无数据", nil)
 	}
 }
 
 func main() {
-	http.HandleFunc("/c/tax", handle)
-	fmt.Printf("mock ctax (税票数据查询C, swfp 源6) listening on %s\n", addr)
+	http.HandleFunc(path, handle)
+	http.HandleFunc("/", handle) // 兜底：baseURL 路径写法不一致时也能命中
+	fmt.Printf("mock ctax (税票数据查询C, swfp 源6) listening on %s  path=%s appId=%s\n", addr, path, appID)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }

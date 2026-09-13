@@ -464,9 +464,16 @@ func buildClient(version string, uc upstreamConfig, httpClient *http.Client, log
 		}, httpClient)
 		return client, nil
 	case upstream.ProviderCTax:
-		// swfp 源6 税票数据查询C (惠众征信)：文档只定义裸 JSON 信封，没有任何
-		// 鉴权凭证，故只需 baseURL (不含 /c/tax)。
-		client := upstream.NewCTax(upstream.CTaxConfig{BaseURL: uc.baseURL}, httpClient)
+		// swfp 源6 税票数据查询C (惠众征信)：baseURL 是上游给的完整业务地址；
+		// 鉴权走请求头 X-AppId(appId)/X-Token(token)；授权码与时间窗走 body。
+		client := upstream.NewCTax(upstream.CTaxConfig{
+			BaseURL:     uc.baseURL,
+			AppID:       uc.appID,
+			Token:       uc.token,
+			AuthCode:    uc.authCode,
+			AuthTimeBeg: uc.authTimeBeg,
+			AuthTimeEnd: uc.authTimeEnd,
+		}, httpClient)
 		return client, nil
 	default:
 		return nil, fmt.Errorf("version %s: unknown upstream kind %q", version, uc.kind)

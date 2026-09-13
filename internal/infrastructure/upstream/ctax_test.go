@@ -14,32 +14,33 @@ import (
 
 const ctaxCreditCode = "92500233MA60R5KW8M"
 
-// ctaxStub 起一个按文档形态应答的挡板，并记下上游收到的入参 (文档 §3 入参表)。
-func ctaxStub(t *testing.T, body func(param ctaxParam) string) (*CTaxClient, *ctaxParam, *string) {
+// ctaxStub 起一个按真实服务器形态应答的挡板，并记下上游收到的鉴权头与请求体。
+func ctaxStub(t *testing.T, body func(req ctaxRequest) string) (*CTaxClient, *ctaxRequest, *http.Header) {
 	t.Helper()
-	var got ctaxParam
-	var path string
+	var got ctaxRequest
+	var hdr http.Header
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path = r.URL.Path
+		hdr = r.Header.Clone()
 		raw, _ := io.ReadAll(r.Body)
-		var env ctaxEnvelope
-		if err := json.Unmarshal(raw, &env); err != nil {
+		if err := json.Unmarshal(raw, &got); err != nil {
 			t.Errorf("请求不是合法 JSON: %v (%s)", err, raw)
 		}
-		got = env.Param
-		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		_, _ = io.WriteString(w, body(env.Param))
+		w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+		_, _ = io.WriteString(w, body(got))
 	}))
 	t.Cleanup(srv.Close)
-	return NewCTax(CTaxConfig{BaseURL: srv.URL}, srv.Client()), &got, &path
+	c := NewCTax(CTaxConfig{
+		BaseURL: srv.URL, AppID: "APPID", Token: "TOK", AuthCode: "test",
+	}, srv.Client())
+	return c, &got, &hdr
 }
 
-// ctaxBody 组一份 result 应答；sections 为 data 节点内的业务段 JSON 片段。
+// ctaxBody 组一份应答；sections 为 data 节点内的业务段 JSON 片段（空则无 data）。
 func ctaxBody(code, sections string) string {
 	if sections == "" {
-		return `{"result":{"code":"` + code + `","msg":"msg"}}`
+		return `{"code":"` + code + `","msg":"msg","orderNo":"ORD-1"}`
 	}
-	return `{"result":{"code":"` + code + `","msg":"msg","data":{` + sections + `}}}`
+	return `{"code":"` + code + `","msg":"msg","orderNo":"ORD-1","data":{` + sections + `}}`
 }
 
 const (
@@ -48,9 +49,9 @@ const (
 	ctaxNsrjbxxJSON        = `"nsrjbxx":{"nsrsbh":"x","nsrmc":"某某公司"}`
 )
 
-// TestCTaxTypeFollowsWant 按本次请求维度传 type：多要一维就多付一次上游的钱，而
-// 多出来的数据既不透出下游也不计费。路径固定 /c/tax，identity 为社会信用代码。
-func TestCTaxTypeFollowsWant(t *testing.T) {
+// TestCTaxRequestShape 按真实服务器要求发报文：鉴权走 X-AppId/X-Token 头，业务参数
+// 平铺（identityId/type/authTimeBeg/authTimeEnd/authCode），type 随本次请求维度变化。
+func TestCTaxRequestShape(t *testing.T) {
 	cases := []struct {
 		name     string
 		want     model.DimSet
@@ -63,22 +64,25 @@ func TestCTaxTypeFollowsWant(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			c, param, path := ctaxStub(t, func(ctaxParam) string {
-				return ctaxBody(ctaxCodeOK, ctaxTaxSectionJSON+","+ctaxInvoiceSectionJSON)
+			c, req, hdr := ctaxStub(t, func(ctaxRequest) string {
+				return ctaxBody("200", ctaxTaxSectionJSON+","+ctaxInvoiceSectionJSON)
 			})
 			if _, err := c.Query(context.Background(), &model.UpstreamRequest{
 				CreditCode: ctaxCreditCode, Reqid: "r1", Want: tc.want,
 			}); err != nil {
 				t.Fatalf("Query: %v", err)
 			}
-			if param.Type != tc.wantType {
-				t.Fatalf("type=%q, want %q", param.Type, tc.wantType)
+			if req.Type != tc.wantType {
+				t.Fatalf("type=%q, want %q", req.Type, tc.wantType)
 			}
-			if param.Identity != ctaxCreditCode {
-				t.Fatalf("identity=%q, want %q", param.Identity, ctaxCreditCode)
+			if req.IdentityID != ctaxCreditCode {
+				t.Fatalf("identityId=%q, want %q", req.IdentityID, ctaxCreditCode)
 			}
-			if *path != ctaxPath {
-				t.Fatalf("path=%q, want %q", *path, ctaxPath)
+			if req.AuthCode != "test" || req.AuthTimeBeg == "" || req.AuthTimeEnd == "" {
+				t.Fatalf("授权信息缺失: %+v", req)
+			}
+			if hdr.Get(ctaxHeaderAppID) != "APPID" || hdr.Get(ctaxHeaderToken) != "TOK" {
+				t.Fatalf("鉴权头缺失: X-AppId=%q X-Token=%q", hdr.Get(ctaxHeaderAppID), hdr.Get(ctaxHeaderToken))
 			}
 		})
 	}
@@ -100,7 +104,7 @@ func TestCTaxGotFollowsData(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			c, _, _ := ctaxStub(t, func(ctaxParam) string { return ctaxBody(ctaxCodeOK, tc.sections) })
+			c, _, _ := ctaxStub(t, func(ctaxRequest) string { return ctaxBody("200", tc.sections) })
 			res, err := c.Query(context.Background(), &model.UpstreamRequest{
 				CreditCode: ctaxCreditCode, Reqid: "r2", Want: model.AllDims(),
 			})
@@ -108,7 +112,7 @@ func TestCTaxGotFollowsData(t *testing.T) {
 				t.Fatalf("Query: %v", err)
 			}
 			if tc.want.Empty() {
-				// SYS200 但没有任何业务数据：与查无同口径，绝不能当查得计费。
+				// 有 data 容器但无业务段：与查无同口径，绝不能当查得计费。
 				if res.Code != "999" || !res.Got.Empty() {
 					t.Fatalf("空业务段应归一为 999/无实得维度, got %s/%s", res.Code, res.Got)
 				}
@@ -117,6 +121,9 @@ func TestCTaxGotFollowsData(t *testing.T) {
 			if res.Code != "001" || res.Got != tc.want {
 				t.Fatalf("want 001/%s, got %s/%s", tc.want, res.Code, res.Got)
 			}
+			if res.UID != "ORD-1" || res.LogID != "ORD-1" {
+				t.Fatalf("orderNo 应落 UID/LogID 供对账, got uid=%q logId=%q", res.UID, res.LogID)
+			}
 		})
 	}
 }
@@ -124,8 +131,8 @@ func TestCTaxGotFollowsData(t *testing.T) {
 // TestCTaxGotCappedByWant 单维请求时实得维度不得超出请求维度：上游即便多回了另一维，
 // 我们也不曾把它交付给下游，不能按它计费。
 func TestCTaxGotCappedByWant(t *testing.T) {
-	c, _, _ := ctaxStub(t, func(ctaxParam) string {
-		return ctaxBody(ctaxCodeOK, ctaxTaxSectionJSON+","+ctaxInvoiceSectionJSON)
+	c, _, _ := ctaxStub(t, func(ctaxRequest) string {
+		return ctaxBody("200", ctaxTaxSectionJSON+","+ctaxInvoiceSectionJSON)
 	})
 	res, err := c.Query(context.Background(), &model.UpstreamRequest{
 		CreditCode: ctaxCreditCode, Reqid: "r3", Want: model.DimSet{Invoice: true},
@@ -138,11 +145,11 @@ func TestCTaxGotCappedByWant(t *testing.T) {
 	}
 }
 
-// TestCTaxResultCodes 文档 §4 返回码逐个归一：SYS200 查得 / SYS404 查无 /
-// 500 异常（该源失败，带业务码可追查）。
+// TestCTaxResultCodes 真实返回码归一：200 有 data → 查得；404 → 查无；
+// 203 授权校验失败 → 该源失败（带上游码 + orderNo 可追查）。
 func TestCTaxResultCodes(t *testing.T) {
-	t.Run("SYS404 查无", func(t *testing.T) {
-		c, _, _ := ctaxStub(t, func(ctaxParam) string { return ctaxBody(ctaxCodeEmpty, "") })
+	t.Run("404 查无", func(t *testing.T) {
+		c, _, _ := ctaxStub(t, func(ctaxRequest) string { return ctaxBody("404", "") })
 		res, err := c.Query(context.Background(), &model.UpstreamRequest{
 			CreditCode: ctaxCreditCode, Reqid: "r4", Want: model.AllDims(),
 		})
@@ -152,10 +159,15 @@ func TestCTaxResultCodes(t *testing.T) {
 		if res.Code != "999" || res.Range != "" {
 			t.Fatalf("want 999/空 range, got %s/%q", res.Code, res.Range)
 		}
+		if res.UID != "ORD-1" {
+			t.Fatalf("查无也应带 orderNo: %+v", res)
+		}
 	})
 
-	t.Run("500 异常", func(t *testing.T) {
-		c, _, _ := ctaxStub(t, func(ctaxParam) string { return ctaxBody(ctaxCodeError, "") })
+	t.Run("203 授权校验失败", func(t *testing.T) {
+		c, _, _ := ctaxStub(t, func(ctaxRequest) string {
+			return `{"code":"203","msg":"授权信息校验失败","orderNo":"ORD-9","data":null}`
+		})
 		_, err := c.Query(context.Background(), &model.UpstreamRequest{
 			CreditCode: ctaxCreditCode, Reqid: "r5", Want: model.AllDims(),
 		})
@@ -163,34 +175,24 @@ func TestCTaxResultCodes(t *testing.T) {
 		if !errors.As(err, &ue) {
 			t.Fatalf("上游业务失败必须回 *model.UpstreamError（否则审计拿不到上游码）, got %T: %v", err, err)
 		}
-		if ue.Code != ctaxCodeError {
-			t.Fatalf("应带上游返回码原值 %s, got %q", ctaxCodeError, ue.Code)
+		if ue.Code != "203" || ue.UID != "ORD-9" {
+			t.Fatalf("应带上游码 203 与 orderNo, got code=%q uid=%q", ue.Code, ue.UID)
 		}
 	})
 }
 
-// TestCTaxAcceptsBothEnvelopeShapes 文档没给报文示例，故应答的两种形态都要认：
-// 外层包一层 result，或直接就是 result 本体。挑一种赌等于赌联调失败。
-func TestCTaxAcceptsBothEnvelopeShapes(t *testing.T) {
-	c, _, _ := ctaxStub(t, func(ctaxParam) string {
-		return `{"code":"` + ctaxCodeOK + `","msg":"查询成功","data":{` + ctaxTaxSectionJSON + `}}`
-	})
-	res, err := c.Query(context.Background(), &model.UpstreamRequest{
-		CreditCode: ctaxCreditCode, Reqid: "r6", Want: model.AllDims(),
-	})
-	if err != nil {
-		t.Fatalf("裸 result 形态应能解析: %v", err)
-	}
-	if res.Code != "001" || res.Got != (model.DimSet{Tax: true}) {
-		t.Fatalf("want 001/tax, got %s/%s", res.Code, res.Got)
-	}
-}
-
-// TestCTaxBaseURLMissing 未配 baseURL 时立刻报错，不发请求（文档未给地址，配置里
-// 是占位符时必须一眼看出来，而不是发出一个诡异的请求）。
-func TestCTaxBaseURLMissing(t *testing.T) {
-	c := NewCTax(CTaxConfig{}, http.DefaultClient)
+// TestCTaxCredentialsRequired 鉴权凭证不完整时立刻报错，不发请求（上游必报 A20029，
+// 本地先拦下，避免发出注定失败的请求）。
+func TestCTaxCredentialsRequired(t *testing.T) {
+	c := NewCTax(CTaxConfig{BaseURL: "http://example.invalid", AppID: "", Token: "TOK"}, http.DefaultClient)
 	if _, err := c.Query(context.Background(), &model.UpstreamRequest{
+		CreditCode: ctaxCreditCode, Reqid: "r6", Want: model.AllDims(),
+	}); err == nil {
+		t.Fatal("缺 appId 应返回错误")
+	}
+
+	c2 := NewCTax(CTaxConfig{}, http.DefaultClient)
+	if _, err := c2.Query(context.Background(), &model.UpstreamRequest{
 		CreditCode: ctaxCreditCode, Reqid: "r7", Want: model.AllDims(),
 	}); err == nil {
 		t.Fatal("未配 baseURL 应返回错误")
