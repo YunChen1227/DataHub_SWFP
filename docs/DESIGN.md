@@ -57,13 +57,16 @@ Client → Relay → Sourcer
 
 ## 3.1 响应中的寻源信息
 
-`result.range` 除各源数据外额外给出三个字段，使下游能自查本次计费依据：
+`result.range` 把各上游数据**扁平合并**后给下游（`nsrjbxx` 一个对象、各 List 一个数组），
+不按源编号分组，也不附带逐源调用状态。下游只能看到：
 
 | 字段 | 说明 |
 |------|------|
-| `sourceStatus` | 各源本次状态：`ok` / `empty` / `error` / `skipped` |
+| `发票数据聚合` / `税务数据聚合` | xlsx 白名单业务数据 |
 | `dataScope` | 实际查得维度 `{"发票": bool, "税务": bool}` |
-| `feeStandard` | 据实得维度判定的收费档位 `both` / `invoice` / `tax` / `none` |
+
+计费档位（`fee_standard`）与逐源状态（ok/empty/error/skipped）只落台账与
+`upstream_call`，经后台按 `requestId` 下钻；下游排查凭 `head.logId` 找我方即可。
 
 ## 4. 存储
 

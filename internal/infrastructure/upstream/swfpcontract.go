@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/datahub/relay/internal/domain/model"
@@ -19,21 +20,15 @@ import (
 // 输出结构（result.range 反序列化后）：
 //
 //	{
-//	  "发票数据聚合": { "nsrjbxx": {"源1": {...}, "源2": {...}},
-//	                    "kphzxxList": {"源1": [...], "源2": [...], "源5": [...]}, ... },
-//	  "税务数据聚合": { "nsrjbxx": {"源3": {...}, "源4": {...}}, "lrbxxList": {...}, ... },
-//	  "sourceStatus": { "源1": "ok", "源2": "ok", "源5": "skipped" },
-//	  "dataScope":    { "发票": true, "税务": false },
-//	  "feeStandard":  "invoice"
+//	  "发票数据聚合": { "nsrjbxx": {...}, "kphzxxList": [...], ... },
+//	  "税务数据聚合": { "nsrjbxx": {...}, "sbsjList": [...], ... },
+//	  "dataScope":    { "发票": true, "税务": false }
 //	}
 //
-// 每个 xlsx 顶层字段的值按数据源分组（源1..源6，对下游隐匿真实上游），各源数据
-// 不合并不去重，冲突由下游自行采信。sourceStatus 标记各源本次的状态
-// (ok=查得 / empty=查无 / error=失败 / skipped=未调用——串行寻源命中即停，被更
-// 高优先级源短路掉的源即为 skipped)。
-//
-// dataScope/feeStandard 是本次【实际查得的维度】与据此判定的收费标准：请求两项而
-// 只查得发票时业务码仍为 001，但按【单发票】计费，下游凭这两个字段自查即可。
+// 对下游**不暴露源数量与来源**：各上游数据在契约层内按别名暂存后扁平合并，
+// nsrjbxx 合并为一个对象（先非空值优先），各 List 拼接为一个数组。响应里不得
+// 出现 源N / sourceStatus / feeStandard——计费档位与逐源轨迹只落台账与
+// upstream_call，下游凭 dataScope 判断实得维度。
 //
 // 计费判定 (001/999/002) 仍由寻源器 (sourcing.go) 完成，本层只改写 range 内容，
 // 不触碰上游调用与归一逻辑。
@@ -46,7 +41,8 @@ func NewSwfpContract(inner port.UpstreamPort) *SwfpContract {
 	return &SwfpContract{inner: inner}
 }
 
-// swfpSourceAlias 把聚合段名 label 映射为对下游脱敏的源编号。
+// swfpSourceAlias 把聚合段名 label 映射为**内部**源编号（寻源轨迹 / upstream_call /
+// 成本对账）。对下游契约输出不再按此编号分组，见 flattenSegment。
 var swfpSourceAlias = map[string]string{
 	"invoice1": "源1", // 发票数据聚合-part1
 	"invoice2": "源2", // 发票数据聚合-part2
@@ -56,8 +52,8 @@ var swfpSourceAlias = map[string]string{
 	"ctax":     "源6", // 税票数据查询C（综合源：一次同时给发票+税务）
 }
 
-// SourceAlias 返回段名对下游的脱敏编号；未登记的段名原样返回（兜底不丢数据）。
-// 寻源器 (sourcing.go) 与本契约层共用这一份映射，避免两处漂移。
+// SourceAlias 返回段名的内部脱敏编号；未登记的段名原样返回（兜底不丢数据）。
+// 寻源器 (sourcing.go) 用它落逐源轨迹；契约层仅作内部暂存键，扁平化后不对下游输出。
 func SourceAlias(label string) string {
 	if a := swfpSourceAlias[label]; a != "" {
 		return a
@@ -207,8 +203,8 @@ func (c *SwfpContract) Requery(ctx context.Context, reqid string) (*model.Requer
 
 // mapSwfpRange 把寻源器的分段 JSON ({label:{status,data,error}}) 改写为 xlsx 契约
 // 结构。creditCode 用于补齐源5 条目里的 nsrsbh (纳税人识别号 = 查询主体)；got 是
-// 本次实际查得的维度，据此向下游明示 dataScope 与 feeStandard（部分查得时业务码
-// 仍是 001，客户凭这两个字段自查本次按哪档标准收费）。
+// 本次实际查得的维度，据此向下游明示 dataScope（实得维度；收费档位只落台账，
+// 不对下游输出）。
 func mapSwfpRange(rangeJSON, creditCode string, got model.DimSet) (string, error) {
 	var sections map[string]aggSection
 	dec := json.NewDecoder(bytes.NewReader([]byte(rangeJSON)))
@@ -218,11 +214,9 @@ func mapSwfpRange(rangeJSON, creditCode string, got model.DimSet) (string, error
 
 	invoice := newSwfpSegment(append([]string{"nsrjbxx"}, keysOf(swfpInvoiceLists)...))
 	tax := newSwfpSegment(append([]string{"nsrjbxx"}, keysOf(swfpTaxLists)...))
-	status := map[string]string{}
 
 	for label, sec := range sections {
 		alias := SourceAlias(label)
-		status[alias] = sec.Status
 		if sec.Status != model.CallOK || len(sec.Data) == 0 {
 			continue
 		}
@@ -240,19 +234,17 @@ func mapSwfpRange(rangeJSON, creditCode string, got model.DimSet) (string, error
 		case "ctax":
 			fillCTaxSection(invoice, tax, alias, data)
 		default:
-			// 未知段：无契约映射依据，只标状态不透数据（严格白名单）。
+			// 未知段：无契约映射依据，不透数据（严格白名单）。
 		}
 	}
 
 	out := map[string]any{
-		"发票数据聚合": invoice,
-		"税务数据聚合": tax,
-		"sourceStatus": status,
+		"发票数据聚合": flattenSegment(invoice),
+		"税务数据聚合": flattenSegment(tax),
 		"dataScope": map[string]bool{
 			"发票": got.Invoice,
 			"税务": got.Tax,
 		},
-		"feeStandard": string(model.StandardOf(got)),
 	}
 	buf, err := json.Marshal(out)
 	if err != nil {
@@ -261,14 +253,55 @@ func mapSwfpRange(rangeJSON, creditCode string, got model.DimSet) (string, error
 	return string(buf), nil
 }
 
-// newSwfpSegment 预置一个契约段：每个 xlsx 顶层字段恒存在（值为 源N→数据 的分组
-// 对象，无源贡献时为空对象），保证下游拿到确定形状。
+// newSwfpSegment 预置一个内部暂存段：每个 xlsx 顶层字段是 alias→数据 的分组对象，
+// 填完后再由 flattenSegment 压平成对下游形状（对象或数组）。
 func newSwfpSegment(fields []string) map[string]map[string]any {
 	seg := make(map[string]map[string]any, len(fields))
 	for _, f := range fields {
 		seg[f] = map[string]any{}
 	}
 	return seg
+}
+
+// flattenSegment 去掉内部源别名层：nsrjbxx 合并为一个对象（先非空值优先，同口径
+// 的 part1/part2 互补字段可拼全）；各 List 按别名排序后拼接为一个数组。空字段
+// 恒为 {} / []，保证下游拿到确定形状且看不到源数量。
+func flattenSegment(seg map[string]map[string]any) map[string]any {
+	out := make(map[string]any, len(seg))
+	for field, byAlias := range seg {
+		aliases := make([]string, 0, len(byAlias))
+		for a := range byAlias {
+			aliases = append(aliases, a)
+		}
+		sort.Strings(aliases)
+
+		if field == "nsrjbxx" {
+			merged := map[string]string{}
+			for _, a := range aliases {
+				row, ok := byAlias[a].(map[string]string)
+				if !ok {
+					continue
+				}
+				for k, v := range row {
+					if cur, exists := merged[k]; !exists || cur == "" {
+						merged[k] = v
+					}
+				}
+			}
+			out[field] = merged
+			continue
+		}
+
+		rows := make([]map[string]string, 0)
+		for _, a := range aliases {
+			switch v := byAlias[a].(type) {
+			case []map[string]string:
+				rows = append(rows, v...)
+			}
+		}
+		out[field] = rows
+	}
+	return out
 }
 
 func keysOf(m map[string][]string) []string {
@@ -357,8 +390,8 @@ func fillSalesSection(seg map[string]map[string]any, alias string, data map[stri
 // data 里同时可能带发票段 (表4/6/11/12/13) 与税务段 (表2/3/7/9)。
 //
 // nsrjbxx 只写进本源本次真正贡献了业务段的那个维度里：请求 dataType=invoice 时
-// 不把纳税人基本信息塞进税务段，免得下游看见税务段有数据、却发现 feeStandard 是
-// invoice。两维都没有业务段（只回了基本信息）时两段都给，不丢数据。
+// 不把纳税人基本信息塞进税务段，免得下游看见税务段有数据、却发现 dataScope 里
+// 税务为 false。两维都没有业务段（只回了基本信息）时两段都给，不丢数据。
 func fillCTaxSection(invoice, tax map[string]map[string]any, alias string, data map[string]any) {
 	invFilled := false
 	for section, listName := range swfpCTaxInvoiceSections {

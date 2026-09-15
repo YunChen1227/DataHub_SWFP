@@ -139,10 +139,10 @@ func main() {
 			probe = firstHit
 		}
 		r := harness.Query("swfp", appKey, harness.Secret, map[string]string{"creditCode": probe}, nil)
-		s6 := statusOf(r.Range, "源6")
-		rec.Check("relay 全链路(真实源6)", fmt.Sprintf("creditCode=%s 源6∈{ok,empty}", probe),
-			r.ErrorCode == "0" && (s6 == "ok" || s6 == "empty"),
-			fmt.Sprintf("errorCode=%s body=%s sourceStatus=%v", r.ErrorCode, r.BodyCode, sourceStatuses(r.Range)))
+		ok := r.ErrorCode == "0" && (r.BodyCode == "001" || r.BodyCode == "999") &&
+			!strings.Contains(r.Raw, "sourceStatus") && !strings.Contains(r.Raw, "源6")
+		rec.Check("relay 全链路(真实源6)", fmt.Sprintf("creditCode=%s errorCode=0 & body∈{001,999} & 无源泄漏", probe),
+			ok, fmt.Sprintf("errorCode=%s body=%s dataScope=%v", r.ErrorCode, r.BodyCode, dataScopeOf(r.Range)))
 	}
 }
 
@@ -160,26 +160,14 @@ func gotOf(res *model.UpstreamResult) string {
 	return res.Got.String()
 }
 
-func statusOf(rangeJSON, source string) string {
+func dataScopeOf(rangeJSON string) map[string]any {
 	if rangeJSON == "" {
-		return ""
+		return nil
 	}
-	var m map[string]any
-	if json.Unmarshal([]byte(rangeJSON), &m) != nil {
-		return ""
-	}
-	ss, _ := m["sourceStatus"].(map[string]any)
-	if ss == nil {
-		return ""
-	}
-	return fmt.Sprint(ss[source])
-}
-
-func sourceStatuses(rangeJSON string) map[string]any {
 	var m map[string]any
 	if json.Unmarshal([]byte(rangeJSON), &m) != nil {
 		return nil
 	}
-	ss, _ := m["sourceStatus"].(map[string]any)
-	return ss
+	ds, _ := m["dataScope"].(map[string]any)
+	return ds
 }

@@ -79,6 +79,6 @@ docs/               SWFP 上下游文档与契约
 
 综合源的计费依据是它**本次真正带回的维度**（客户端在 `UpstreamResult.Got` 里回填，寻源器优先采信）：单维请求只向它要那一维，请求两项而只回一维时按单维档收费、缺的那维继续找别的源补。
 
-响应 `result.range` 额外给出 `sourceStatus`（各源 ok/empty/error/skipped）、`dataScope`（实得维度）与 `feeStandard`（本次计费档位）。
+响应 `result.range` 为扁平契约：`发票数据聚合` / `税务数据聚合`（xlsx 字段，无源编号分组）+ `dataScope`（实得维度）。**不对下游输出**源数量、逐源状态或计费档位；`feeStandard` 与逐源轨迹只落台账 / `upstream_call`。
 
 详细设计见 `docs/DESIGN.md`。

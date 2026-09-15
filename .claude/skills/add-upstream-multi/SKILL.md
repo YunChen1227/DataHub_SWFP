@@ -37,7 +37,7 @@ description: DataHub_SWFP 的多上游「按维度串行寻源 + 按实得内容
                     **过滤本次已请求过的逻辑源**
 4. 汇总 Got
 5. 按 Got 定档：invoice+tax / invoice / tax / none(不计费)
-6. 返回下游（range 内附 sourceStatus / dataScope / feeStandard）
+6. 返回下游（range 内仅业务数据 + dataScope；**无** 源N / sourceStatus / feeStandard）
 7. 落库：台账(档位/应收/成本/逐源汇总) + 审计(请求维度/实得维度) + upstream_call(每源一行)
 ```
 
@@ -78,15 +78,18 @@ description: DataHub_SWFP 的多上游「按维度串行寻源 + 按实得内容
    用尽后不再尝试下一个源，只记 `reason`。**禁止**为了多试一个源而放宽预算把下游
    拖到超时——省钱的前提是不违约。
 
-8. **契约层严格白名单 + 对下游脱敏**。只输出 `docs/税票分析接口文档.xlsx` 定义的
-   字段，段名一律映射为 `源1..源5`（`SourceAlias`，寻源器与契约层共用同一份映射表，
-   避免两处漂移）。上游产品码/真实厂商/错误详情一律不得透出。
+8. **契约层严格白名单 + 对下游隐匿源**。只输出 `docs/税票分析接口文档.xlsx` 定义的
+   字段；查得后把各源数据**扁平合并**再给下游（`nsrjbxx` 合成一个对象，各 List
+   拼成一个数组）。响应里**不得**出现 `源N` / `sourceStatus` / `feeStandard`——
+   下游不知道有几个源、也不知道数据从哪来。`SourceAlias` 仅供内部寻源轨迹 /
+   `upstream_call` / 成本对账使用，不进契约输出。上游产品码/真实厂商/错误详情
+   一律不得透出。新增契约字段前先问：这个字段会不会让下游数出我方有几个源。
 
 9. **一源一文档，逐字对齐**。本仓的源来自不同厂商不同协议（源1-4 证通 entcredit：
    HMAC-SHA256 + form 表单 + 产品码；源5 凯盈云 crestv：AES + JSON 信封 + 接口名走
-   URL 路径）。**禁止**把已实现源的协议/凭证形态/加密方式套到新源上；新源的文档要
-   完整读完（PDF 用 Read 工具整篇读，鉴权与错误码常在文档中后段），签名算法要拿到
-   SDK 源码而不是凭文档描述猜；上游服务器的报错信息比文档示例更权威。
+   URL 路径；源6 ctax：综合源）。**禁止**把已实现源的协议/凭证形态/加密方式套到新源上；
+   新源的文档要完整读完（PDF 用 Read 工具整篇读，鉴权与错误码常在文档中后段），
+   签名算法要拿到 SDK 源码而不是凭文档描述猜；上游服务器的报错信息比文档示例更权威。
 
 ## 判定表与计费档位
 
@@ -98,12 +101,15 @@ description: DataHub_SWFP 的多上游「按维度串行寻源 + 按实得内容
 | 全部调用失败 | error → `505062` | 否 | PENDING → 复查/对账 |
 | 本次维度无可用源（配置缺口） | error → `505062` | 否 | PENDING |
 
-| 实得维度 | `feeStandard` | 单价来源（前者为 0 时取后者） |
+| 实得维度 | 台账 `fee_standard`（不对下游输出） | 单价来源（前者为 0 时取后者） |
 |---|---|---|
 | 发票 + 税务 | `both` | license `rate_both_fen` → config `billing.rates.bothFen` |
 | 仅发票 | `invoice` | license `rate_invoice_fen` → config `billing.rates.invoiceFen` |
 | 仅税务 | `tax` | license `rate_tax_fen` → config `billing.rates.taxFen` |
 | 皆无 | `none` | 恒 0，不计费 |
+
+> 下游 `result.range` 只带 `dataScope`（实得维度）与业务数据；`feeStandard` 只写
+> 台账/审计，供我方对账，不进契约。
 
 金额一律用「分」的整数（`AmountFen`/`CostFen`），**不用浮点**——对账要逐笔相加，
 不能有舍入漂移。
@@ -126,25 +132,29 @@ description: DataHub_SWFP 的多上游「按维度串行寻源 + 按实得内容
    `cmd/relay/main.go` 的 `buildClient` 加一个 case、`config.go` 补凭证字段。
    复用既有 kind（如再加一个 entcredit 产品码）则**零 Go 改动**。
 3. **契约层**（[swfpcontract.go](internal/infrastructure/upstream/swfpcontract.go)）：
-   `swfpSourceAlias` 加 `label → 源N` 映射，并在 `mapSwfpRange` 的 `switch label`
-   里加该段的字段映射（严格白名单，逐字段标注依据 xlsx 哪一节）。**漏了这一步**
-   该源的数据会被当"未知段"只标状态不透出——线上表现是"调了、计费了、但下游没数据"。
-4. **mock**：`scripts/mock_<kind>.go` 按 creditCode 驱动场景（既有约定见下「测试」）。
-5. **单测 + e2e**：见下「测试」。
+   `swfpSourceAlias` 加 `label → 源N`（**内部**轨迹用），并在 `mapSwfpRange` 的
+   `switch label` 里加该段的字段映射（严格白名单，逐字段标注依据 xlsx 哪一节）。
+   填完后由 `flattenSegment` 压平成对下游形状——**漏了映射**该源的数据会被当
+   "未知段"不透出，线上表现是"调了、计费了、但下游没数据"。
+4. **单测**：见下「测试」。用真实上游/探针验证接入，**不要**为新源写 HTTP mock
+   挡板或靠 mock 驱动的 e2e——那种测既测不到真实协议，又要维护一套假场景。
 
 ### B. 新增一个「综合源」（一次同时给发票+税务）
 
 `provides: "both"` 即可，`NewSourcer` 会自动把它放进 `combined` 列表、流程自动走 2b。
-**当前生产配置里综合源列表为空**（五个源都是单维度），2b 代码有单测覆盖但未跑过真实
-流量——首次接入综合源时必须补一条 e2e：两项请求只调该综合源一次即满足，其余源全部
-`skipped`，`feeStandard=both`。其余同 A 类。
+首次接入综合源时：在 `sourcing_test` 用进程内 fakePort 断言「两项请求只调该源一次、
+其余 skipped」；下游契约断言扁平 range + `dataScope` 两维皆真。再用真实凭证探针
+打通一笔。其余同 A 类。
+
+综合源有一个单维度源不会遇到的坑：**一次调用可能只拿到声明维度的一部分**。此时
+客户端必须自报到 `UpstreamResult.Got`，寻源引擎优先采信自报值并继续补齐缺维。
 
 ### C. 只调优先级 / 成本 / 可选性
 
 纯配置改动（`priority` / `costFen` / `costOn` / `optional`）。排序规则是
 `(priority 升 → 逻辑源总成本升 → 配置顺序)`，未显式给 priority 时全为 0，自然退化为
-「价格由低到高」。改完必须重跑 e2e 的「命中即停/回落」用例——优先级改动会直接改变
-哪些源被 `skipped`，进而改变成本与轨迹断言。
+「价格由低到高」。改完必须重跑寻源单测的「命中即停/回落」断言——优先级改动会直接
+改变哪些源被 `skipped`，进而改变成本与轨迹。
 
 ### D. 新增一个数据维度（大改，牵动计费与库表）
 
@@ -162,36 +172,26 @@ description: DataHub_SWFP 的多上游「按维度串行寻源 + 按实得内容
 4. [swfpcontract.go](internal/infrastructure/upstream/swfpcontract.go)：`dataScope`
    输出与新段的白名单映射。
 5. **库表**：新 migration（照 `migrations/0007_sourcing_billing.sql` 的形状）加
-   license 的档位费率列、`upstream_call` 的维度列；pg 与 memory 两套 store 同步改
-   （e2e 的 memory 模式才能覆盖）。
+   license 的档位费率列、`upstream_call` 的维度列；pg 与 memory 两套 store 同步改。
 6. 后台：`Users.jsx` 费率列/编辑项、`Audits.jsx` 维度列。
 
-## 测试（改完必须全绿，缺一项不算完）
+## 测试（改完必须全绿；不要写/扩 mock 挡板）
 
-1. **寻源引擎单测** [sourcing_test.go](internal/infrastructure/upstream/sourcing_test.go)：
+**不要**新增或维护 `scripts/mock_*.go`、也不要靠 mock 驱动的 `test/cases` /
+`test/run.ps1` 当验收门槛——它们既测不到真实协议与鉴权，又要维护一套与线上无关
+的假场景，投入产出不成正比。接入验证用真实上游探针（如既有 `scripts/probe_*.go`）。
+
+必跑的是进程内单测（fakePort，不是 HTTP mock）：
+
+1. **寻源引擎** [sourcing_test.go](internal/infrastructure/upstream/sourcing_test.go)：
    新增源/改优先级后至少补两条断言——**该源在什么条件下被调用**、**在什么条件下被
-   `skipped`**。既有用例覆盖：命中即停、缺项补齐去重、单维度请求跳过另一维度的源、
-   `Want` 为空默认 both、全失败携带上游标识、部分失败→002、全查无→999、
-   `scope=basic` 跳过可选源、主源查无回落、priority 胜过配置顺序。
-2. **计费单测** [billing_test.go](internal/domain/billing/billing_test.go)：按 Got
+   `skipped`**。命中即停 / 回落 / 综合源短路等**逐源状态只在此断言**（或后台
+   `upstream_call`），不得再从下游 `result.range` 读 sourceStatus。
+2. **计费** [billing_test.go](internal/domain/billing/billing_test.go)：按 Got
    定档、license 费率逐档覆盖全局缺省、不计费时成本照样带出。
-3. **e2e** [test/cases/12_swfp_query.go](test/cases/12_swfp_query.go) +
-   [scripts/mock_entcredit.go](scripts/mock_entcredit.go) 的场景值：
-
-   | creditCode | 场景 |
-   |---|---|
-   | `92500233MA60R5KW8M` | 全部查得（高优先级源命中，低优先级源 `skipped`） |
-   | `91110000EMPTYEMPT0` | 全部查无 → 999 |
-   | `91110000PARTFA0001` | 同一逻辑源半边失败、另一半查得 → 仍 001 |
-   | `91110000FPEMPTY001` | 发票源查无 → 回落源5 补发票 |
-   | `91110000TAXEMP0001` | 税务源查无 → 按【单发票】档计费 |
-
-   新增源要么复用这些场景，要么在 mock 里加一个新 creditCode。**注意统一社会信用
-   代码字符集不含 I/O/S/V/Z**——编造场景值时用 `FPEMPTY`/`TAXEMP` 这类合法字符，
-   带 `I`/`V` 的会被 `ParseCreditCode` 前置拦截，测试根本到不了寻源层（踩过）。
-4. **全量**：`go build ./...`、`go vet ./...`、`go test -count=1 ./internal/...`、
-   `powershell -ExecutionPolicy Bypass -File .\test\run.ps1 -ConfigFile config.local.mem.yaml`
-   （postgres 模式需可连通的 e2e PG/Redis；报告在 `test_res/<日期>/REPORT.md`）。
+3. **契约** [swfpcontract_test.go](internal/infrastructure/upstream/swfpcontract_test.go)：
+   扁平输出、白名单、无 `源N`/`sourceStatus`/`feeStandard` 泄漏、`dataScope` 正确。
+4. **全量单测**：`go build ./...`、`go vet ./...`、`go test -count=1 ./internal/...`。
 
 ## 交付前自检（四层齐了才算完）
 
@@ -212,7 +212,7 @@ description: DataHub_SWFP 的多上游「按维度串行寻源 + 按实得内容
   （`GET /admin/api/{ver}/audits/{requestId}/calls`）。
 - 新 migration 由 relay 启动时自动执行；`upstream_call` **无历史回填**，改造前的
   请求下钻会返回空列表，这是已知且接受的。
-- 对外手册（api-doc skill）需同步：`dataType` 入参、`dataScope`/`feeStandard` 字段、
-  `002` 的语义（**未取得数据**且部分数据源异常；取得了数据即 `001` 并计费）、
-  以及分档计费口径。措辞仍受「上游隐匿」铁律约束——只说"数据源/数据段"，
-  不得暴露真实厂商与产品码。
+- 对外手册（api-doc skill）需同步：`dataType` 入参、扁平 `result.range`（两段业务
+  数据 + `dataScope`，**无**源编号/`sourceStatus`/`feeStandard`）、`002` 的语义
+  （**未取得数据**且部分数据源异常；取得了数据即 `001` 并计费）、以及分档计费口径
+  （计费档位只在我方台账）。措辞仍受「上游隐匿」铁律约束——不得暴露真实厂商与产品码。
