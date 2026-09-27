@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/datahub/relay/internal/domain/admin"
 	"github.com/datahub/relay/internal/domain/model"
@@ -31,6 +32,9 @@ func (s *Server) registerAdminRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("GET /admin/api/{ver}/audits", s.requireAdmin(s.adminListAudits))
 	mux.HandleFunc("GET /admin/api/{ver}/audits/{requestId}/calls", s.requireAdmin(s.adminListUpstreamCalls))
+
+	mux.HandleFunc("GET /admin/api/{ver}/stats", s.requireAdmin(s.adminUsageStats))
+	mux.HandleFunc("GET /admin/api/{ver}/stats/sources", s.requireAdmin(s.adminSourceStats))
 
 	if s.spaDir != "" {
 		mux.HandleFunc("GET /admin/", s.serveSPA)
@@ -243,6 +247,85 @@ func (s *Server) adminListUpstreamCalls(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeAdminJSON(w, http.StatusOK, map[string]any{"calls": calls})
+}
+
+// --- §16.4 usage stats (按年/月/日 请求次数与成功次数) ---
+
+func (s *Server) adminUsageStats(w http.ResponseWriter, r *http.Request) {
+	svc, ok := s.adminFor(w, r)
+	if !ok {
+		return
+	}
+	q := r.URL.Query()
+	f := model.StatsFilter{
+		Granularity: model.StatsGranularity(q.Get("granularity")),
+		From:        parseTimeParam(q.Get("from")),
+		To:          parseTimeParam(q.Get("to")),
+		Limit:       atoiDefault(q.Get("limit"), 0),
+	}
+	// ?q= 按 uuid(appKey)/名称/手机号过滤：先解析为匹配的 appKey 集合，再限定统计范围。
+	if kw := strings.TrimSpace(q.Get("q")); kw != "" {
+		matched, err := svc.SearchUsers(r.Context(), kw)
+		if err != nil {
+			writeAdminError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		appKeys := make([]string, 0, len(matched))
+		for _, u := range matched {
+			appKeys = append(appKeys, u.AppKey)
+		}
+		if len(appKeys) == 0 {
+			writeAdminJSON(w, http.StatusOK, map[string]any{"stats": []*model.UsageStat{}})
+			return
+		}
+		f.AppKeys = appKeys
+	}
+	stats, err := svc.UsageStats(r.Context(), f)
+	if err != nil {
+		writeAdminError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeAdminJSON(w, http.StatusOK, map[string]any{"stats": stats})
+}
+
+// adminSourceStats 下钻统计页的某一行：该用户在 [from,to) 内各源分别查得/查无/失败/
+// 未调用多少次——回答「这些请求是哪个源查成功的」。区间由前端按该行的桶标签算好。
+// 未装配逐源明细仓储时返回空列表而非 500：统计主表来自 audit_log，不该整页失败。
+func (s *Server) adminSourceStats(w http.ResponseWriter, r *http.Request) {
+	svc, ok := s.adminFor(w, r)
+	if !ok {
+		return
+	}
+	q := r.URL.Query()
+	sources, err := svc.SourceStats(r.Context(), model.SourceStatFilter{
+		AppKey: q.Get("appKey"),
+		From:   parseTimeParam(q.Get("from")),
+		To:     parseTimeParam(q.Get("to")),
+	})
+	if err != nil {
+		if errors.Is(err, admin.ErrUpstreamCallsUnavailable) {
+			writeAdminJSON(w, http.StatusOK, map[string]any{"sources": []*model.SourceStat{}})
+			return
+		}
+		if errors.Is(err, admin.ErrValidation) {
+			writeAdminError(w, http.StatusBadRequest, "缺少 appKey")
+			return
+		}
+		writeAdminError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeAdminJSON(w, http.StatusOK, map[string]any{"sources": sources})
+}
+
+// parseTimeParam 解析 RFC3339 时间参数，非法/空返回零值 (表示不限)。
+func parseTimeParam(v string) time.Time {
+	if v == "" {
+		return time.Time{}
+	}
+	if t, err := time.Parse(time.RFC3339, v); err == nil {
+		return t
+	}
+	return time.Time{}
 }
 
 // --- SPA static serving (§16.0) ---

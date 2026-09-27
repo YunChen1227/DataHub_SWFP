@@ -268,3 +268,37 @@ func (s *Service) ListUpstreamCalls(ctx context.Context, requestID string) ([]*m
 		Limit:     200,
 	})
 }
+
+// --- §16.4 usage stats (按年/月/日 请求次数与成功次数) ---
+
+// UsageStats 返回本路由作用域下、按 (用户, 时间桶) 聚合的请求/成功次数趋势。
+// 默认粒度按日；Limit 兜底防止桶数过多。作用域 (version) 强制注入，杜绝越权。
+func (s *Service) UsageStats(ctx context.Context, f model.StatsFilter) ([]*model.UsageStat, error) {
+	switch f.Granularity {
+	case model.GranularityYear, model.GranularityMonth, model.GranularityDay:
+		// 合法粒度，保持不变。
+	default:
+		f.Granularity = model.GranularityDay
+	}
+	if f.Limit <= 0 || f.Limit > 2000 {
+		f.Limit = 2000
+	}
+	f.Version = s.route
+	return s.audits.UsageStats(ctx, f)
+}
+
+// SourceStats 下钻统计页的某一行（某用户 + 某时间桶）：该区间内各源分别查得/查无/
+// 失败/未调用多少次。区间边界由调用方按桶标签算好，故此处不重复分桶。
+// 未装配逐源明细仓储时返回 ErrUpstreamCallsUnavailable，由接口层降级为空列表——
+// 统计主表来自 audit_log，不应因明细缺失而整页失败。
+func (s *Service) SourceStats(ctx context.Context, f model.SourceStatFilter) ([]*model.SourceStat, error) {
+	if s.calls == nil {
+		return nil, ErrUpstreamCallsUnavailable
+	}
+	f.AppKey = strings.TrimSpace(f.AppKey)
+	if f.AppKey == "" {
+		return nil, ErrValidation
+	}
+	f.Version = s.route
+	return s.calls.SourceStats(ctx, f)
+}

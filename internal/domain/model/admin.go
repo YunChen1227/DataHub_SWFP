@@ -83,3 +83,38 @@ type AuditFilter struct {
 	Limit    int
 	Offset   int
 }
+
+// StatsGranularity 是用量统计的时间桶粒度 (按年/月/日)。
+type StatsGranularity string
+
+const (
+	GranularityDay   StatsGranularity = "day"
+	GranularityMonth StatsGranularity = "month"
+	GranularityYear  StatsGranularity = "year"
+)
+
+// StatsFilter narrows a usage-stats aggregation over the audit log (§16.4)。
+// 统计按 (用户 appKey, 时间桶) 分组：每个用户各自的时间趋势 (请求次数/成功次数)。
+type StatsFilter struct {
+	Version     string // 路由作用域 (由 admin.Service 注入)
+	AppKeys     []string
+	Granularity StatsGranularity // 默认 day
+	From        time.Time        // 可选区间 [From, To)
+	To          time.Time
+	Limit       int
+}
+
+// UsageStat is one (user, time-bucket) aggregate of request/success counts,
+// powering the admin 「按年/月/日」统计面板 (§16.4)。时间桶按北京时间 (+08:00)
+// 归档，Bucket 为其可读标签 (YYYY / YYYY-MM / YYYY-MM-DD)。
+//
+// 口径取自 audit_log（一次请求一行），与逐源明细 upstream_call（一次请求 N 行）
+// 分开聚合：两表 join 后再 count 会把请求数按源的行数放大，故「哪个源查成功」
+// 走 SourceStats 单独下钻，见 sourcing.go。
+type UsageStat struct {
+	Bucket  string `json:"bucket"`  // 时间桶标签 (北京时间)
+	AppKey  string `json:"appKey"`  // 用户 uuid
+	Name    string `json:"name"`    // 用户名称/备注
+	Total   int64  `json:"total"`   // 请求次数 (审计行总数，含鉴权/参数失败)
+	Success int64  `json:"success"` // 成功次数 (查得数据 found_data)
+}

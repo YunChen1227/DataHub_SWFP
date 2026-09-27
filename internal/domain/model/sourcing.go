@@ -222,6 +222,29 @@ type UpstreamCallFilter struct {
 	Limit     int
 }
 
+// SourceStatFilter narrows 「某用户某时间桶内，各源分别成功了多少次」的聚合。
+// 时间边界由调用方（后台统计页展开某行时）按该行的桶标签算好，故这里只收
+// [From, To) 绝对区间，不再重复分桶逻辑。
+type SourceStatFilter struct {
+	Version string // 路由作用域 (由 admin.Service 注入)
+	AppKey  string
+	From    time.Time
+	To      time.Time
+}
+
+// SourceStat 是一个源在给定区间内的调用结果分布，回答「这些请求是哪个源查成功的」。
+// Calls = OK+Empty+Err+Skipped（skipped 也落库，故它同时反映寻源是否走到该源）。
+type SourceStat struct {
+	Source   string `json:"source"`   // 逻辑源名
+	Label    string `json:"label"`    // 契约段名 invoice1/invoice2/tax1/tax2/sales
+	Provider string `json:"provider"` // 上游 kind: entcredit/salesdata
+	Calls    int64  `json:"calls"`    // 明细行数（= 该源被寻源列表纳入的次数）
+	OK       int64  `json:"ok"`       // 查得
+	Empty    int64  `json:"empty"`    // 查无
+	Err      int64  `json:"err"`      // 失败
+	Skipped  int64  `json:"skipped"`  // 未调用
+}
+
 // SourceSummary 汇总一次请求的逐源结果，供台账速查「这笔钱是哪个源挣的、花了多少」
 // 而不必回头 join 明细表。
 type SourceSummary struct {

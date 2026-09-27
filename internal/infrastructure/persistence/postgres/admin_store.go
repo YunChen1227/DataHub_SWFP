@@ -255,6 +255,71 @@ func (s *Store) ListAudits(ctx context.Context, f model.AuditFilter) ([]*model.A
 	return out, rows.Err()
 }
 
+// UsageStats aggregates per (app_key, 时间桶) request/success counts from the
+// audit log (§16.4)。时间桶按北京时间归档：先把 created_at 转到 Asia/Shanghai
+// (中国自 1991 年起无夏令时，恒为 +08:00) 再 to_char 成标签。名称从 license 关联，
+// 无对应 license 的 appKey (如已删除用户) name 留空但仍计数。
+//
+// 只聚合 audit_log：逐源明细 upstream_call 与它是 1:N，join 后 count(*) 会把请求
+// 次数按源的行数放大，故「哪个源查成功」走 SourceStats 单独下钻。
+func (s *Store) UsageStats(ctx context.Context, f model.StatsFilter) ([]*model.UsageStat, error) {
+	format := "YYYY-MM-DD"
+	switch f.Granularity {
+	case model.GranularityYear:
+		format = "YYYY"
+	case model.GranularityMonth:
+		format = "YYYY-MM"
+	}
+	q := `SELECT a.app_key, COALESCE(l.name,''),
+		to_char(a.created_at AT TIME ZONE 'Asia/Shanghai', $1) AS bucket,
+		count(*) AS total,
+		count(*) FILTER (WHERE a.found_data) AS success
+		FROM audit_log a LEFT JOIN license l ON l.app_key = a.app_key
+		WHERE 1=1`
+	args := []any{format}
+	n := 1
+	if f.Version != "" {
+		n++
+		q += " AND a.version=$" + itoa(n)
+		args = append(args, f.Version)
+	}
+	if len(f.AppKeys) > 0 {
+		n++
+		q += " AND a.app_key = ANY($" + itoa(n) + ")"
+		args = append(args, f.AppKeys)
+	}
+	if !f.From.IsZero() {
+		n++
+		q += " AND a.created_at >= $" + itoa(n)
+		args = append(args, f.From)
+	}
+	if !f.To.IsZero() {
+		n++
+		q += " AND a.created_at < $" + itoa(n)
+		args = append(args, f.To)
+	}
+	q += " GROUP BY a.app_key, l.name, bucket ORDER BY bucket DESC, a.app_key"
+	if f.Limit > 0 {
+		n++
+		q += " LIMIT $" + itoa(n)
+		args = append(args, f.Limit)
+	}
+	rows, err := s.pool.Query(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*model.UsageStat
+	for rows.Next() {
+		var st model.UsageStat
+		if err := rows.Scan(&st.AppKey, &st.Name, &st.Bucket, &st.Total, &st.Success); err != nil {
+			return nil, err
+		}
+		out = append(out, &st)
+	}
+	return out, rows.Err()
+}
+
 // itoa is a tiny positive-int formatter for $N placeholders.
 func itoa(n int) string {
 	if n == 0 {

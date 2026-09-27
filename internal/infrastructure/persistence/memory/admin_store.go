@@ -229,3 +229,80 @@ func containsStr(xs []string, v string) bool {
 	}
 	return false
 }
+
+// --- §16.4 usage stats ---
+
+// cstZone 是北京时间固定时区 (+08:00)。用固定偏移而非 time.LoadLocation，避免
+// Windows 上缺 tzdata 时加载失败；中国自 1991 年起无夏令时，固定 +08:00 与
+// Postgres 侧 'Asia/Shanghai' 归档结果一致。
+var cstZone = time.FixedZone("CST", 8*3600)
+
+// UsageStats aggregates per (app_key, 时间桶) request/success counts (§16.4)。
+func (s *Store) UsageStats(_ context.Context, f model.StatsFilter) ([]*model.UsageStat, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	type key struct{ appKey, bucket string }
+	agg := map[key]*model.UsageStat{}
+	for _, a := range s.audits {
+		if f.Version != "" && a.Version != f.Version {
+			continue
+		}
+		if len(f.AppKeys) > 0 && !containsStr(f.AppKeys, a.AppKey) {
+			continue
+		}
+		if !f.From.IsZero() && a.CreatedAt.Before(f.From) {
+			continue
+		}
+		if !f.To.IsZero() && !a.CreatedAt.Before(f.To) {
+			continue
+		}
+		bucket := bucketLabel(a.CreatedAt.In(cstZone), f.Granularity)
+		k := key{a.AppKey, bucket}
+		st := agg[k]
+		if st == nil {
+			st = &model.UsageStat{Bucket: bucket, AppKey: a.AppKey, Name: s.nameForAppKeyLocked(a.AppKey)}
+			agg[k] = st
+		}
+		st.Total++
+		if a.FoundData {
+			st.Success++
+		}
+	}
+	out := make([]*model.UsageStat, 0, len(agg))
+	for _, v := range agg {
+		out = append(out, v)
+	}
+	// bucket 降序 (新在前)，同桶按 appKey 升序，与 Postgres 侧一致。
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Bucket != out[j].Bucket {
+			return out[i].Bucket > out[j].Bucket
+		}
+		return out[i].AppKey < out[j].AppKey
+	})
+	if f.Limit > 0 && len(out) > f.Limit {
+		out = out[:f.Limit]
+	}
+	return out, nil
+}
+
+// bucketLabel 按粒度格式化时间桶标签 (入参已是北京时间)。
+func bucketLabel(t time.Time, g model.StatsGranularity) string {
+	switch g {
+	case model.GranularityYear:
+		return t.Format("2006")
+	case model.GranularityMonth:
+		return t.Format("2006-01")
+	default:
+		return t.Format("2006-01-02")
+	}
+}
+
+// nameForAppKeyLocked 反查 appKey 对应的用户名称；caller MUST hold s.mu。
+func (s *Store) nameForAppKeyLocked(appKey string) string {
+	if id, ok := s.appKeyIndex[appKey]; ok {
+		if rec := s.licenses[id]; rec != nil {
+			return rec.name
+		}
+	}
+	return ""
+}

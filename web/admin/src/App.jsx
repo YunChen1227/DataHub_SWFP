@@ -3,9 +3,11 @@ import { getToken, setToken } from './api.js'
 import Login from './pages/Login.jsx'
 import Users from './pages/Users.jsx'
 import Audits from './pages/Audits.jsx'
+import Stats from './pages/Stats.jsx'
 
 const TABS = [
   { id: 'users', label: '用户管理' },
+  { id: 'stats', label: '用量统计' },
   { id: 'audits', label: '操作记录' },
 ]
 
@@ -41,6 +43,7 @@ export default function App() {
       </header>
       <div className="container">
         {tab === 'users' && <Users />}
+        {tab === 'stats' && <Stats />}
         {tab === 'audits' && <Audits />}
       </div>
     </>

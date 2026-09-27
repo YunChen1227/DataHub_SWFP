@@ -115,6 +115,69 @@ func main() {
 	rec.Check("审计列表(按 appKey 过滤)", "返回记录数组", am["audits"] != nil, ar)
 	rec.Check("审计 PII 掩码", "idCardMask 含 *", masked, "未发现掩码记录(可能本次无 demo 流量)")
 
+	// 9b. 用量统计：按日分桶 + 按用户检索 + 按源下钻（§16.4）。
+	stst, sm, sr := harness.Call(http.MethodGet, adminBase+"/stats?granularity=day&limit=50", nil, auth)
+	stats, _ := sm["stats"].([]any)
+	rec.Check("用量统计(按日)", "HTTP 200 且返回 stats 数组", stst == 200 && sm["stats"] != nil, sr)
+
+	// 每行必须带桶标签与两个计数，且 success <= total（口径自洽）。无流量时空数组也算通过。
+	shape := true
+	for _, s := range stats {
+		row, _ := s.(map[string]any)
+		bucket, _ := row["bucket"].(string)
+		total, _ := row["total"].(float64)
+		success, _ := row["success"].(float64)
+		if len(bucket) != 10 || success > total { // 日粒度桶标签形如 2026-09-27
+			shape = false
+			break
+		}
+	}
+	rec.Check("用量统计行形态", "bucket=YYYY-MM-DD 且 success<=total", shape, sr)
+
+	// 按年分桶：桶标签应为 4 位年份。
+	_, ym, yr := harness.Call(http.MethodGet, adminBase+"/stats?granularity=year", nil, auth)
+	yStats, _ := ym["stats"].([]any)
+	yShape := true
+	for _, s := range yStats {
+		row, _ := s.(map[string]any)
+		if bucket, _ := row["bucket"].(string); len(bucket) != 4 {
+			yShape = false
+			break
+		}
+	}
+	rec.Check("用量统计(按年)", "bucket=YYYY", yShape, yr)
+
+	// 检索不存在的用户 -> 空结果（而非退化为全量）。
+	_, nm2, nr := harness.Call(http.MethodGet, adminBase+"/stats?q=__no_such_user__", nil, auth)
+	noneStats, _ := nm2["stats"].([]any)
+	rec.Check("用量统计(检索无命中)", "stats 为空数组", nm2["stats"] != nil && len(noneStats) == 0, nr)
+
+	// 按源下钻：不限区间即全时段分布，回答「哪个源查成功的」。
+	stsrc, srcm, srcr := harness.Call(http.MethodGet,
+		adminBase+"/stats/sources?appKey="+harness.AppKey, nil, auth)
+	sources, _ := srcm["sources"].([]any)
+	rec.Check("按源统计", "HTTP 200 且返回 sources 数组", stsrc == 200 && srcm["sources"] != nil, srcr)
+
+	// calls = ok+empty+err+skipped，四种状态必须把明细行分完（口径自洽）。
+	srcShape := true
+	for _, s := range sources {
+		row, _ := s.(map[string]any)
+		calls, _ := row["calls"].(float64)
+		ok, _ := row["ok"].(float64)
+		empty, _ := row["empty"].(float64)
+		errc, _ := row["err"].(float64)
+		skipped, _ := row["skipped"].(float64)
+		if calls != ok+empty+errc+skipped {
+			srcShape = false
+			break
+		}
+	}
+	rec.Check("按源统计口径自洽", "calls = ok+empty+err+skipped", srcShape, srcr)
+
+	// 缺 appKey -> 400（下钻必须限定用户，否则跨用户混算）。
+	stbad, _, badr := harness.Call(http.MethodGet, adminBase+"/stats/sources", nil, auth)
+	rec.Check("按源统计(缺 appKey)", "HTTP 400", stbad == 400, "status="+itoa(stbad)+" "+badr)
+
 	// 10. 删除
 	std, _, dr := harness.Call(http.MethodDelete, adminBase+"/users/"+licenseID, nil, auth)
 	rec.Check("删除用户", "HTTP 200", std == 200, dr)

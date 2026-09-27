@@ -91,6 +91,54 @@ func (s *Store) ListUpstreamCalls(ctx context.Context, f model.UpstreamCallFilte
 	return scanUpstreamCalls(rows)
 }
 
+// SourceStats 按源汇总某用户某区间内的结果分布，回答后台统计页「这些请求是哪个源
+// 查成功的」。按 source_label 分组（五个源 1:1 对应五个上游产品码，与成本对账口径
+// 一致）；skipped 也计入 calls，故能看出寻源有没有走到该源。
+func (s *Store) SourceStats(ctx context.Context, f model.SourceStatFilter) ([]*model.SourceStat, error) {
+	q := `SELECT source_name, source_label, COALESCE(provider,''),
+		count(*) AS calls,
+		count(*) FILTER (WHERE status='ok')      AS ok_cnt,
+		count(*) FILTER (WHERE status='empty')   AS empty_cnt,
+		count(*) FILTER (WHERE status='error')   AS err_cnt,
+		count(*) FILTER (WHERE status='skipped') AS skipped_cnt
+		FROM upstream_call WHERE 1=1`
+	args := []any{}
+	n := 0
+	add := func(cond string, v any) {
+		n++
+		q += " AND " + cond + "$" + strconv.Itoa(n)
+		args = append(args, v)
+	}
+	if f.Version != "" {
+		add("version=", f.Version)
+	}
+	if f.AppKey != "" {
+		add("app_key=", f.AppKey)
+	}
+	if !f.From.IsZero() {
+		add("created_at>=", f.From)
+	}
+	if !f.To.IsZero() {
+		add("created_at<", f.To)
+	}
+	q += " GROUP BY source_name, source_label, provider ORDER BY source_label"
+	rows, err := s.pool.Query(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*model.SourceStat
+	for rows.Next() {
+		var st model.SourceStat
+		if err := rows.Scan(&st.Source, &st.Label, &st.Provider,
+			&st.Calls, &st.OK, &st.Empty, &st.Err, &st.Skipped); err != nil {
+			return nil, err
+		}
+		out = append(out, &st)
+	}
+	return out, rows.Err()
+}
+
 func scanUpstreamCalls(rows pgx.Rows) ([]*model.UpstreamCallRecord, error) {
 	var out []*model.UpstreamCallRecord
 	for rows.Next() {

@@ -57,6 +57,9 @@ type LedgerRepository interface {
 type UpstreamCallRepository interface {
 	AppendUpstreamCalls(ctx context.Context, calls []*model.UpstreamCallRecord) error
 	ListUpstreamCalls(ctx context.Context, f model.UpstreamCallFilter) ([]*model.UpstreamCallRecord, error)
+	// SourceStats 按源汇总某用户某区间内的调用结果分布，回答后台统计页的
+	// 「这些请求是哪个源查成功的」。
+	SourceStats(ctx context.Context, f model.SourceStatFilter) ([]*model.SourceStat, error)
 }
 
 // SubjectBillingRepository 实现「主体年度计费」的免费期状态机 (设计_主体年度计费.md)：
@@ -131,4 +134,7 @@ type UserAdminRepository interface {
 type AuditRepository interface {
 	AppendAudit(ctx context.Context, rec *model.AuditRecord) error
 	ListAudits(ctx context.Context, f model.AuditFilter) ([]*model.AuditRecord, error)
+	// UsageStats aggregates request/success counts per (user, 时间桶) for the
+	// admin 「按年/月/日」统计面板 (§16.4)。时间桶按北京时间 (+08:00) 归档。
+	UsageStats(ctx context.Context, f model.StatsFilter) ([]*model.UsageStat, error)
 }
