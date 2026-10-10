@@ -8,7 +8,11 @@
 //
 //	DAYS=30                     统计窗口（天），缺省 30
 //	LOG_FILE=logs/relay.log     relay 日志；不存在时跳过日志分析
-//	OUT=test_res/xxx.xlsx       输出路径，缺省 test_res/ctax_diag_<时间>.xlsx
+//	OUT=test_res/xxx.xlsx       内部版输出路径，缺省 test_res/ctax_diag_<时间>.xlsx
+//	OUT_HZ=test_res/xxx.xlsx    外发惠众版输出路径，缺省 test_res/ctax_huizhong_<时间>.xlsx
+//
+// 外发版只含惠众侧可见的信息（调用时间 / 惠众 orderNo / type / 惠众返回 code、msg），
+// 不含我方 reqid、request_id、客户、其他上游与计费口径。
 //
 // 数据库会话强制 default_transaction_read_only=on，不会写库。
 //
@@ -74,7 +78,9 @@ func main() {
 		days = 30
 	}
 	now := time.Now()
-	out := env("OUT", filepath.Join("test_res", "ctax_diag_"+now.In(cst).Format("20060102_1504")+".xlsx"))
+	stamp := now.In(cst).Format("20060102_1504")
+	out := env("OUT", filepath.Join("test_res", "ctax_diag_"+stamp+".xlsx"))
+	outHZ := env("OUT_HZ", filepath.Join("test_res", "ctax_huizhong_"+stamp+".xlsx"))
 	windowStart := now.Add(-time.Duration(days) * 24 * time.Hour)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
@@ -318,9 +324,173 @@ GROUP BY 1,2 ORDER BY 3 DESC`)
 	if err := wb.save(out); err != nil {
 		fail("写 Excel 失败: %v", err)
 	}
+	hz := buildHuizhongWorkbook(d.ctaxCalls(since), lg)
+	if err := hz.save(outHZ); err != nil {
+		fail("写外发 Excel 失败: %v", err)
+	}
 	fmt.Printf("ctax 实调 %d（查得 %d / 查无 %d / 失败 %d）；有 data 无业务段 %d（库里匹配 %d）\n",
 		called, ok, empty, errCnt, nodata, matchedCnt)
-	fmt.Println("已输出:", out)
+	fmt.Println("已输出（内部版，勿外发）:", out)
+	fmt.Println("已输出（外发惠众版）:", outHZ)
+}
+
+// ---------------- 外发惠众版 ----------------
+
+type ctaxCall struct {
+	at                 time.Time
+	reqid, status      string
+	code, msg, orderNo string
+	reqScope           string
+}
+
+// ctaxCalls 取窗口内全部真正打到惠众的 ctax 调用；请求维度取自审计（逐源明细里的维度
+// 是源的能力，不是本次请求的 type）。
+func (d *diag) ctaxCalls(since string) []ctaxCall {
+	rows, err := d.conn.Query(d.ctx, `
+SELECT u.created_at, u.reqid, u.status, u.upstream_code, u.upstream_msg, u.upstream_uid, COALESCE(a.req_scope,'')
+FROM upstream_call u LEFT JOIN audit_log a ON a.request_id=u.request_id
+WHERE u.source_label='ctax' AND u.status<>'skipped' AND u.created_at >= `+since+`
+ORDER BY u.created_at`)
+	if err != nil {
+		fail("查询 ctax 明细失败: %v", err)
+	}
+	defer rows.Close()
+	var out []ctaxCall
+	for rows.Next() {
+		var c ctaxCall
+		if err := rows.Scan(&c.at, &c.reqid, &c.status, &c.code, &c.msg, &c.orderNo, &c.reqScope); err != nil {
+			fail("读取 ctax 明细失败: %v", err)
+		}
+		out = append(out, c)
+	}
+	if err := rows.Err(); err != nil {
+		fail("读取 ctax 明细失败: %v", err)
+	}
+	return out
+}
+
+// hzType 把我方请求维度换成惠众接口的 type 入参。
+func hzType(scope string) string {
+	switch scope {
+	case "tax":
+		return "1（税务）"
+	case "invoice":
+		return "2（发票）"
+	case "invoice+tax", "none", "":
+		return "3（税务+发票）"
+	}
+	return scope
+}
+
+func isTimeout(msg string) bool {
+	m := strings.ToLower(msg)
+	return strings.Contains(m, "deadline") || strings.Contains(m, "timeout")
+}
+
+func buildHuizhongWorkbook(calls []ctaxCall, lg *logScan) *workbook {
+	nodataCode := map[string]string{}
+	for _, e := range lg.inWindow {
+		nodataCode[e.Reqid] = e.Code
+	}
+
+	const (
+		catNoData  = "SYS200 但无业务数据"
+		catEmpty   = "查无"
+		catTimeout = "超时未收到应答"
+		catFail    = "返回错误码"
+	)
+	cats := []string{catNoData, catEmpty, catFail, catTimeout}
+
+	var nodataRows, emptyRows, failRows [][]any
+	byDay := map[string]map[string]int64{}
+	catCnt := map[string]int64{}
+	var first, last time.Time
+	for _, c := range calls {
+		ts := fmtTime(c.at)
+		typ := hzType(c.reqScope)
+		var cat string
+		switch {
+		case c.status == "empty" && nodataCode[c.reqid] != "":
+			cat = catNoData
+			nodataRows = append(nodataRows, []any{ts, c.orderNo, typ, nodataCode[c.reqid], "data 中发票/税务业务段均为空"})
+		case c.status == "empty":
+			cat = catEmpty
+			emptyRows = append(emptyRows, []any{ts, c.orderNo, typ, "查无（未返回业务数据）"})
+		case c.status == "error" && c.orderNo == "" && isTimeout(c.msg):
+			cat = catTimeout
+			failRows = append(failRows, []any{ts, "", typ, "", "我方 4 秒超时断开，未收到惠众应答"})
+		case c.status == "error":
+			cat = catFail
+			failRows = append(failRows, []any{ts, c.orderNo, typ, c.code, strings.TrimPrefix(c.msg, "cTax 失败: ")})
+		default:
+			continue // ok：窗口内若有查得，不属于本次争议范围
+		}
+		if first.IsZero() {
+			first = c.at
+		}
+		last = c.at
+		day := c.at.In(cst).Format("2006-01-02")
+		if byDay[day] == nil {
+			byDay[day] = map[string]int64{}
+		}
+		byDay[day][cat]++
+		catCnt[cat]++
+	}
+
+	var totalCnt int64
+	for _, n := range catCnt {
+		totalCnt += n
+	}
+
+	wb := &workbook{}
+	wb.add("汇总", []string{"项目", "次数", "说明"}, [][]any{
+		{"统计区间", fmt.Sprintf("%s ~ %s", fmtTime(first), fmtTime(last)), "北京时间"},
+		{"我方调用惠众「税票数据查询C」总次数", totalCnt, "以下四类之和"},
+		{"  · " + catNoData, catCnt[catNoData], "惠众返回 SYS200，但 data 中发票/税务业务段均为空，详见「SYS200无业务数据_明细」"},
+		{"  · " + catEmpty, catCnt[catEmpty], "惠众返回查无，详见「查无_明细」"},
+		{"  · " + catFail, catCnt[catFail], "惠众返回非成功码，详见「失败_明细」"},
+		{"  · " + catTimeout, catCnt[catTimeout], "我方 4 秒内未收到应答主动断开，无 orderNo，详见「失败_明细」"},
+	}, []float64{36, 26, 80})
+
+	days := make([]string, 0, len(byDay))
+	for d := range byDay {
+		days = append(days, d)
+	}
+	sort.Strings(days)
+	dayRows := make([][]any, 0, len(days)+1)
+	tot := make([]int64, len(cats))
+	for _, d := range days {
+		row := []any{d}
+		var sum int64
+		for i, c := range cats {
+			n := byDay[d][c]
+			row = append(row, n)
+			tot[i] += n
+			sum += n
+		}
+		dayRows = append(dayRows, append(row, sum))
+	}
+	totalRow := []any{"合计"}
+	for _, n := range tot {
+		totalRow = append(totalRow, n)
+	}
+	dayRows = append(dayRows, append(totalRow, totalCnt))
+	wb.add("按天", append(append([]string{"日期"}, cats...), "合计"), dayRows, []float64{14, 20, 10, 12, 16, 10})
+
+	wb.add("SYS200无业务数据_明细", []string{"调用时间", "惠众订单号 orderNo", "查询类型 type", "惠众返回 code", "说明"},
+		nodataRows, []float64{20, 26, 16, 14, 34})
+	wb.add("查无_明细", []string{"调用时间", "惠众订单号 orderNo", "查询类型 type", "结果"},
+		emptyRows, []float64{20, 26, 16, 24})
+	wb.add("失败_明细", []string{"调用时间", "惠众订单号 orderNo", "查询类型 type", "惠众返回 code", "惠众返回 msg / 说明"},
+		failRows, []float64{20, 26, 16, 14, 50})
+	wb.add("说明", []string{"项目", "说明"}, [][]any{
+		{"惠众订单号 orderNo", "惠众应答中的 orderNo，可据此在惠众侧逐笔核对"},
+		{"查询类型 type", "请求入参 type：1=税务，2=发票，3=税务+发票"},
+		{"SYS200 但无业务数据", "惠众返回 code=SYS200 且带 data，但发票类（kphzxx/spxx/xyhzxx/khxsdq/syhzxx）与税务类（sbsj/zsbxx/lrbxx/zcfzbxx）业务段均为空，仅有纳税人基本信息或空容器"},
+		{"查无", "惠众返回查无类结果（SYS404 等），或返回成功码但无 data"},
+		{"超时未收到应答", "我方单次调用超时为 4 秒，超时后断开连接，因此没有 orderNo；惠众侧如已受理，请以惠众日志为准"},
+	}, []float64{24, 100})
+	return wb
 }
 
 // ---------------- 数据库 ----------------
