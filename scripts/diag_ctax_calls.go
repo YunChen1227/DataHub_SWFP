@@ -11,8 +11,8 @@
 //	OUT=test_res/xxx.xlsx       内部版输出路径，缺省 test_res/ctax_diag_<时间>.xlsx
 //	OUT_HZ=test_res/xxx.xlsx    外发惠众版输出路径，缺省 test_res/ctax_huizhong_<时间>.xlsx
 //
-// 外发版只含惠众侧可见的信息（调用时间 / 惠众 orderNo / type / 惠众返回 code、msg），
-// 不含我方 reqid、request_id、客户、其他上游与计费口径。
+// 外发版含调用时间 / reqid / 惠众 orderNo / type / 惠众返回 code、msg，
+// 不含我方 request_id、客户、其他上游与计费口径。
 //
 // 数据库会话强制 default_transaction_read_only=on，不会写库。
 //
@@ -412,16 +412,16 @@ func buildHuizhongWorkbook(calls []ctaxCall, lg *logScan) *workbook {
 		switch {
 		case c.status == "empty" && nodataCode[c.reqid] != "":
 			cat = catNoData
-			nodataRows = append(nodataRows, []any{ts, c.orderNo, typ, nodataCode[c.reqid], "data 中发票/税务业务段均为空"})
+			nodataRows = append(nodataRows, []any{ts, c.reqid, c.orderNo, typ, nodataCode[c.reqid], "data 中发票/税务业务段均为空"})
 		case c.status == "empty":
 			cat = catEmpty
-			emptyRows = append(emptyRows, []any{ts, c.orderNo, typ, "查无（未返回业务数据）"})
+			emptyRows = append(emptyRows, []any{ts, c.reqid, c.orderNo, typ, "查无（未返回业务数据）"})
 		case c.status == "error" && c.orderNo == "" && isTimeout(c.msg):
 			cat = catTimeout
-			failRows = append(failRows, []any{ts, "", typ, "", "我方 4 秒超时断开，未收到惠众应答"})
+			failRows = append(failRows, []any{ts, c.reqid, "", typ, "", "我方 4 秒超时断开，未收到惠众应答"})
 		case c.status == "error":
 			cat = catFail
-			failRows = append(failRows, []any{ts, c.orderNo, typ, c.code, strings.TrimPrefix(c.msg, "cTax 失败: ")})
+			failRows = append(failRows, []any{ts, c.reqid, c.orderNo, typ, c.code, strings.TrimPrefix(c.msg, "cTax 失败: ")})
 		default:
 			continue // ok：窗口内若有查得，不属于本次争议范围
 		}
@@ -477,14 +477,15 @@ func buildHuizhongWorkbook(calls []ctaxCall, lg *logScan) *workbook {
 	dayRows = append(dayRows, append(totalRow, totalCnt))
 	wb.add("按天", append(append([]string{"日期"}, cats...), "合计"), dayRows, []float64{14, 20, 10, 12, 16, 10})
 
-	wb.add("SYS200无业务数据_明细", []string{"调用时间", "惠众订单号 orderNo", "查询类型 type", "惠众返回 code", "说明"},
-		nodataRows, []float64{20, 26, 16, 14, 34})
-	wb.add("查无_明细", []string{"调用时间", "惠众订单号 orderNo", "查询类型 type", "结果"},
-		emptyRows, []float64{20, 26, 16, 24})
-	wb.add("失败_明细", []string{"调用时间", "惠众订单号 orderNo", "查询类型 type", "惠众返回 code", "惠众返回 msg / 说明"},
-		failRows, []float64{20, 26, 16, 14, 50})
+	wb.add("SYS200无业务数据_明细", []string{"调用时间", "reqid", "惠众请求号 orderNo", "查询类型 type", "惠众返回 code", "说明"},
+		nodataRows, []float64{20, 18, 26, 16, 14, 34})
+	wb.add("查无_明细", []string{"调用时间", "reqid", "惠众请求号 orderNo", "查询类型 type", "结果"},
+		emptyRows, []float64{20, 18, 26, 16, 24})
+	wb.add("失败_明细", []string{"调用时间", "reqid", "惠众请求号 orderNo", "查询类型 type", "惠众返回 code", "惠众返回 msg / 说明"},
+		failRows, []float64{20, 18, 26, 16, 14, 50})
 	wb.add("说明", []string{"项目", "说明"}, [][]any{
-		{"惠众订单号 orderNo", "惠众应答中的 orderNo，可据此在惠众侧逐笔核对"},
+		{"reqid", "每次调用的 reqid"},
+		{"惠众请求号 orderNo", "惠众每次应答返回的 orderNo（我方库中记为上游请求号/上游订单号），可据此在惠众侧逐笔核对"},
 		{"查询类型 type", "请求入参 type：1=税务，2=发票，3=税务+发票"},
 		{"SYS200 但无业务数据", "惠众返回 code=SYS200 且带 data，但发票类（kphzxx/spxx/xyhzxx/khxsdq/syhzxx）与税务类（sbsj/zsbxx/lrbxx/zcfzbxx）业务段均为空，仅有纳税人基本信息或空容器"},
 		{"查无", "惠众返回查无类结果（SYS404 等），或返回成功码但无 data"},
