@@ -12,7 +12,7 @@
 //
 // 口径：audit_log.found_data = true（下游 body.code=001）；查得维度取 data_scope，
 // 不区分由哪个上游源查得。request id 即返回给下游的 head.logId（audit_log.request_id）。
-// 「计费」列取主体年度计费后的 charged_scope：免费期内的查得记为查得但不计费。
+// 不区分免费期：每一条查得都计入（计费量 = 查得量）。
 package main
 
 import (
@@ -132,83 +132,47 @@ func main() {
 	}
 	recs := loadRecords(ctx, conn, appKeys, from, to)
 
-	// 单价：客户合同价优先，缺档走全局缺省（与 FeeRates 兜底口径一致）。
-	pick := func(lic, def int64) int64 {
-		if lic > 0 {
-			return lic
-		}
-		return def
-	}
-	l0 := lics[0]
-	price := map[string]int64{
-		"invoice":     pick(l0.invFen, cfg.Billing.Rates.InvoiceFen),
-		"tax":         pick(l0.taxFen, cfg.Billing.Rates.TaxFen),
-		"invoice+tax": pick(l0.bothFen, cfg.Billing.Rates.BothFen),
-	}
-
+	// 不区分免费期：每条查得都计入，计费量 = 查得量。
 	found := map[string]int64{}
-	charged := map[string]int64{}
 	detail := make([][]any, 0, len(recs))
 	for _, r := range recs {
 		inv, tax := dims(r.dataScope)
-		cInv, cTax := dims(r.chargedScope)
 		code := r.creditCode
-		var notes []string
+		note := ""
 		if code == "" {
 			code = r.mask
-			notes = append(notes, "税号为脱敏值（主体计费上线前的记录）")
-		}
-		switch {
-		case r.chargeState == "FREE":
-			notes = append(notes, "免费期内，本次未计费")
-		case r.chargeState == "DEFERRED":
-			notes = append(notes, "计费判定待补记")
-		case r.chargeState == "CHARGED" && r.chargedScope != r.dataScope:
-			notes = append(notes, fmt.Sprintf("仅计费%s，其余类目在免费期内", scopeName(r.chargedScope)))
+			note = "税号为脱敏值（主体计费上线前的记录）"
 		}
 		found[normScope(r.dataScope)]++
-		if r.chargeState == "CHARGED" && r.chargedScope != "" && r.chargedScope != "none" {
-			charged[normScope(r.chargedScope)]++
-		}
 		detail = append(detail, []any{
 			r.at.In(cst).Format("2006-01-02 15:04:05"), r.requestID, code, r.appKey,
-			b2i(tax), b2i(inv), scopeName(r.dataScope), b2i(cTax), b2i(cInv), strings.Join(notes, "；"),
+			b2i(tax), b2i(inv), scopeName(r.dataScope), note,
 		})
 	}
 
 	wb := &workbook{}
 	monthLabel := from.Format("2006年1月")
-	var totFound, totCharged, totAmount int64
+	var totFound int64
 	summary := [][]any{
 		{"客户名称", customer},
 		{"账期", monthLabel},
-		{"产品名称", "查得量", "计费量", "单价（元）", "计费小计（元）", "备注"},
+		{"产品名称", "查得量"},
 	}
 	scopes := []string{"invoice", "tax", "invoice+tax"}
 	if found["unknown"] > 0 {
 		scopes = append(scopes, "unknown")
 	}
 	for _, s := range scopes {
-		amount := charged[s] * price[s]
 		totFound += found[s]
-		totCharged += charged[s]
-		totAmount += amount
-		note := ""
-		switch {
-		case s == "unknown":
-			note = "查得维度未记录（字段上线前的老记录）"
-		case price[s] == 0:
-			note = "未配置单价"
-		}
-		summary = append(summary, []any{scopeName(s), found[s], charged[s], fen(price[s]), fen(amount), note})
+		summary = append(summary, []any{scopeName(s), found[s]})
 	}
-	summary = append(summary, []any{"小计", totFound, totCharged, "", fen(totAmount), ""})
-	wb.add("对账单", nil, summary, []float64{30, 12, 12, 14, 16, 30})
+	summary = append(summary, []any{"小计", totFound})
+	wb.add("对账单", nil, summary, []float64{30, 12})
 	wb.sheets[len(wb.sheets)-1].hdrRows = map[int]bool{0: true, 1: true, 2: true, len(summary) - 1: true}
 
 	wb.add(from.Format("1月")+"明细",
-		[]string{"调用时间", "request id", "税号", "appKey", "查得税", "查得票", "查得类型", "计费税", "计费票", "备注"},
-		detail, []float64{20, 40, 22, 16, 8, 8, 14, 8, 8, 36})
+		[]string{"调用时间", "request id", "税号", "appKey", "查得税", "查得票", "查得类型", "备注"},
+		detail, []float64{20, 40, 22, 16, 8, 8, 14, 30})
 
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		fail("创建输出目录失败: %v", err)
@@ -216,8 +180,8 @@ func main() {
 	if err := wb.save(out); err != nil {
 		fail("写 Excel 失败: %v", err)
 	}
-	fmt.Printf("%s %s：查得 %d 条（票 %d / 税 %d / 票+税 %d），计费 %d 条\n",
-		customer, monthLabel, totFound, found["invoice"], found["tax"], found["invoice+tax"], totCharged)
+	fmt.Printf("%s %s：查得 %d 条（票 %d / 税 %d / 票+税 %d）\n",
+		customer, monthLabel, totFound, found["invoice"], found["tax"], found["invoice+tax"])
 	fmt.Println("已输出:", out)
 }
 
