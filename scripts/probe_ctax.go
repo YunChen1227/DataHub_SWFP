@@ -2,7 +2,7 @@
 
 // probe_ctax: 用真实惠众征信环境 + test/cases/测试税号.xlsx 批量探测源6。
 //
-// 源6 的连接参数（baseURL / appId / token / authCode / authTime）**直接读配置文件**，
+// 源6 的连接参数（baseURL / appId / token）**直接读配置文件**，
 // 与 relay 用的是同一份 config，避免手抄凭证抄错：
 //
 //	# 阿里云生产（默认读 config.aliyun.prod.yaml 里的 ctax 源）：
@@ -49,13 +49,10 @@ func env(k, def string) string {
 type probeConfig struct {
 	Versions map[string]struct {
 		Upstreams []struct {
-			Kind        string `yaml:"kind"`
-			BaseURL     string `yaml:"baseURL"`
-			AppID       string `yaml:"appId"`
-			Token       string `yaml:"token"`
-			AuthCode    string `yaml:"authCode"`
-			AuthTimeBeg string `yaml:"authTimeBeg"`
-			AuthTimeEnd string `yaml:"authTimeEnd"`
+			Kind    string `yaml:"kind"`
+			BaseURL string `yaml:"baseURL"`
+			AppID   string `yaml:"appId"`
+			Token   string `yaml:"token"`
 		} `yaml:"upstreams"`
 	} `yaml:"versions"`
 }
@@ -77,12 +74,9 @@ func loadCTaxConfig(path, version string) (upstream.CTaxConfig, error) {
 	for _, u := range ver.Upstreams {
 		if u.Kind == "ctax" {
 			return upstream.CTaxConfig{
-				BaseURL:     u.BaseURL,
-				AppID:       u.AppID,
-				Token:       u.Token,
-				AuthCode:    u.AuthCode,
-				AuthTimeBeg: u.AuthTimeBeg,
-				AuthTimeEnd: u.AuthTimeEnd,
+				BaseURL: u.BaseURL,
+				AppID:   u.AppID,
+				Token:   u.Token,
 			}, nil
 		}
 	}
@@ -125,7 +119,6 @@ func main() {
 	fmt.Printf("  config   : %s (versions.%s)\n", configFile, version)
 	fmt.Printf("  baseURL  : %s\n", cfg.BaseURL)
 	fmt.Printf("  appId    : %s\n", cfg.AppID)
-	fmt.Printf("  authCode : %s\n", cfg.AuthCode)
 	fmt.Printf("  type     : %s\n", wantType)
 	fmt.Printf("  tax nums : %d (from 测试税号.xlsx)\n\n", len(codes))
 
@@ -185,7 +178,7 @@ func main() {
 	fmt.Printf("\n== summary: hit=%d empty=%d auth/config=%d rateLimit=%d other=%d total=%d ==\n",
 		hit, empty, authFail, rateLimit, other, len(codes))
 	if authFail > 0 {
-		os.Exit(2) // 凭证/授权窗口配错
+		os.Exit(2) // 凭证配错或企业未授权
 	}
 	if other > 0 {
 		os.Exit(3) // 非预期的上游失败

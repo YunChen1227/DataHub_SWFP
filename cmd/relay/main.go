@@ -465,14 +465,11 @@ func buildClient(version string, uc upstreamConfig, httpClient *http.Client, log
 		return client, nil
 	case upstream.ProviderCTax:
 		// swfp 源6 税票数据查询C (惠众征信)：baseURL 是上游给的完整业务地址；
-		// 鉴权走请求头 X-AppId(appId)/X-Token(token)；授权码与时间窗走 body。
+		// 鉴权走请求头 X-AppId(appId)/X-Token(token)。
 		client := upstream.NewCTax(upstream.CTaxConfig{
-			BaseURL:     uc.baseURL,
-			AppID:       uc.appID,
-			Token:       uc.token,
-			AuthCode:    uc.authCode,
-			AuthTimeBeg: uc.authTimeBeg,
-			AuthTimeEnd: uc.authTimeEnd,
+			BaseURL: uc.baseURL,
+			AppID:   uc.appID,
+			Token:   uc.token,
 		}, httpClient)
 		return client, nil
 	default:

@@ -4,8 +4,8 @@
 //
 // 默认打测试环境；生产需 ECS 白名单：
 //
-//	CTAX_BASE_URL=https://api.huizhongcredit.com/hzservice/sy/tax \
-//	CTAX_APP_ID=9VTYC6YU CTAX_TOKEN='...' CTAX_AUTH_CODE=gckj \
+//	CTAX_BASE_URL=https://api.huizhongcredit.com/hzservice/c/tax \
+//	CTAX_APP_ID=9VTYC6YU CTAX_TOKEN='...' \
 //	go run test/cases/13_ctax_real.go
 //
 // 可选走 relay 全链路（relay 须用 config.local.real.yaml 启动，无 mock）：
@@ -49,10 +49,9 @@ func main() {
 	rec.Check("读取测试税号.xlsx", fmt.Sprintf("%d 条税号", len(codes)), len(codes) > 0, fmt.Sprintf("%v", codes))
 
 	cfg := upstream.CTaxConfig{
-		BaseURL:  env("CTAX_BASE_URL", "https://cloud-test.huizhongcredit.com/hzservice/sy/tax"),
-		AppID:    env("CTAX_APP_ID", "FMRJGBVB"),
-		Token:    env("CTAX_TOKEN", "L0HsaFt5LBemICthuAsBHs2k8CPf9xrEDpNQXbSWyLde2A8B0tPbcjFoSSGVKWbO"),
-		AuthCode: env("CTAX_AUTH_CODE", "test"),
+		BaseURL: env("CTAX_BASE_URL", "https://cloud-test.huizhongcredit.com/hzservice/c/tax"),
+		AppID:   env("CTAX_APP_ID", "FMRJGBVB"),
+		Token:   env("CTAX_TOKEN", "L0HsaFt5LBemICthuAsBHs2k8CPf9xrEDpNQXbSWyLde2A8B0tPbcjFoSSGVKWbO"),
 	}
 	client := upstream.NewCTax(cfg, &http.Client{Timeout: 45 * time.Second})
 
@@ -78,7 +77,7 @@ func main() {
 				firstHit = cc
 			}
 		case qerr == nil && res.Code == "999":
-			okRound++ // SYS404 查无：协议通、授权窗口可接受，只是这家没数据
+			okRound++ // SYS404 查无：协议通，只是这家没数据
 		default:
 			var ue *model.UpstreamError
 			if errors.As(qerr, &ue) {
@@ -113,7 +112,7 @@ func main() {
 	}
 
 	rec.Check("鉴权/参数无致命错误", "authFail=0", authFail == 0,
-		fmt.Sprintf("authFail=%d（203/A20029 表示 authCode/凭证/窗口配错）", authFail))
+		fmt.Sprintf("authFail=%d（203/A20029 表示凭证配错或企业未授权）", authFail))
 	rec.Check("真实往返成功率", fmt.Sprintf(">=%d/%d", len(codes)/2, len(codes)),
 		okRound >= len(codes)/2,
 		fmt.Sprintf("okRound=%d hit=%d transport/other=%d total=%d", okRound, hit, transport, len(codes)))

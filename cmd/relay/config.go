@@ -24,11 +24,8 @@ type upstreamConfig struct {
 	label           string
 	optional        bool
 
-	// ctax（源6 税票数据查询C）专用凭证与授权信息。
-	token       string // 请求头 X-Token
-	authCode    string // body authCode：授权码（环境级凭证）
-	authTimeBeg string // body authTimeBeg：授权时间窗下界（缺省 2020-01-01）
-	authTimeEnd string // body authTimeEnd：授权时间窗上界（缺省当天）
+	// ctax（源6 税票数据查询C）专用凭证。
+	token string // 请求头 X-Token
 
 	// 寻源属性（缺省值由 label 推导，见 sourceOf/providesOf，老配置无需改动）。
 	source   string // 逻辑源名：寻源优先级列表的单位，也是「已请求过」去重的键
@@ -136,10 +133,7 @@ type fileUpstream struct {
 	CostOn          string `yaml:"costOn"`
 
 	// ctax（源6）专用。
-	Token       string `yaml:"token"`
-	AuthCode    string `yaml:"authCode"`
-	AuthTimeBeg string `yaml:"authTimeBeg"`
-	AuthTimeEnd string `yaml:"authTimeEnd"`
+	Token string `yaml:"token"`
 }
 
 type fileDatabase struct {
@@ -309,9 +303,6 @@ func toUpstreamConfig(fu fileUpstream, version string) upstreamConfig {
 		costFen:         fu.CostFen,
 		costOn:          fu.CostOn,
 		token:           fu.Token,
-		authCode:        fu.AuthCode,
-		authTimeBeg:     fu.AuthTimeBeg,
-		authTimeEnd:     fu.AuthTimeEnd,
 	}
 }
 

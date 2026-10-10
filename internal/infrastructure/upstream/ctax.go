@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/datahub/relay/internal/domain/model"
 )
@@ -17,48 +16,32 @@ import (
 // 税票数据查询C 上游 (惠众征信)：本仓第一个**综合源**——一次调用即可同时给出税务与
 // 发票两个维度，由入参 type 选择 (1 仅税务 / 2 仅发票 / 3 两者)。
 //
-// ⚠ 协议以**真实服务器为准**，与 docs/【税票数据查询c】接口文档.docx V1.0 多处不符
-// （2026-09-13 用测试环境凭证联调所得，文档 V1.0 的信封/字段/返回码几乎全部过时）：
-//
-//	                文档 V1.0            真实服务器（本实现依据）
-//	路径            /c/tax（相对）        baseURL 即完整地址，直接 POST
-//	鉴权            无                    请求头 X-AppId + X-Token（缺失报 A20029）
-//	业务入参        {param:{identity,     顶层平铺 {identityId, type, authTimeBeg,
-//	                 type}}               authTimeEnd, authCode}（缺任一报 A03001）
-//	返回码          SYS200/SYS404/500     数字/字母码，如 200/203/A03001；带 orderNo
+// 调用方式以惠众给出的调用示例为准（与 docs/【税票数据查询c】接口文档.docx V1.0
+// 的差别：鉴权走请求头、入参平铺不包 param、应答平铺且带 orderNo）：
 //
 // 请求  POST <baseURL>   application/json; charset=UTF-8
 //
-//	Header: X-AppId / X-Token
-//	Body:   {"identityId","type","authTimeBeg","authTimeEnd","authCode"}
+//	baseURL: 完整业务地址，如 https://api.huizhongcredit.com/hzservice/c/tax
+//	Header:  X-AppId / X-Token（缺失报 A20029）
+//	Body:    {"identity":"<社会信用代码>","type":"1|2|3"}
 //
 // 应答  {"code":"...","msg":"...","orderNo":"...","data":{...}}
 //
-// authCode 与 authTime 是上游要求的**授权信息**（企业授权数据查询的凭证与时间窗），
-// 下游 querySrmxSWFP 不带这些参数，故由本源的配置提供：authCode 是环境级凭证
-// (test/gckj)，authTime 窗口默认取「2020-01-01 ~ 当天」。
-//
-// 返回码（2026-09-13 测试环境实测，与 SYS200/… 文档口径部分吻合、部分不符）：
+// 返回码（文档 SYS200/SYS404/500 与实测数字码并存，一并兼容）：
 //   - SYS200 / 200 有 data      → 查得（本实现以「有业务段」而非仅看码判成功，防码不准）
 //   - SYS404「未查得数据」        → 查无（归一 999，寻源器静默回落其余源）
-//   - 203「授权信息校验失败」     → 该源失败（error）。这是配置/授权问题（authCode 错、
-//     授权时间窗不合法、企业未授权等），**故意不当查无**：当成查无会把「凭证配错、
-//     源6 形同虚设」悄悄掩盖掉；报 error 才能在审计里暴露出来。实测同一税号，窗口过
-//     窄/过近会回 203，取足够宽的默认窗（2020-01-01~当天）则回 SYS404，故默认取宽窗。
+//   - 203「授权信息校验失败」     → 该源失败（error）。这是上游授权/凭证问题（企业未授权、
+//     账号未开通等），**故意不当查无**：当成查无会把「凭证配错、源6 形同虚设」悄悄
+//     掩盖掉；报 error 才能在审计里暴露出来。
 const (
 	ctaxServiceCode = "cTax" // 文档 §3 服务代码（备查；真实报文里不出现）
 
-	// type 入参 (文档 §3，真实服务器沿用)。
+	// type 入参 (文档 §3)。
 	ctaxTypeTax     = "1" // 仅税务
 	ctaxTypeInvoice = "2" // 仅发票
 	ctaxTypeBoth    = "3" // 税务 + 发票
 
-	// authTimeBeg 缺省起始日（授权时间窗下界）。授权窗口只是查询过滤，取一个足够早
-	// 的日期即「尽量多给」；authTimeEnd 缺省取当天。两者都可由配置覆盖。
-	ctaxDefaultAuthTimeBeg = "2020-01-01"
-	ctaxDateLayout         = "2006-01-02"
-
-	// 真实服务器的鉴权头（联调实测：缺失报 A20029「请检查X-AppId，X-Token」）。
+	// 鉴权头（缺失报 A20029「请检查X-AppId，X-Token」）。
 	ctaxHeaderAppID = "X-AppId"
 	ctaxHeaderToken = "X-Token"
 )
@@ -71,15 +54,12 @@ var (
 	ctaxTaxSections     = []string{"sbsj", "zsbxx", "lrbxx", "zcfzbxx"}            // 表2/表3/表7/表9
 )
 
-// CTaxConfig holds the 税票数据查询C endpoint + 凭证 + 授权信息。
-// BaseURL 是上游给出的**完整**业务地址（含 /hzservice/sy/tax），直接 POST，不再拼路径。
+// CTaxConfig holds the 税票数据查询C endpoint + 凭证。
+// BaseURL 是上游给出的**完整**业务地址（含 /hzservice/c/tax），直接 POST，不再拼路径。
 type CTaxConfig struct {
-	BaseURL     string // 完整业务地址（生产/测试各一）
-	AppID       string // 请求头 X-AppId
-	Token       string // 请求头 X-Token
-	AuthCode    string // body authCode：授权码（环境级凭证 test/gckj）
-	AuthTimeBeg string // body authTimeBeg：授权时间窗下界（缺省 2020-01-01）
-	AuthTimeEnd string // body authTimeEnd：授权时间窗上界（缺省当天）
+	BaseURL string // 完整业务地址（生产/测试各一）
+	AppID   string // 请求头 X-AppId
+	Token   string // 请求头 X-Token
 }
 
 // CTaxClient implements port.UpstreamPort for 税票数据查询C。
@@ -104,13 +84,10 @@ func NewCTax(cfg CTaxConfig, httpClient *http.Client) *CTaxClient {
 	return &CTaxClient{cfg: cfg, http: httpClient}
 }
 
-// ctaxRequest 是业务请求体（真实服务器要求的平铺形态，字段名以联调报错为准）。
+// ctaxRequest 是业务请求体（平铺，不包 param）。
 type ctaxRequest struct {
-	IdentityID  string `json:"identityId"`
-	Type        string `json:"type"`
-	AuthTimeBeg string `json:"authTimeBeg"`
-	AuthTimeEnd string `json:"authTimeEnd"`
-	AuthCode    string `json:"authCode"`
+	Identity string `json:"identity"`
+	Type     string `json:"type"`
 }
 
 // ctaxResponse 是应答（真实服务器形态：平铺 + orderNo，小写字段）。data 结构见文档
@@ -188,22 +165,7 @@ func (c *CTaxClient) call(ctx context.Context, identity, queryType, reqid string
 		return nil, fmt.Errorf("ctax 凭证不完整: appId/token 必填")
 	}
 
-	begin := c.cfg.AuthTimeBeg
-	if begin == "" {
-		begin = ctaxDefaultAuthTimeBeg
-	}
-	end := c.cfg.AuthTimeEnd
-	if end == "" {
-		end = time.Now().Format(ctaxDateLayout)
-	}
-
-	payload, err := json.Marshal(ctaxRequest{
-		IdentityID:  identity,
-		Type:        queryType,
-		AuthTimeBeg: begin,
-		AuthTimeEnd: end,
-		AuthCode:    c.cfg.AuthCode,
-	})
+	payload, err := json.Marshal(ctaxRequest{Identity: identity, Type: queryType})
 	if err != nil {
 		return nil, fmt.Errorf("marshal ctax request: %w", err)
 	}

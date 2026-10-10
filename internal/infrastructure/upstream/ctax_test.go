@@ -25,12 +25,18 @@ func ctaxStub(t *testing.T, body func(req ctaxRequest) string) (*CTaxClient, *ct
 		if err := json.Unmarshal(raw, &got); err != nil {
 			t.Errorf("请求不是合法 JSON: %v (%s)", err, raw)
 		}
+		// 上游只认平铺的 identity/type；多带字段或包一层 param 都会被拒。
+		var keys map[string]json.RawMessage
+		_ = json.Unmarshal(raw, &keys)
+		if _, ok := keys["identity"]; !ok || len(keys) != 2 {
+			t.Errorf("请求体应只含 identity/type 两个字段, got %s", raw)
+		}
 		w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 		_, _ = io.WriteString(w, body(got))
 	}))
 	t.Cleanup(srv.Close)
 	c := NewCTax(CTaxConfig{
-		BaseURL: srv.URL, AppID: "APPID", Token: "TOK", AuthCode: "test",
+		BaseURL: srv.URL, AppID: "APPID", Token: "TOK",
 	}, srv.Client())
 	return c, &got, &hdr
 }
@@ -50,7 +56,7 @@ const (
 )
 
 // TestCTaxRequestShape 按真实服务器要求发报文：鉴权走 X-AppId/X-Token 头，业务参数
-// 平铺（identityId/type/authTimeBeg/authTimeEnd/authCode），type 随本次请求维度变化。
+// 平铺（identity/type），type 随本次请求维度变化。
 func TestCTaxRequestShape(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -75,11 +81,8 @@ func TestCTaxRequestShape(t *testing.T) {
 			if req.Type != tc.wantType {
 				t.Fatalf("type=%q, want %q", req.Type, tc.wantType)
 			}
-			if req.IdentityID != ctaxCreditCode {
-				t.Fatalf("identityId=%q, want %q", req.IdentityID, ctaxCreditCode)
-			}
-			if req.AuthCode != "test" || req.AuthTimeBeg == "" || req.AuthTimeEnd == "" {
-				t.Fatalf("授权信息缺失: %+v", req)
+			if req.Identity != ctaxCreditCode {
+				t.Fatalf("identity=%q, want %q", req.Identity, ctaxCreditCode)
 			}
 			if hdr.Get(ctaxHeaderAppID) != "APPID" || hdr.Get(ctaxHeaderToken) != "TOK" {
 				t.Fatalf("鉴权头缺失: X-AppId=%q X-Token=%q", hdr.Get(ctaxHeaderAppID), hdr.Get(ctaxHeaderToken))

@@ -6,8 +6,8 @@
 #   CONFIG_FILE=config.local.real.yaml ./test/run_real.sh
 #
 # 生产源6（需在 ECS 白名单内）：
-#   CTAX_BASE_URL=https://api.huizhongcredit.com/hzservice/sy/tax \
-#   CTAX_APP_ID=9VTYC6YU CTAX_TOKEN='...' CTAX_AUTH_CODE=gckj \
+#   CTAX_BASE_URL=https://api.huizhongcredit.com/hzservice/c/tax \
+#   CTAX_APP_ID=9VTYC6YU CTAX_TOKEN='...' \
 #   ./test/run_real.sh
 set -euo pipefail
 

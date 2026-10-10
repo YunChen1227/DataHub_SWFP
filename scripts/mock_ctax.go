@@ -3,15 +3,14 @@
 // Mock 税票数据查询C 上游 (惠众征信)，swfp 源6 的全链路测试挡板。
 // Run: go run scripts/mock_ctax.go
 //
-// 严格复刻**真实服务器**的协议 (internal/infrastructure/upstream/ctax.go，
-// 2026-09-13 用测试环境凭证联调所得，非文档 V1.0)：
+// 复刻惠众给出的调用方式 (internal/infrastructure/upstream/ctax.go)：
 //
-//	POST /hzservice/sy/tax
+//	POST /hzservice/c/tax
 //	  Header: X-AppId / X-Token（缺失 → A20029）
-//	  Body:   {"identityId","type","authTimeBeg","authTimeEnd","authCode"}（缺任一 → A03001）
+//	  Body:   {"identity","type"}（缺任一 → A03001）
 //	       →  {"code":"200","msg":"...","orderNo":"...","data":{…}}
 //
-// 按 identityId（= 下游 creditCode）驱动场景（与 mock_entcredit/mock_salesdata 同一惯例）：
+// 按 identity（= 下游 creditCode）驱动场景（与 mock_entcredit/mock_salesdata 同一惯例）：
 //   - 91110000CTAXALL001 → code=200，按 type 返回两维/单维数据（综合源一次拿全）
 //   - 91110000CTAXTAX001 → code=200，但只有税务段（发票维度需由证通发票源补齐）
 //   - 91110000CTAX500001 → code=203 授权信息校验失败（该源失败）
@@ -43,7 +42,7 @@ var (
 	addr  = env("CTAX_ADDR", ":9126")
 	appID = env("CTAX_APP_ID", "FMRJGBVB") // 与 config.local.mem.yaml 的 appId 一致
 	token = env("CTAX_TOKEN", "L0HsaFt5LBemICthuAsBHs2k8CPf9xrEDpNQXbSWyLde2A8B0tPbcjFoSSGVKWbO")
-	path  = env("CTAX_PATH", "/hzservice/sy/tax")
+	path  = env("CTAX_PATH", "/hzservice/c/tax")
 )
 
 const (
@@ -187,25 +186,16 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	}
 	raw, _ := io.ReadAll(r.Body)
 	var req struct {
-		IdentityID  string `json:"identityId"`
-		Type        string `json:"type"`
-		AuthTimeBeg string `json:"authTimeBeg"`
-		AuthTimeEnd string `json:"authTimeEnd"`
-		AuthCode    string `json:"authCode"`
+		Identity string `json:"identity"`
+		Type     string `json:"type"`
 	}
 	if err := json.Unmarshal(raw, &req); err != nil {
 		write(w, "A03001", "报文解析失败", nil)
 		return
 	}
-	// 逐字段非空校验（真实服务器口径）。
-	for name, v := range map[string]string{
-		"identityId": req.IdentityID, "authTimeBeg": req.AuthTimeBeg,
-		"authTimeEnd": req.AuthTimeEnd, "authCode": req.AuthCode,
-	} {
-		if v == "" {
-			write(w, "A03001", "$."+name+"参数不能为空", nil)
-			return
-		}
+	if req.Identity == "" {
+		write(w, "A03001", "$.identity参数不能为空", nil)
+		return
 	}
 	switch req.Type {
 	case typeTax, typeInvoice, typeBoth:
@@ -214,15 +204,15 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch req.IdentityID {
+	switch req.Identity {
 	case creditAll:
-		write(w, "200", "查询成功", buildData(req.IdentityID, req.Type, false))
+		write(w, "200", "查询成功", buildData(req.Identity, req.Type, false))
 	case creditTax:
 		if req.Type == typeInvoice {
 			write(w, "404", "查无数据", nil) // 只有税务的主体，被问发票即查无
 			return
 		}
-		write(w, "200", "查询成功", buildData(req.IdentityID, req.Type, true))
+		write(w, "200", "查询成功", buildData(req.Identity, req.Type, true))
 	case creditFail:
 		write(w, "203", "授权信息校验失败", nil)
 	default:
