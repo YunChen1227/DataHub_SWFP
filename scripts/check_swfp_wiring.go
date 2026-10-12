@@ -43,6 +43,7 @@ type fileConfig struct {
 // 契约层的 label → 源编号映射 (internal/infrastructure/upstream/swfpcontract.go)。
 var alias = map[string]string{
 	"invoice1": "源1", "invoice2": "源2", "tax1": "源3", "tax2": "源4", "sales": "源5",
+	"ctax": "源6", "sy": "源7",
 }
 
 func main() {

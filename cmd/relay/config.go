@@ -9,11 +9,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// upstreamConfig holds one SWFP upstream sub-source (entcredit / salesdata / ctax)。
+// upstreamConfig holds one SWFP upstream sub-source (entcredit / salesdata / ctax / sy)。
 // 一个条目 = 一次上游调用；多个条目可通过 source 归入同一个「逻辑源」（互补调用，
 // 必须一起发出，见 upstream.Source）。
 type upstreamConfig struct {
-	kind            string // entcredit | salesdata | ctax
+	kind            string // entcredit | salesdata | ctax | sy
 	baseURL         string
 	appID           string
 	appSecret       string
@@ -24,8 +24,15 @@ type upstreamConfig struct {
 	label           string
 	optional        bool
 
-	// ctax（源6 税票数据查询C）专用凭证。
+	// ctax（源6 税票数据查询C）/ sy（源7 税友）共用凭证。
 	token string // 请求头 X-Token
+
+	// sy（源7 税友）专用。
+	authCode      string // 授权码
+	authTimeBeg   string // 授权起始日期 yyyy-MM-dd（缺省 2020-01-01）
+	authTimeEnd   string // 授权截止日期 yyyy-MM-dd（缺省 当天）
+	allowlistFile string // 白名单 CSV（data/sy_allowlist.csv）；必填，加载失败拒绝启动
+	allowUntil    string // 白名单截止时刻 RFC3339；必填，到点后一律不再调用 sy
 
 	// 寻源属性（缺省值由 label 推导，见 sourceOf/providesOf，老配置无需改动）。
 	source   string // 逻辑源名：寻源优先级列表的单位，也是「已请求过」去重的键
@@ -132,8 +139,15 @@ type fileUpstream struct {
 	CostFen         int64  `yaml:"costFen"`
 	CostOn          string `yaml:"costOn"`
 
-	// ctax（源6）专用。
+	// ctax（源6）/ sy（源7）共用。
 	Token string `yaml:"token"`
+
+	// sy（源7）专用。
+	AuthCode      string `yaml:"authCode"`
+	AuthTimeBeg   string `yaml:"authTimeBeg"`
+	AuthTimeEnd   string `yaml:"authTimeEnd"`
+	AllowlistFile string `yaml:"allowlistFile"`
+	AllowUntil    string `yaml:"allowUntil"`
 }
 
 type fileDatabase struct {
@@ -303,6 +317,11 @@ func toUpstreamConfig(fu fileUpstream, version string) upstreamConfig {
 		costFen:         fu.CostFen,
 		costOn:          fu.CostOn,
 		token:           fu.Token,
+		authCode:        fu.AuthCode,
+		authTimeBeg:     fu.AuthTimeBeg,
+		authTimeEnd:     fu.AuthTimeEnd,
+		allowlistFile:   fu.AllowlistFile,
+		allowUntil:      fu.AllowUntil,
 	}
 }
 

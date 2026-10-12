@@ -312,9 +312,9 @@ func buildRouteStack(cfg config, route string, ds *domainStorage, httpClient *ht
 	// 同口径的上游 (gama/income)。聚合路由所有子源 kind 一致 (loadConfig 已校验)，
 	// 故按路由 kind 选校验器即可。
 	switch routeKind {
-	case upstream.ProviderEntCredit, upstream.ProviderCTax:
-		// swfp 入参对齐上游的企业标识：证通 entcreditapi 的 args.creditCode 与
-		// 税票数据查询C 的 param.identity 同为统一社会信用代码。
+	case upstream.ProviderEntCredit, upstream.ProviderCTax, upstream.ProviderSy:
+		// swfp 入参对齐上游的企业标识：证通 entcreditapi 的 args.creditCode、
+		// 税票数据查询C 的 identity、税友 sy 的 identityId 同为统一社会信用代码。
 		orch.WithParser(parse.ParseCreditCode)
 	}
 	requery := job.NewRequeryWorker(ds.ledgerRepo, ds.licenseRepo, upClient, billSvc, quotaSvc, cfg.requeryInterval, log)
@@ -340,6 +340,14 @@ func buildUpstreams(route string, ucs []upstreamConfig, budget time.Duration, ht
 		if err != nil {
 			return nil, "", err
 		}
+		var allow *upstream.SyAllowlist
+		if uc.kind == upstream.ProviderSy {
+			allow, err = loadSyAllowlist(route, uc, logger)
+			if err != nil {
+				return nil, "", err
+			}
+			client = upstream.NewGatedPort(client, allow, nil)
+		}
 		label := labelFor(uc, i)
 		name := sourceOf(uc, label)
 		src := byName[name]
@@ -350,6 +358,9 @@ func buildUpstreams(route string, ucs []upstreamConfig, budget time.Duration, ht
 				Provides: providesOf(uc, label),
 				Priority: uc.priority,
 				Optional: uc.optional,
+			}
+			if allow != nil {
+				src.Allow = allow.Allowed
 			}
 			byName[name] = src
 			order = append(order, name)
@@ -415,8 +426,8 @@ func providesOf(uc upstreamConfig, label string) model.DimSet {
 	case model.DataTypeBoth:
 		return model.AllDims()
 	}
-	if label == "ctax" {
-		return model.AllDims() // 源6 税票数据查询C 是综合源：一次同时给发票与税务
+	if label == "ctax" || label == "sy" {
+		return model.AllDims() // 源6 / 源7 都能一次同时给发票与税务
 	}
 	if strings.HasPrefix(label, "tax") {
 		return model.DimSet{Tax: true}
@@ -438,6 +449,9 @@ func labelFor(uc upstreamConfig, idx int) string {
 	}
 	if uc.kind == upstream.ProviderCTax {
 		return "ctax" // swfp 契约层按此段名映射为源6
+	}
+	if uc.kind == upstream.ProviderSy {
+		return "sy" // swfp 契约层按此段名映射为源7
 	}
 	return fmt.Sprintf("%s%d", uc.kind, idx+1)
 }
@@ -472,9 +486,53 @@ func buildClient(version string, uc upstreamConfig, httpClient *http.Client, log
 			Token:   uc.token,
 		}, httpClient)
 		return client, nil
+	case upstream.ProviderSy:
+		// swfp 源7 税友 sy：旧 /hzservice/sy/tax 协议。白名单闸在 buildUpstreams
+		// 里套 GatedPort + Source.Allow；这里只建协议客户端。
+		if strings.TrimSpace(uc.baseURL) == "" {
+			return nil, fmt.Errorf("version %s: sy baseURL 未配置", version)
+		}
+		if uc.appID == "" || uc.token == "" || uc.authCode == "" {
+			return nil, fmt.Errorf("version %s: sy 凭证不完整: appId/token/authCode 必填", version)
+		}
+		client := upstream.NewSy(upstream.SyConfig{
+			BaseURL:     uc.baseURL,
+			AppID:       uc.appID,
+			Token:       uc.token,
+			AuthCode:    uc.authCode,
+			AuthTimeBeg: uc.authTimeBeg,
+			AuthTimeEnd: uc.authTimeEnd,
+		}, httpClient)
+		return client, nil
 	default:
 		return nil, fmt.Errorf("version %s: unknown upstream kind %q", version, uc.kind)
 	}
+}
+
+// loadSyAllowlist 加载 sy 白名单：文件、表头、税号、标志位、截止时间任一不合法
+// 都拒绝启动。绝不能带着空白名单或错截止时间把 sy 接上。
+func loadSyAllowlist(route string, uc upstreamConfig, logger *slog.Logger) (*upstream.SyAllowlist, error) {
+	if strings.TrimSpace(uc.allowlistFile) == "" {
+		return nil, fmt.Errorf("version %s: sy 源必须配置 allowlistFile", route)
+	}
+	until, err := time.Parse(time.RFC3339, uc.allowUntil)
+	if err != nil {
+		return nil, fmt.Errorf("version %s: sy allowUntil 必须是 RFC3339（如 2027-09-24T00:00:00+08:00）: %w", route, err)
+	}
+	allow, err := upstream.LoadSyAllowlist(uc.allowlistFile, until)
+	if err != nil {
+		return nil, fmt.Errorf("version %s: %w", route, err)
+	}
+	st := allow.Stats()
+	logger.Info("sy allowlist loaded",
+		"route", route,
+		"file", uc.allowlistFile,
+		"total", st.Total,
+		"taxOnly", st.TaxOnly,
+		"invoiceOnly", st.InvoiceOnly,
+		"both", st.Both,
+		"until", until)
+	return allow, nil
 }
 
 // seedDemo registers the 域's dev demo license in a memory store so the

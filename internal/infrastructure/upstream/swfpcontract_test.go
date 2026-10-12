@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/datahub/relay/internal/domain/model"
 )
@@ -132,7 +133,7 @@ func tryQueryContract(t *testing.T, c *SwfpContract, scope string) (*model.Upstr
 
 func assertNoSourceLeak(t *testing.T, rangeJSON string) {
 	t.Helper()
-	for _, banned := range []string{"源1", "源2", "源3", "源4", "源5", "源6", "sourceStatus", "feeStandard"} {
+	for _, banned := range []string{"源1", "源2", "源3", "源4", "源5", "源6", "源7", "sourceStatus", "feeStandard"} {
 		if strings.Contains(rangeJSON, banned) {
 			t.Fatalf("下游契约泄漏 %q: %s", banned, rangeJSON)
 		}
@@ -348,6 +349,180 @@ func TestSwfpContractCTax(t *testing.T) {
 		if jb["nsrmc"] != "某某公司" || jb["hybmdl"] != "651" {
 			t.Fatalf("%s段 nsrjbxx 不符: %v", name, jb)
 		}
+	}
+}
+
+// syData 构造一份源7 (税友 sy，包年接口) 明细：每个业务段一条；kpje（含税）、
+// yxhpje/wsje（xlsx 外）、现金流指标等不应透出。
+func syData() string {
+	tc := testCreditCode
+	return `{"success":true,"nsrsbh":"` + tc + `","djxh":"` + tc + `",
+	"qyxxList":[{"nsrsbh":"` + tc + `","djxh":"` + tc + `","nsrmc":"某某公司","dlhyDm":"51","dlhymc":"批发业",
+	  "scjydz":"重庆市某区","nsrztmc":"正常","zzsnsrlxId":"1","nsrlx":"一般纳税人","djzclxDm":"173",
+	  "djzclxmc":"私营有限责任公司","minKprq":"2020-03-01","kprqMinMonth":"72"}],
+	"kphzxxList":[{"djxh":"` + tc + `","kpqj":"2026-05-31","kpyf":"202605","dykptsLp":10,"dykptsQb":12,
+	  "lxwjyts":3,"kpje":1130.00,"kpsl":8,"hpsl":1,"fpsl":0,"yxhpje":-10,"zddzje":500,
+	  "zjkpsj":"2026-05-28","wsje":1000.00}],
+	"syKphzxxList":[{"djxh":"` + tc + `","kpqj":"2026-05-31","kpyf":"202605","xfCount":3,"xfDjxh":"91500000AAAA",
+	  "xfhyId":"52","xfmc":"某销方","zcjeCnt":4,"zcjeCntRate":0.5,"zcjeSum":800,"zcjeSumRank":1,
+	  "zcjeSumRate":0.8,"wsjeSum":800}],
+	"xyKphzxxList":[{"djxh":"` + tc + `","kpqj":"2026-05-31","kpyf":"202605","gfCount":2,"gfDjxh":"91500000BBBB",
+	  "gfhyId":"53","gfmc":"某购方","zcjeCnt":5,"zcjeCntRate":0.6,"zcjeSum":900,"zcjeSumRank":2,
+	  "zcjeSumRate":0.9,"wsjeSum":900}],
+	"khxsdqxxList":[{"djxh":"` + tc + `","kpqj":"2026-05-31","kpyf":"202605","gfdsswjgId":"500100","gfsCount":2,
+	  "zcjeCnt":5,"zcjeCntRate":0.6,"zcjeSum":900,"zcjeSumRank":1,"zcjeSumRate":0.9,"wsjeSum":900}],
+	"sbxxList":[{"djxh":"` + tc + `","zsxmmc":"增值税","sbrq":"2026-04-15","skssqq":"2026-01-01",
+	  "skssqz":"2026-03-31","sbqx":"2026-04-15","ysx":10000,"jsyj":9000,"jmse":0,"ynse":1300,"yjse":0,"ybtse":1300}],
+	"zsxxList":[{"djxh":"` + tc + `","zsxmmc":"增值税","skssqq":"2026-01-01","skssqz":"2026-03-31",
+	  "jkqx":"2026-04-15","skzlmc":"正常税款","sl1":0.13,"skzt":"已入库","jsyj":9000,"ybtse":1300,
+	  "yzfsrq":"2026-04-10","rkrq":null}],
+	"cwbbZbList":[{"bbsqq":"2026-01-01","bbsqz":"2026-03-31","yysr":10000,"jlr":800,"hbzj":5000,"dqjk":2000,
+	  "lxfy":null,"jyhdcsdxjlljexj":300,"zcfzbZlbslxDm":"ZL1001001","lrbZlbslxDm":"ZL1001002"}]}`
+}
+
+func buildSyContract(t *testing.T, syPort fakePort, allow model.DimSet) *SwfpContract {
+	t.Helper()
+	s, err := NewSourcer([]Source{
+		{Name: "sy", Provider: ProviderSy, Provides: model.AllDims(), Priority: 0,
+			Allow: func(string, time.Time) model.DimSet { return allow },
+			Calls: []Call{{Label: "sy", Dims: model.AllDims(), Port: syPort}}},
+	}, 0)
+	if err != nil {
+		t.Fatalf("NewSourcer: %v", err)
+	}
+	return NewSwfpContract(s)
+}
+
+// TestSwfpContractSy 源7 按包年文档逐字段映射：口径一致的改名/转码，口径不一致的
+// 留空，财务指标宽表拆成项目行。
+func TestSwfpContractSy(t *testing.T) {
+	syPort := fakePort{res: &model.UpstreamResult{
+		Code: "001", Msg: "成功", Range: syData(), Got: model.AllDims(),
+	}}
+	res, out := queryContract(t, buildSyContract(t, syPort, model.AllDims()), model.ScopeAll)
+	if res.Code != "001" {
+		t.Fatalf("want 001, got %s", res.Code)
+	}
+	assertNoSourceLeak(t, res.Range)
+	if !out.DataScope["发票"] || !out.DataScope["税务"] {
+		t.Fatalf("dataScope 不符: %v", out.DataScope)
+	}
+	for _, leaked := range []string{"yxhpje", "wsje", "jyhdcsdxjlljexj", "kprqMinMonth", "ZL1001002"} {
+		if strings.Contains(res.Range, leaked) {
+			t.Fatalf("包年独有内容 %q 泄漏: %s", leaked, res.Range)
+		}
+	}
+
+	for name, raw := range map[string]json.RawMessage{"发票": out.Invoice["nsrjbxx"], "税务": out.Tax["nsrjbxx"]} {
+		jb := decodeObj(t, raw)
+		if jb["nsrsbh"] != testCreditCode || jb["nsrmc"] != "某某公司" || jb["hybmdl"] != "51" ||
+			jb["hymcdl"] != "批发业" || jb["yqjydz"] != "重庆市某区" || jb["sjjyys"] != "72" ||
+			jb["djzclxDm"] != "173" {
+			t.Fatalf("%s段 nsrjbxx 映射不符: %v", name, jb)
+		}
+		if jb["nsrzt"] != "03" || jb["zzsnsrlx"] != "2000010001" {
+			t.Fatalf("%s段 nsrjbxx 码值转换不符: %v", name, jb)
+		}
+		if jb["qydyckpsj"] != "" {
+			t.Fatalf("minKprq 口径不一致，qydyckpsj 应留空: %v", jb)
+		}
+		if len(jb) != len(swfpNsrjbxxFields) {
+			t.Fatalf("nsrjbxx 字段数=%d, want %d", len(jb), len(swfpNsrjbxxFields))
+		}
+	}
+
+	kphz := decodeRows(t, out.Invoice["kphzxxList"])
+	if len(kphz) != 1 {
+		t.Fatalf("kphzxxList 应 1 条, got %v", kphz)
+	}
+	k := kphz[0]
+	if k["ssyf"] != "2026-05" || k["kpqj"] != "2026-05-31" || k["nsrsbh"] != testCreditCode ||
+		k["dykptslp"] != "10" || k["dykptsqb"] != "12" || k["hpsl"] != "1" || k["fpsl"] != "0" ||
+		k["zjybkpsj"] != "2026-05-28" {
+		t.Fatalf("kphzxxList 映射不符: %v", k)
+	}
+	for _, f := range []string{"kpje", "ljkpcs", "hpje", "fpje", "dzzgkpjejlp", "dzzgkpjehhfp", "dqlxwjyjlts", "ljse"} {
+		if k[f] != "" {
+			t.Fatalf("kphzxxList.%s 口径不一致应留空, got %q", f, k[f])
+		}
+	}
+
+	syhz := decodeRows(t, out.Invoice["syhzxxList"])
+	if len(syhz) != 1 || syhz[0]["xfnsrsbh"] != "91500000AAAA" || syhz[0]["xfmc"] != "某销方" ||
+		syhz[0]["xfsl"] != "3" || syhz[0]["syqyhydm"] != "52" || syhz[0]["ljkpcs"] != "4" ||
+		syhz[0]["kpcszb"] != "0.5" || syhz[0]["kpjezb"] != "0.8" || syhz[0]["kpjepmbhs"] != "1" ||
+		syhz[0]["ljkpjebhs"] != "" || syhz[0]["ssyf"] != "2026-05" {
+		t.Fatalf("syhzxxList 映射不符: %v", syhz)
+	}
+	xyhz := decodeRows(t, out.Invoice["xyhzxxList"])
+	if len(xyhz) != 1 || xyhz[0]["gfnsrsbh"] != "91500000BBBB" || xyhz[0]["gfnsrmc"] != "某购方" ||
+		xyhz[0]["gfsl"] != "2" || xyhz[0]["xyqyhydm"] != "53" || xyhz[0]["kpjepmbhs"] != "2" {
+		t.Fatalf("xyhzxxList 映射不符: %v", xyhz)
+	}
+	dq := decodeRows(t, out.Invoice["khxsdqList"])
+	if len(dq) != 1 || dq[0]["gfdjsxzqydm"] != "500100" || dq[0]["gfdjssl"] != "2" || dq[0]["jycs"] != "5" ||
+		dq[0]["jycszb"] != "0.6" || dq[0]["jyjezb"] != "0.9" || dq[0]["jyjepm"] != "1" || dq[0]["kpjebhs"] != "" {
+		t.Fatalf("khxsdqList 映射不符: %v", dq)
+	}
+	if sp := decodeRows(t, out.Invoice["spxxList"]); len(sp) != 0 {
+		t.Fatalf("包年无商品信息，spxxList 应为空: %v", sp)
+	}
+
+	sbsj := decodeRows(t, out.Tax["sbsjList"])
+	if len(sbsj) != 1 || sbsj[0]["sfzl"] != "增值税" || sbsj[0]["sssjq"] != "2026-01-01" ||
+		sbsj[0]["sssjz"] != "2026-03-31" || sbsj[0]["ynse"] != "1300" || sbsj[0]["ybtse"] != "1300" ||
+		sbsj[0]["sbqx"] != "2026-04-15" || sbsj[0]["qbxssr"] != "" || sbsj[0]["ysxssr"] != "" {
+		t.Fatalf("sbsjList 映射不符: %v", sbsj)
+	}
+	zsb := decodeRows(t, out.Tax["zsbxxList"])
+	if len(zsb) != 1 || zsb[0]["zsxm"] != "增值税" || zsb[0]["skzl"] != "正常税款" || zsb[0]["sl"] != "0.13" ||
+		zsb[0]["jkzt"] != "已入库" || zsb[0]["jsje"] != "9000" || zsb[0]["sjje"] != "1300" ||
+		zsb[0]["jkjzrq"] != "2026-04-15" || zsb[0]["jkfsrq"] != "2026-04-10" || zsb[0]["rkrq"] != "" {
+		t.Fatalf("zsbxxList 映射不符: %v", zsb)
+	}
+
+	lrb := decodeRows(t, out.Tax["lrbxxList"])
+	if len(lrb) != 2 {
+		t.Fatalf("利润类指标应拆成 2 行（null 指标不出行）, got %v", lrb)
+	}
+	if lrb[0]["xmmc"] != "营业收入" || lrb[0]["bnljje"] != "10000" || lrb[0]["sssjq"] != "2026-01-01" ||
+		lrb[0]["sssjz"] != "2026-03-31" || lrb[0]["nsrsbh"] != testCreditCode || lrb[1]["xmmc"] != "净利润" {
+		t.Fatalf("lrbxxList 拆行不符: %v", lrb)
+	}
+	zcfzb := decodeRows(t, out.Tax["zcfzbxxList"])
+	if len(zcfzb) != 2 {
+		t.Fatalf("资产负债类指标应拆成 2 行, got %v", zcfzb)
+	}
+	if zcfzb[0]["zcxmmc"] != "货币资金" || zcfzb[0]["qmyezc"] != "5000" || zcfzb[0]["cwbblxdm"] != "ZL1001001" ||
+		zcfzb[0]["fzhsyzqyxmmc"] != "" {
+		t.Fatalf("资产侧拆行不符: %v", zcfzb[0])
+	}
+	if zcfzb[1]["fzhsyzqyxmmc"] != "短期借款" || zcfzb[1]["qmyeqy"] != "2000" || zcfzb[1]["zcxmmc"] != "" {
+		t.Fatalf("负债权益侧拆行不符: %v", zcfzb[1])
+	}
+}
+
+// TestSwfpContractSyTaxOnly 白名单只允许税务：sy 只带回税务段，基本信息不落进发票段。
+func TestSwfpContractSyTaxOnly(t *testing.T) {
+	taxOnly := `{"success":true,"nsrsbh":"` + testCreditCode + `",
+	"qyxxList":[{"nsrsbh":"` + testCreditCode + `","nsrmc":"某某公司"}],
+	"sbxxList":[{"djxh":"` + testCreditCode + `","zsxmmc":"增值税","ynse":1300}]}`
+	syPort := fakePort{res: &model.UpstreamResult{
+		Code: "001", Msg: "成功", Range: taxOnly, Got: model.DimSet{Tax: true},
+	}}
+	res, out, err := tryQueryContract(t, buildSyContract(t, syPort, model.DimSet{Tax: true}), model.ScopeAll)
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	assertNoSourceLeak(t, res.Range)
+	if out.DataScope["发票"] || !out.DataScope["税务"] {
+		t.Fatalf("仅查得税务时 dataScope 不符: %v", out.DataScope)
+	}
+	if jb := decodeObj(t, out.Invoice["nsrjbxx"]); jb["nsrmc"] != "" {
+		t.Fatalf("sy 未贡献发票段时，其基本信息不应落进发票段: %v", jb)
+	}
+	if jb := decodeObj(t, out.Tax["nsrjbxx"]); jb["nsrmc"] != "某某公司" {
+		t.Fatalf("税务段 nsrjbxx 应来自 sy: %v", jb)
 	}
 }
 

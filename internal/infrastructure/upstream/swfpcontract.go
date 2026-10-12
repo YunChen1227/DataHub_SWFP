@@ -50,6 +50,7 @@ var swfpSourceAlias = map[string]string{
 	"tax2":     "源4", // 税务数据聚合-part2
 	"sales":    "源5", // 销项数据（月度汇总，可选源）
 	"ctax":     "源6", // 税票数据查询C（综合源：一次同时给发票+税务）
+	"sy":       "源7", // 税友 sy（白名单源，包年接口，映射见 sycontract.go）
 }
 
 // SourceAlias 返回段名的内部脱敏编号；未登记的段名原样返回（兜底不丢数据）。
@@ -233,6 +234,8 @@ func mapSwfpRange(rangeJSON, creditCode string, got model.DimSet) (string, error
 			fillSalesSection(invoice, alias, data, creditCode)
 		case "ctax":
 			fillCTaxSection(invoice, tax, alias, data)
+		case "sy":
+			fillSySection(invoice, tax, alias, data, creditCode, got)
 		default:
 			// 未知段：无契约映射依据，不透数据（严格白名单）。
 		}

@@ -152,6 +152,25 @@ versions:
         baseURL: "REPLACE_WITH_CTAX_BASE_URL"
         appId: "REPLACE_WITH_CTAX_APP_ID"
         token: "REPLACE_WITH_CTAX_TOKEN"
+      # 源7 税友 sy（惠众 /hzservice/sy/tax）：按主体计费，只允许调对账单里已计过
+      # 费的 (企业, 维度)。允许时永远最先调；不在白名单、维度不匹配或过了 allowUntil
+      # 一律不调。白名单文件缺失/非法或未配截止时间 → 拒绝启动。
+      #   baseURL         完整业务地址（如 https://api.huizhongcredit.com/hzservice/sy/tax）。
+      #   appId/token     鉴权走请求头 X-AppId / X-Token。
+      #   authCode        授权码（生产 gckj）；authTimeBeg/End 缺省 2020-01-01~当天。
+      #   allowlistFile   白名单 CSV（creditCode,tax,invoice,callTime）。
+      #   allowUntil      截止时刻 RFC3339；到点后对任何企业都不再调 sy。
+      - kind: "sy"
+        label: "sy"
+        source: "sy"
+        provides: "both"
+        costFen: 0
+        baseURL: "REPLACE_WITH_SY_BASE_URL"
+        appId: "REPLACE_WITH_SY_APP_ID"
+        token: "REPLACE_WITH_SY_TOKEN"
+        authCode: "REPLACE_WITH_SY_AUTH_CODE"
+        allowlistFile: "data/sy_allowlist.csv"
+        allowUntil: "2027-09-24T00:00:00+08:00"
     database:
       <<: *pg_base
       name: "datahub_swfp_db"

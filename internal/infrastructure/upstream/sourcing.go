@@ -17,7 +17,8 @@ import (
 
 // Sourcer 是按优先级串行寻源的编排器，实现流程图第 2~4 步：
 //
-//	两项请求 → 先遍历【综合源】列表，两者皆得即停
+//	任何请求 → 先试【白名单源】（源7 sy），只要 want ∩ 白名单允许的维度
+//	两项请求 → 两维都还缺时遍历【综合源】列表，两者皆得即停
 //	         → 综合源用尽仍缺 → 按维度分别补齐（过滤本次已请求过的源）
 //	单项请求 → 直接遍历该维度的优先级列表，命中即停
 //
@@ -33,6 +34,7 @@ import (
 //     订单号/请求号与成本——不再像聚合器那样把 N 组标识归并成一对丢掉其余。
 type Sourcer struct {
 	sources  []Source
+	gated    []Source // 白名单管控的源（源7 sy）：只在白名单阶段调用，绝不进下面三个回落列表
 	combined []Source // 能一次同时提供发票与税务的源（如源6 税票数据查询C）
 	invoice  []Source
 	tax      []Source
@@ -51,6 +53,9 @@ type Source struct {
 	Priority int          // 越小越先调用
 	Optional bool         // scope=basic 时跳过（如源5 销项数据）
 	Calls    []Call       // 内含的上游调用（互补，需全部调用）
+	// Allow 非 nil 即白名单管控源：返回该主体此刻允许向本源请求的维度（空集=不许调）。
+	// 这类源先于一切其他源调用，且只按 want ∩ Allow 请求，不参与任何回落。
+	Allow func(creditCode string, now time.Time) model.DimSet
 }
 
 // Call 是逻辑源内的一次上游调用，1:1 对应配置里的一个 upstreams 条目。
@@ -88,6 +93,9 @@ func NewSourcer(sources []Source, budget time.Duration) (*Sourcer, error) {
 		if sources[i].Provides.Empty() {
 			return nil, fmt.Errorf("upstream sourcer: 源 %q 未声明 provides（发票/税务）", sources[i].Name)
 		}
+		if sources[i].Provider == ProviderSy && sources[i].Allow == nil {
+			return nil, fmt.Errorf("upstream sourcer: 源 %q 是 sy 但未挂白名单，拒绝装配", sources[i].Name)
+		}
 		for j := range sources[i].Calls {
 			if sources[i].Calls[j].Port == nil {
 				return nil, fmt.Errorf("upstream sourcer: 源 %q 的调用 %d 未初始化", sources[i].Name, j)
@@ -121,6 +129,10 @@ func NewSourcer(sources []Source, budget time.Duration) (*Sourcer, error) {
 	s := &Sourcer{sources: ordered, budget: budget}
 	for _, src := range ordered {
 		s.calls += len(src.Calls)
+		if src.Allow != nil {
+			s.gated = append(s.gated, src)
+			continue
+		}
 		if src.Provides.Both() {
 			s.combined = append(s.combined, src)
 		}
@@ -145,7 +157,7 @@ func (s Source) cost() int64 {
 
 // Active 返回源数量描述，供健康检查/日志使用。
 func (s *Sourcer) Active() string {
-	return fmt.Sprintf("sourcer(%d源/%d调用, 综合源%d)", len(s.sources), s.calls, len(s.combined))
+	return fmt.Sprintf("sourcer(%d源/%d调用, 综合源%d, 白名单源%d)", len(s.sources), s.calls, len(s.combined), len(s.gated))
 }
 
 func (s *Sourcer) Query(ctx context.Context, req *model.UpstreamRequest) (*model.UpstreamResult, error) {
@@ -155,8 +167,11 @@ func (s *Sourcer) Query(ctx context.Context, req *model.UpstreamRequest) (*model
 	}
 	tr := newTrace(s.budget)
 
-	// 2b. 综合寻源：两项都要时先试能一次拿全的源。
-	if want.Both() {
+	// 1. 白名单源：先于一切其他源，只请求 want ∩ 白名单允许的维度。
+	s.traverseGated(ctx, req, tr, want)
+	// 2b. 综合寻源：两项都还缺时先试能一次拿全的源。白名单源已拿到其中一维时不能
+	// 再走综合源——它会按两项计费，把已拿到的那一维再买一遍。
+	if want.Both() && tr.got.Empty() {
 		s.traverse(ctx, req, tr, s.combined, want)
 	}
 	// 2a/3. 单项寻源 = 缺项补齐：同一段代码，候选集是「该维度的源 − 本次已请求过的源」。
@@ -194,15 +209,43 @@ func (s *Sourcer) traverse(ctx context.Context, req *model.UpstreamRequest, tr *
 			tr.reason[src.Name] = "已超出本次总时延预算，未再尝试"
 			continue
 		}
-		s.invoke(ctx, req, tr, src)
+		s.invoke(ctx, req, tr, src, tr.got.Missing(need).Intersect(src.Provides))
+	}
+}
+
+// traverseGated 是白名单阶段：每个白名单源只按 want ∩ Allow ∩ Provides（再扣掉已拿到
+// 的维度）请求；交集为空就不调，只记原因。
+func (s *Sourcer) traverseGated(ctx context.Context, req *model.UpstreamRequest, tr *trace, want model.DimSet) {
+	now := time.Now()
+	for _, src := range s.gated {
+		allowed := src.Allow(req.CreditCode, now)
+		need := tr.got.Missing(want.Intersect(allowed).Intersect(src.Provides))
+		switch {
+		case allowed.Empty():
+			tr.reason[src.Name] = "未命中白名单或已过白名单截止时间，不允许调用"
+			continue
+		case need.Empty():
+			tr.reason[src.Name] = fmt.Sprintf("请求维度不在白名单允许范围内（允许=%s），不允许调用", allowed.String())
+			continue
+		}
+		if left := tr.left(); left <= 0 {
+			tr.reason[src.Name] = "已超出本次总时延预算，未再尝试"
+			continue
+		}
+		s.invoke(ctx, req, tr, src, need)
 	}
 }
 
 // invoke 调用一个逻辑源：内含的互补调用并发发出（它们同属一个源、一起计价，没有
-// 短路可省），再按维度归一该源的结果。
-func (s *Sourcer) invoke(ctx context.Context, req *model.UpstreamRequest, tr *trace, src Source) {
+// 短路可省），再按维度归一该源的结果。want 是本次向该源要的维度（只要还缺的、且该源
+// 能给的），以请求副本的 Want 下发——按维度计价的上游 (ctax/sy) 据此选 type。
+func (s *Sourcer) invoke(ctx context.Context, req *model.UpstreamRequest, tr *trace, src Source, want model.DimSet) {
 	callCtx, cancel := context.WithTimeout(ctx, tr.left())
 	defer cancel()
+
+	sub := *req
+	sub.Want = want
+	req = &sub
 
 	rows := make([]model.SourceCall, len(src.Calls))
 	var wg sync.WaitGroup

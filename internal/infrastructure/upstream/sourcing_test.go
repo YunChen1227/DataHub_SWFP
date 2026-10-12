@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/datahub/relay/internal/domain/model"
+	"github.com/datahub/relay/internal/domain/port"
 )
 
 // fakePort 是一个可编排返回值的上游子源桩。
@@ -387,5 +389,267 @@ func TestSourcerPriorityBeatsConfigOrder(t *testing.T) {
 	}
 	if cheapHits != 1 || expensiveHits != 0 {
 		t.Fatalf("同优先级应先调便宜的源: cheap=%d expensive=%d", cheapHits, expensiveHits)
+	}
+}
+
+// wantPort 记下本次收到的 Want，并可按 sy 口径把 Got 回填为请求维度。
+type wantPort struct {
+	res      *model.UpstreamResult
+	err      error
+	hits     *int
+	lastWant *model.DimSet
+	echoGot  bool
+}
+
+func (p *wantPort) Query(_ context.Context, req *model.UpstreamRequest) (*model.UpstreamResult, error) {
+	if p.hits != nil {
+		*p.hits++
+	}
+	if p.lastWant != nil {
+		*p.lastWant = req.Want
+	}
+	if p.err != nil {
+		return nil, p.err
+	}
+	if p.res == nil {
+		return nil, nil
+	}
+	out := *p.res
+	if p.echoGot {
+		out.Got = req.Want
+	}
+	return &out, nil
+}
+func (p *wantPort) Requery(context.Context, string) (*model.RequeryResult, error) {
+	return &model.RequeryResult{Reachable: false}, nil
+}
+
+func allowOf(code string, dims model.DimSet, until time.Time) func(string, time.Time) model.DimSet {
+	return func(c string, now time.Time) model.DimSet {
+		if !now.Before(until) {
+			return model.DimSet{}
+		}
+		if c == code {
+			return dims
+		}
+		return model.DimSet{}
+	}
+}
+
+func gatedSrc(name string, allow func(string, time.Time) model.DimSet, p port.UpstreamPort) Source {
+	return Source{
+		Name: name, Provider: ProviderSy, Provides: bothDim, Priority: 0, Allow: allow,
+		Calls: []Call{{Label: name, Dims: bothDim, Port: p}},
+	}
+}
+
+func TestSourcerSyNotOnAllowlistNeverCalled(t *testing.T) {
+	var syHits, comboHits int
+	s, err := NewSourcer([]Source{
+		gatedSrc("sy", allowOf("ON-LIST", taxDim, syUntil), &wantPort{
+			res: &model.UpstreamResult{Code: "001", Range: `{}`}, echoGot: true, hits: &syHits,
+		}),
+		src("combo", bothDim, 1, 400, combinedPort(model.AllDims(), &comboHits)),
+	}, 0)
+	if err != nil {
+		t.Fatalf("NewSourcer: %v", err)
+	}
+	res, err := s.Query(context.Background(), &model.UpstreamRequest{
+		CreditCode: "OFF-LIST", Reqid: "g1", Want: model.AllDims(),
+	})
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	if syHits != 0 {
+		t.Fatalf("不在白名单绝不能调 sy, hits=%d", syHits)
+	}
+	if comboHits != 1 || !res.Got.Both() {
+		t.Fatalf("应走综合源, combo=%d got=%s", comboHits, res.Got)
+	}
+	if r := rowOf(t, res.Sources, "sy"); r.Status != model.CallSkipped || r.Reason == "" {
+		t.Fatalf("sy 应 skipped 并记原因: %+v", r)
+	}
+}
+
+func TestSourcerSyTaxOnlyBothRequestNarrowsWant(t *testing.T) {
+	var syHits, comboHits int
+	var syWant, comboWant model.DimSet
+	s, err := NewSourcer([]Source{
+		gatedSrc("sy", allowOf("TAX-ONLY", taxDim, syUntil), &wantPort{
+			res: &model.UpstreamResult{Code: "001", Range: `{"sbsj":[1]}`}, echoGot: true,
+			hits: &syHits, lastWant: &syWant,
+		}),
+		{Name: "combo", Provider: "ctax", Provides: bothDim, Priority: 1,
+			Calls: []Call{{Label: "ctax", Dims: bothDim, CostFen: 400, Port: &wantPort{
+				res: &model.UpstreamResult{Code: "001", Range: `{"kphzxx":[1]}`, Got: invoiceDim},
+				hits: &comboHits, lastWant: &comboWant,
+			}}}},
+	}, 0)
+	if err != nil {
+		t.Fatalf("NewSourcer: %v", err)
+	}
+	res, err := s.Query(context.Background(), &model.UpstreamRequest{
+		CreditCode: "TAX-ONLY", Reqid: "g2", Want: model.AllDims(),
+	})
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	if syHits != 1 || syWant != taxDim {
+		t.Fatalf("sy 只应收到 tax, hits=%d want=%s", syHits, syWant)
+	}
+	if comboHits != 1 || comboWant != invoiceDim {
+		t.Fatalf("综合源只应补发票, hits=%d want=%s", comboHits, comboWant)
+	}
+	if !res.Got.Both() {
+		t.Fatalf("补齐后应两项皆得, got %s", res.Got)
+	}
+}
+
+func TestSourcerSyInvoiceOnlyTaxRequestSkipped(t *testing.T) {
+	var syHits, taxHits int
+	s, err := NewSourcer([]Source{
+		gatedSrc("sy", allowOf("INV-ONLY", invoiceDim, syUntil), &wantPort{
+			res: &model.UpstreamResult{Code: "001", Range: `{}`}, echoGot: true, hits: &syHits,
+		}),
+		src("tax_a", taxDim, 1, 100, okPort(&taxHits)),
+	}, 0)
+	if err != nil {
+		t.Fatalf("NewSourcer: %v", err)
+	}
+	res, err := s.Query(context.Background(), &model.UpstreamRequest{
+		CreditCode: "INV-ONLY", Reqid: "g3", Want: taxDim,
+	})
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	if syHits != 0 {
+		t.Fatalf("仅票企业请求税不得调 sy, hits=%d", syHits)
+	}
+	if taxHits != 1 || res.Got != taxDim {
+		t.Fatalf("税应由其他源补, taxHits=%d got=%s", taxHits, res.Got)
+	}
+}
+
+func TestSourcerSyBothAllowsSingleDim(t *testing.T) {
+	var syHits int
+	var syWant model.DimSet
+	s, err := NewSourcer([]Source{
+		gatedSrc("sy", allowOf("BOTH", bothDim, syUntil), &wantPort{
+			res: &model.UpstreamResult{Code: "001", Range: `{}`}, echoGot: true,
+			hits: &syHits, lastWant: &syWant,
+		}),
+	}, 0)
+	if err != nil {
+		t.Fatalf("NewSourcer: %v", err)
+	}
+	res, err := s.Query(context.Background(), &model.UpstreamRequest{
+		CreditCode: "BOTH", Reqid: "g4", Want: invoiceDim,
+	})
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	if syHits != 1 || syWant != invoiceDim {
+		t.Fatalf("两者企业请求票时应只按票调, hits=%d want=%s", syHits, syWant)
+	}
+	if res.Got != invoiceDim {
+		t.Fatalf("实得应是发票, got %s", res.Got)
+	}
+}
+
+func TestSourcerSyEmptyFallsBack(t *testing.T) {
+	var syHits, comboHits int
+	s, err := NewSourcer([]Source{
+		gatedSrc("sy", allowOf("BOTH", bothDim, syUntil), &wantPort{
+			res: &model.UpstreamResult{Code: "999"}, hits: &syHits, echoGot: true,
+		}),
+		src("combo", bothDim, 1, 400, combinedPort(model.AllDims(), &comboHits)),
+	}, 0)
+	if err != nil {
+		t.Fatalf("NewSourcer: %v", err)
+	}
+	res, err := s.Query(context.Background(), &model.UpstreamRequest{
+		CreditCode: "BOTH", Reqid: "g5", Want: model.AllDims(),
+	})
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	if syHits != 1 || comboHits != 1 {
+		t.Fatalf("sy 查无应回落综合源: sy=%d combo=%d", syHits, comboHits)
+	}
+	if !res.Got.Both() {
+		t.Fatalf("回落后应两项皆得, got %s", res.Got)
+	}
+}
+
+func TestSourcerSyErrorFallsBack(t *testing.T) {
+	var syHits, comboHits int
+	s, err := NewSourcer([]Source{
+		gatedSrc("sy", allowOf("BOTH", bothDim, syUntil), &wantPort{
+			err: &model.UpstreamError{Code: "203", Msg: "授权信息校验失败", UID: "ORD-9"}, hits: &syHits,
+		}),
+		src("combo", bothDim, 1, 400, combinedPort(model.AllDims(), &comboHits)),
+	}, 0)
+	if err != nil {
+		t.Fatalf("NewSourcer: %v", err)
+	}
+	res, err := s.Query(context.Background(), &model.UpstreamRequest{
+		CreditCode: "BOTH", Reqid: "g6", Want: model.AllDims(),
+	})
+	if err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	if syHits != 1 || comboHits != 1 || !res.Got.Both() {
+		t.Fatalf("sy 失败应回落: sy=%d combo=%d got=%s", syHits, comboHits, res.Got)
+	}
+}
+
+func TestSourcerSyPastCutoffNeverCalled(t *testing.T) {
+	var syHits, comboHits int
+	s, err := NewSourcer([]Source{
+		gatedSrc("sy", allowOf("BOTH", bothDim, time.Now().Add(-time.Hour)), &wantPort{
+			res: &model.UpstreamResult{Code: "001", Range: `{}`}, echoGot: true, hits: &syHits,
+		}),
+		src("combo", bothDim, 1, 400, combinedPort(model.AllDims(), &comboHits)),
+	}, 0)
+	if err != nil {
+		t.Fatalf("NewSourcer: %v", err)
+	}
+	if _, err := s.Query(context.Background(), &model.UpstreamRequest{
+		CreditCode: "BOTH", Reqid: "g7", Want: model.AllDims(),
+	}); err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+	if syHits != 0 || comboHits != 1 {
+		t.Fatalf("过截止不得调 sy: sy=%d combo=%d", syHits, comboHits)
+	}
+}
+
+func TestSourcerGatedNotInRegularLists(t *testing.T) {
+	s, err := NewSourcer([]Source{
+		gatedSrc("sy", allowOf("BOTH", bothDim, syUntil), okPort(nil)),
+		src("combo", bothDim, 1, 400, combinedPort(model.AllDims(), nil)),
+	}, 0)
+	if err != nil {
+		t.Fatalf("NewSourcer: %v", err)
+	}
+	if len(s.gated) != 1 || s.gated[0].Name != "sy" {
+		t.Fatalf("sy 应只在 gated: %+v", s.gated)
+	}
+	for _, list := range [][]Source{s.combined, s.invoice, s.tax} {
+		for _, src := range list {
+			if src.Name == "sy" {
+				t.Fatalf("sy 不得出现在回落列表: %+v", src)
+			}
+		}
+	}
+}
+
+func TestSourcerSyWithoutAllowRejected(t *testing.T) {
+	_, err := NewSourcer([]Source{
+		{Name: "sy", Provider: ProviderSy, Provides: bothDim,
+			Calls: []Call{{Label: "sy", Dims: bothDim, Port: okPort(nil)}}},
+	}, 0)
+	if err == nil {
+		t.Fatal("sy 未挂白名单应拒绝装配")
 	}
 }

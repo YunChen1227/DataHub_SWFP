@@ -7,4 +7,5 @@ const (
 	ProviderEntCredit = "entcredit" // swfp: 税务+发票四产品码聚合
 	ProviderSalesData = "salesdata" // swfp 第五子源: 销项数据 (凯盈云 crestv)
 	ProviderCTax      = "ctax"      // swfp 第六子源: 税票数据查询C (惠众征信)，综合源(发票+税务)
+	ProviderSy        = "sy"        // swfp 第七子源: 税友 sy (惠众 /hzservice/sy/tax)，仅白名单内可调
 )
