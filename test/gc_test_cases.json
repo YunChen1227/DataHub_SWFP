@@ -1,0 +1,50 @@
+{
+  "invoice_195": [
+    {
+      "creditCode": "91340111MA2UX4BT6R",
+      "nsrmc": "",
+      "company": "taikesi",
+      "source_file": "GC-票195.csv",
+      "row_number": 239997
+    },
+    {
+      "creditCode": "92340827MA2NWEWG94",
+      "nsrmc": "",
+      "company": "taikesi",
+      "source_file": "GC-票195.csv",
+      "row_number": 1319828
+    }
+  ],
+  "invoice_914": [
+    {
+      "creditCode": "L370122197110051116",
+      "nsrmc": "张凤忠",
+      "company": "bendi",
+      "source_file": "GC-票914.csv",
+      "row_number": 6083016
+    },
+    {
+      "creditCode": "92370782MAEB12LU2E",
+      "nsrmc": "诸城市鑫浩畜禽养殖场（个体工商户）",
+      "company": "bendi",
+      "source_file": "GC-票914.csv",
+      "row_number": 9015710
+    }
+  ],
+  "invoice_tax_187": [
+    {
+      "creditCode": "91410104MAEPY2G75Y",
+      "nsrmc": "",
+      "company": "yunzhangfang",
+      "source_file": "GC-票税187.csv",
+      "row_number": 442770
+    },
+    {
+      "creditCode": "92130608MADP34MU6Y",
+      "nsrmc": "",
+      "company": "yunzhangfang",
+      "source_file": "GC-票税187.csv",
+      "row_number": 1108402
+    }
+  ]
+}

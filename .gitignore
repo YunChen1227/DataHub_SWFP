@@ -41,3 +41,6 @@ tmp-*.js
 
 # macOS Finder metadata
 .DS_Store
+
+# large raw test data (exceeds GitHub size limit)
+test/GC-*.csv
