@@ -72,15 +72,16 @@ versions:
   swfp:
     # 寻源属性（每条 = 一次上游调用）：
     #   source   逻辑源名。同名条目属于同一个逻辑源，是「优先级列表的单位」与
-    #            「本次已请求过」的去重键；同源内的多次调用互补，必须一起发出
-    #            （证通发票聚合 part1/part2 各出一半字段，拆开会丢字段）。
+    #            「本次已请求过」的去重键；同源内的多次调用一起发出、一起计价。
+    #            证通 part2 (P0130083/P0130084) 与 part1 数据重复，不要配置；
+    #            即便配了，relay 启动时也会丢弃并打告警。
     #   provides 该源能提供的维度：invoice / tax / both。两维皆有即【综合源】，
     #            两项请求时先走综合源列表（当前上游无此类产品，故暂无 both）。
     #   priority 越小越先调用；同优先级按成本从低到高。
     #   costFen  该次调用的上游成本（分），用于对账与「先便宜后贵」排序。
     #   costOn   hit=仅查得计成本（缺省）/ call=调用即计成本，按各上游商务条款配。
     # 缺省推导：不写 source/provides 时按 label 推导 (invoice*/sales→发票源,
-    # tax*→税务源; invoice1+invoice2→ent_invoice, tax1+tax2→ent_tax)，老配置可不改。
+    # tax*→税务源; invoice1→ent_invoice, tax1→ent_tax)，老配置可不改。
     upstreams:
       - kind: "entcredit"
         label: "invoice1"
@@ -94,34 +95,12 @@ versions:
         accessKeyId: "REPLACE_WITH_SWFP_ACCESS_KEY_ID"
         secretAccessKey: "REPLACE_WITH_SWFP_SECRET_ACCESS_KEY"
       - kind: "entcredit"
-        label: "invoice2"
-        source: "ent_invoice"
-        provides: "invoice"
-        priority: 1
-        costFen: 0
-        product: "P0130083"
-        baseURL: "REPLACE_WITH_SWFP_UPSTREAM_ENDPOINT"
-        orgCode: "REPLACE_WITH_SWFP_ORG_CODE"
-        accessKeyId: "REPLACE_WITH_SWFP_ACCESS_KEY_ID"
-        secretAccessKey: "REPLACE_WITH_SWFP_SECRET_ACCESS_KEY"
-      - kind: "entcredit"
         label: "tax1"
         source: "ent_tax"
         provides: "tax"
         priority: 1
         costFen: 0
         product: "P0130082"
-        baseURL: "REPLACE_WITH_SWFP_UPSTREAM_ENDPOINT"
-        orgCode: "REPLACE_WITH_SWFP_ORG_CODE"
-        accessKeyId: "REPLACE_WITH_SWFP_ACCESS_KEY_ID"
-        secretAccessKey: "REPLACE_WITH_SWFP_SECRET_ACCESS_KEY"
-      - kind: "entcredit"
-        label: "tax2"
-        source: "ent_tax"
-        provides: "tax"
-        priority: 1
-        costFen: 0
-        product: "P0130084"
         baseURL: "REPLACE_WITH_SWFP_UPSTREAM_ENDPOINT"
         orgCode: "REPLACE_WITH_SWFP_ORG_CODE"
         accessKeyId: "REPLACE_WITH_SWFP_ACCESS_KEY_ID"

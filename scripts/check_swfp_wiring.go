@@ -1,7 +1,8 @@
 //go:build ignore
 
-// check_swfp_wiring.go —— 启动前自检：确认某个配置文件里 swfp 路由的五个子源都装配到位
-// （源1-4 entcredit 各带产品码 + 源5 salesdata），且源5 的 AppKey 能解出合法 AES 密钥。
+// check_swfp_wiring.go —— 启动前自检：确认某个配置文件里 swfp 路由的子源都装配到位
+// （源1 发票 part1、源3 税务 part1 两个 entcredit 各带产品码 + 源5 salesdata），且源5
+// 的 AppKey 能解出合法 AES 密钥。证通 part2 (invoice2/tax2) 与 part1 重复，relay 会丢弃。
 //
 // 用法：
 //
@@ -87,6 +88,11 @@ func main() {
 
 		switch u.Kind {
 		case "entcredit":
+			if u.Product == "P0130083" || u.Product == "P0130084" {
+				fmt.Println("     ! part2 产品与 part1 数据重复，relay 启动时会丢弃，建议从配置删除")
+				fmt.Println()
+				continue
+			}
 			switch {
 			case u.Product == "" || u.OrgCode == "" || u.AccessKeyID == "" || u.SecretAccessKey == "":
 				fmt.Println("     ✗ entcredit 子源缺 product/orgCode/accessKeyId/secretAccessKey")
@@ -123,7 +129,7 @@ func main() {
 		fmt.Println()
 	}
 
-	for _, want := range []string{"invoice1", "invoice2", "tax1", "tax2", "sales"} {
+	for _, want := range []string{"invoice1", "tax1", "sales"} {
 		found := false
 		for _, u := range ups {
 			if u.Label == want {
@@ -140,7 +146,7 @@ func main() {
 		fmt.Printf("\n%d 处问题\n", bad)
 		os.Exit(1)
 	}
-	fmt.Println("✓ swfp 五源装配完整")
+	fmt.Println("✓ swfp 子源装配完整")
 }
 
 // isPlaceholder 认出 config.example.yaml 里的模板占位符（未填真值不算配置错）。

@@ -336,6 +336,13 @@ func buildUpstreams(route string, ucs []upstreamConfig, budget time.Duration, ht
 	var order []string
 	byName := map[string]*upstream.Source{}
 	for i, uc := range ucs {
+		if uc.kind == upstream.ProviderEntCredit {
+			if p1, dup := upstream.EntCreditDuplicateOf(uc.product); dup {
+				logger.Warn("跳过证通 part2 产品：与 part1 数据重复，只调 part1",
+					"route", route, "product", uc.product, "part1", p1, "label", uc.label)
+				continue
+			}
+		}
 		client, err := buildClient(route, uc, httpClient, logger)
 		if err != nil {
 			return nil, "", err
@@ -398,9 +405,8 @@ func buildUpstreams(route string, ucs []upstreamConfig, budget time.Duration, ht
 	return sourcer, ucs[0].kind, nil
 }
 
-// sourceOf 决定条目所属的逻辑源名。显式 source 优先；否则按段名推导——证通的
-// 发票聚合 part1/part2 (invoice1/invoice2) 是互补字段，必须同属一个逻辑源一起调用，
-// 否则「命中即停」会在 part1 命中后跳过 part2，下游拿到的字段比改造前更少。
+// sourceOf 决定条目所属的逻辑源名。显式 source 优先；否则按段名推导。证通 part2
+// (invoice2/tax2) 已在 buildUpstreams 丢弃，这里保留其映射只为兼容老配置的段名。
 func sourceOf(uc upstreamConfig, label string) string {
 	if uc.source != "" {
 		return uc.source

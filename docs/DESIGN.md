@@ -22,7 +22,8 @@
 
 `internal/infrastructure/upstream/sourcing.go` 的 `Sourcer` 取代了原并发聚合器。
 配置里每个 `upstreams` 条目是一次**调用**，`source` 相同的调用组成一个**逻辑源**
-（part1/part2 是互补字段，必须一起发出，故同属一个逻辑源并发调用；逻辑源之间才串行）。
+（同一逻辑源内的调用并发发出，逻辑源之间才串行）。证通 part2 (P0130083/P0130084)
+与 part1 返回同一份数据，装配时丢弃，证通发票/税务源各只调 part1。
 
 ```
 Client → Relay → Sourcer

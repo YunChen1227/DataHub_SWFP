@@ -70,8 +70,8 @@ docs/               SWFP 上下游文档与契约
 
 | 逻辑源 | 段名 | kind | 提供维度 | 优先级 | 说明 |
 |--------|------|------|----------|--------|------|
-| ent_invoice | invoice1 / invoice2 | entcredit | 发票 | 1 | P0130081 + P0130083（part1/part2 互补） |
-| ent_tax | tax1 / tax2 | entcredit | 税务 | 1 | P0130082 + P0130084（part1/part2 互补） |
+| ent_invoice | invoice1 | entcredit | 发票 | 1 | P0130081（part1；part2 P0130083 数据重复，不调用） |
+| ent_tax | tax1 | entcredit | 税务 | 1 | P0130082（part1；part2 P0130084 数据重复，不调用） |
 | sales | sales | salesdata | 发票 | 9 | 源5 销项（optional，`scope=basic` 跳过；仅在 ent_invoice 未查得时兜底） |
 | ctax | ctax | ctax | 发票 + 税务 | 1 | 源6 税票数据查询C（**综合源**：一次调用按 `type` 同时给两维；两项请求时先试它） |
 

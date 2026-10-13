@@ -31,7 +31,7 @@ const version = "swfp"
 const (
 	creditCodeNormal    = "92500233MA60R5KW8M" // 证通四产品 + 销项均查得（综合源查无）
 	creditCodeEmpty     = "91110000EMPTYEMPT0" // 全部查无
-	creditCodePartial   = "91110000PARTFA0001" // P0130083 失败，其余查得
+	creditCodePartial   = "91110000PARTFA0001" // mock 里 P0130083 失败；relay 已不调 part2，结果应与全部查得一致
 	creditCodeInvEmpty  = "91110000FPEMPTY001" // 证通发票聚合查无 → 回落销项
 	creditCodeTaxEmpty  = "91110000TAXEMP0001" // 证通税务聚合查无 → 仅得发票
 	creditCodeSalesFail = "91110000BADFA00001" // 销项失败（证通查得时销项不会被调用）
