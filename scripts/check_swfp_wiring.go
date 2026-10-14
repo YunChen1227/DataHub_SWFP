@@ -1,8 +1,8 @@
 //go:build ignore
 
 // check_swfp_wiring.go —— 启动前自检：确认某个配置文件里 swfp 路由的子源都装配到位
-// （源1 发票 part1、源3 税务 part1 两个 entcredit 各带产品码 + 源5 salesdata），且源5
-// 的 AppKey 能解出合法 AES 密钥。证通 part2 (invoice2/tax2) 与 part1 重复，relay 会丢弃。
+// （源2 发票 part2、源4 税务 part2 两个 entcredit 各带产品码 + 源5 salesdata），且源5
+// 的 AppKey 能解出合法 AES 密钥。证通 part1 (invoice1/tax1) 与 part2 重复，relay 不调用。
 //
 // 用法：
 //
@@ -88,8 +88,8 @@ func main() {
 
 		switch u.Kind {
 		case "entcredit":
-			if u.Product == "P0130083" || u.Product == "P0130084" {
-				fmt.Println("     ! part2 产品与 part1 数据重复，relay 启动时会丢弃，建议从配置删除")
+			if u.Product == "P0130081" || u.Product == "P0130082" {
+				fmt.Println("     ! part1 产品与 part2 数据重复，relay 启动时会改调 part2 或丢弃，建议改为 part2")
 				fmt.Println()
 				continue
 			}
@@ -129,7 +129,7 @@ func main() {
 		fmt.Println()
 	}
 
-	for _, want := range []string{"invoice1", "tax1", "sales"} {
+	for _, want := range []string{"invoice2", "tax2", "sales"} {
 		found := false
 		for _, u := range ups {
 			if u.Label == want {

@@ -9,7 +9,7 @@
 // 同一惯例）：
 //   - 92500233MA60R5KW8M → 四产品全部查得 (resultCode=00000, Status=4)
 //   - 91110000EMPTYEMPT0 → 四产品全部查无 (resultCode=00000, Status=1)
-//   - 91110000PARTFA0001 → P0130083 返回错误，其余查得（下游同源另一半仍查得）
+//   - 91110000PARTFA0001 → P0130081 返回错误，其余查得（relay 已不调 part1，下游应全部查得）
 //   - 91110000FPEMPTY001 → 发票聚合(P0130081/83) 查无、税务查得（下游回落源5 补发票）
 //   - 91110000TAXEMP0001 → 税务聚合(P0130082/84) 查无、发票查得（下游按单发票计费）
 //   - 验签失败 / 版本号缺失 → 对应文档附录错误码 (E1010 / E1005)
@@ -235,7 +235,7 @@ func main() {
 			empty() // 发票聚合查无 → 下游回落源5 补发票维度
 		case argsMap.CreditCode == creditCodeTaxEmpty && !isInvoiceProd:
 			empty() // 税务聚合查无 → 下游只得发票维度，按【单发票】计费
-		case argsMap.CreditCode == creditCodePartial && argsMap.ProdCode == "P0130083":
+		case argsMap.CreditCode == creditCodePartial && argsMap.ProdCode == "P0130081":
 			writeJSON(w, map[string]any{"resultCode": "E0400", "resultDesc": "查询征信数据出错", "orderNo": msgID})
 		default:
 			plain, _ := json.Marshal(sampleData(argsMap.ProdCode))

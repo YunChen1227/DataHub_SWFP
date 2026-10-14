@@ -43,17 +43,18 @@ var entCreditSectionKey = map[string]string{
 	entCreditTax2:     "tax2",
 }
 
-// entCreditDuplicates 记录与 part1 返回同一份数据的 part2 产品码（文档样例解码后逐字节
-// 相同），值为对应的 part1 产品码。part2 只会重复付费，装配时一律丢弃。
+// entCreditDuplicates 记录与 part2 返回同一份数据的 part1 产品码（文档样例解码后逐字节
+// 相同），值为保留调用的 part2 产品码。part1 只会重复付费，装配时一律丢弃。
 var entCreditDuplicates = map[string]string{
-	entCreditInvoice2: entCreditInvoice1,
-	entCreditTax2:     entCreditTax1,
+	entCreditInvoice1: entCreditInvoice2,
+	entCreditTax1:     entCreditTax2,
 }
 
-// EntCreditDuplicateOf 判断产品码是否为 part2 重复产品；是则返回对应的 part1 产品码。
+// EntCreditDuplicateOf 判断产品码是否为不再调用的 part1 重复产品；是则返回保留调用的
+// part2 产品码。
 func EntCreditDuplicateOf(product string) (string, bool) {
-	p1, ok := entCreditDuplicates[product]
-	return p1, ok
+	kept, ok := entCreditDuplicates[product]
+	return kept, ok
 }
 
 // msgSeq 提供 msgId 的 6 位序号（进程内原子自增，启动时以纳秒时间播种，

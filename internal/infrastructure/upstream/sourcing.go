@@ -44,7 +44,8 @@ type Sourcer struct {
 
 // Source 是寻源优先级列表里的一个候选：一个**逻辑源**，内含 1..N 次上游调用。
 // 同一逻辑源内的调用一起发出、一起计价；若拆成多个逻辑源，「命中即停」会跳过后面的
-// 调用。证通 part2 与 part1 数据重复，装配时已丢弃，故证通发票/税务源各只含一次调用。
+// 调用。证通 part1 与 part2 数据重复，装配时已丢弃 part1，故证通发票/税务源各只含一次
+// 调用（part2）。
 type Source struct {
 	Name     string       // 逻辑源名：优先级列表的单位，也是「已请求过」去重的键
 	Provider string       // 上游 kind: entcredit/salesdata

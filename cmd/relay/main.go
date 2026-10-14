@@ -335,12 +335,27 @@ func buildUpstreams(route string, ucs []upstreamConfig, budget time.Duration, ht
 	// 按配置顺序归组，保证同 (priority, 成本) 时的调用次序可预期。
 	var order []string
 	byName := map[string]*upstream.Source{}
+	configured := map[string]bool{}
+	for _, uc := range ucs {
+		if uc.kind == upstream.ProviderEntCredit {
+			configured[uc.product] = true
+		}
+	}
 	for i, uc := range ucs {
 		if uc.kind == upstream.ProviderEntCredit {
-			if p1, dup := upstream.EntCreditDuplicateOf(uc.product); dup {
-				logger.Warn("跳过证通 part2 产品：与 part1 数据重复，只调 part1",
-					"route", route, "product", uc.product, "part1", p1, "label", uc.label)
-				continue
+			if kept, dup := upstream.EntCreditDuplicateOf(uc.product); dup {
+				if configured[kept] {
+					logger.Warn("跳过证通 part1 产品：与 part2 数据重复，只调 part2",
+						"route", route, "product", uc.product, "part2", kept, "label", uc.label)
+					continue
+				}
+				logger.Warn("证通 part1 产品改调 part2：两者数据重复，只调 part2",
+					"route", route, "product", uc.product, "part2", kept, "label", uc.label)
+				if uc.label == "" || uc.label == upstream.EntCreditLabel(uc.product) {
+					uc.label = upstream.EntCreditLabel(kept)
+				}
+				uc.product = kept
+				configured[kept] = true
 			}
 		}
 		client, err := buildClient(route, uc, httpClient, logger)
@@ -405,8 +420,8 @@ func buildUpstreams(route string, ucs []upstreamConfig, budget time.Duration, ht
 	return sourcer, ucs[0].kind, nil
 }
 
-// sourceOf 决定条目所属的逻辑源名。显式 source 优先；否则按段名推导。证通 part2
-// (invoice2/tax2) 已在 buildUpstreams 丢弃，这里保留其映射只为兼容老配置的段名。
+// sourceOf 决定条目所属的逻辑源名。显式 source 优先；否则按段名推导。证通 part1
+// (invoice1/tax1) 已在 buildUpstreams 丢弃，这里保留其映射只为兼容老配置的段名。
 func sourceOf(uc upstreamConfig, label string) string {
 	if uc.source != "" {
 		return uc.source

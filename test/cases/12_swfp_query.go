@@ -31,7 +31,7 @@ const version = "swfp"
 const (
 	creditCodeNormal    = "92500233MA60R5KW8M" // 证通四产品 + 销项均查得（综合源查无）
 	creditCodeEmpty     = "91110000EMPTYEMPT0" // 全部查无
-	creditCodePartial   = "91110000PARTFA0001" // mock 里 P0130083 失败；relay 已不调 part2，结果应与全部查得一致
+	creditCodePartial   = "91110000PARTFA0001" // mock 里 P0130081 失败；relay 已不调 part1，结果应与全部查得一致
 	creditCodeInvEmpty  = "91110000FPEMPTY001" // 证通发票聚合查无 → 回落销项
 	creditCodeTaxEmpty  = "91110000TAXEMP0001" // 证通税务聚合查无 → 仅得发票
 	creditCodeSalesFail = "91110000BADFA00001" // 销项失败（证通查得时销项不会被调用）
@@ -104,7 +104,7 @@ func main() {
 			!leaksSource(r.Range), r.Raw)
 
 	r = harness.Query(version, appKey, harness.Secret, body(creditCodePartial), nil)
-	rec.Check("同源半边失败仍查得", "errorCode=0 & body.code=001 & dataScope 全真",
+	rec.Check("part1 失败不影响（已不调用）", "errorCode=0 & body.code=001 & dataScope 全真",
 		r.ErrorCode == "0" && r.BodyCode == "001" &&
 			scopeOf(r.Range, "发票") && scopeOf(r.Range, "税务") &&
 			!leaksSource(r.Range), r.Raw)
