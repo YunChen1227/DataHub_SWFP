@@ -7,12 +7,14 @@
 // 可选环境变量：
 //
 //	CUSTOMER=北京联信征信咨询有限责任公司   license.name，精确匹配
-//	MONTH=2026-09                           北京时间自然月
+//	MONTH=2026-10                           北京时间自然月
+//	SCOPES=tax,invoice+tax                  只导出这些查得类型（逗号分隔）；缺省只抓「税」和「票税」
 //	OUT=test_res/xxx.xlsx                   缺省 test_res/<客户>-<月份>-查得明细.xlsx
 //
 // 口径：audit_log.found_data = true（下游 body.code=001）；查得维度取 data_scope，
 // 不区分由哪个上游源查得。request id 即返回给下游的 head.logId（audit_log.request_id）。
 // 不区分免费期：每一条查得都计入（计费量 = 查得量）。
+// 缺省只抓「税(tax)」与「票税(invoice+tax)」，排除纯「票(invoice)」。
 package main
 
 import (
@@ -81,12 +83,16 @@ type record struct {
 func main() {
 	configFile := env("CONFIG_FILE", "config.aliyun.prod.yaml")
 	customer := env("CUSTOMER", "北京联信征信咨询有限责任公司")
-	month := env("MONTH", "2026-09")
+	month := env("MONTH", "2026-10")
 	from, err := time.ParseInLocation("2006-01", month, cst)
 	if err != nil {
 		fail("MONTH 格式应为 YYYY-MM: %v", err)
 	}
 	to := from.AddDate(0, 1, 0)
+	scopes := parseScopes(env("SCOPES", "tax,invoice+tax"))
+	if len(scopes) == 0 {
+		fail("SCOPES 为空：请指定要导出的查得类型，如 tax,invoice+tax")
+	}
 	out := env("OUT", filepath.Join("test_res", fmt.Sprintf("%s-%s-查得明细.xlsx", customer, month)))
 
 	raw, err := os.ReadFile(configFile)
@@ -130,7 +136,7 @@ func main() {
 	for _, l := range lics {
 		appKeys = append(appKeys, l.appKey)
 	}
-	recs := loadRecords(ctx, conn, appKeys, from, to)
+	recs := loadRecords(ctx, conn, appKeys, from, to, scopes)
 
 	// 不区分免费期：每条查得都计入，计费量 = 查得量。
 	found := map[string]int64{}
@@ -158,10 +164,6 @@ func main() {
 		{"账期", monthLabel},
 		{"产品名称", "查得量"},
 	}
-	scopes := []string{"invoice", "tax", "invoice+tax"}
-	if found["unknown"] > 0 {
-		scopes = append(scopes, "unknown")
-	}
 	for _, s := range scopes {
 		totFound += found[s]
 		summary = append(summary, []any{scopeName(s), found[s]})
@@ -180,8 +182,8 @@ func main() {
 	if err := wb.save(out); err != nil {
 		fail("写 Excel 失败: %v", err)
 	}
-	fmt.Printf("%s %s：查得 %d 条（票 %d / 税 %d / 票+税 %d）\n",
-		customer, monthLabel, totFound, found["invoice"], found["tax"], found["invoice+tax"])
+	fmt.Printf("%s %s：查得 %d 条（税 %d / 票+税 %d）\n",
+		customer, monthLabel, totFound, found["tax"], found["invoice+tax"])
 	fmt.Println("已输出:", out)
 }
 
@@ -205,13 +207,14 @@ func loadLicenses(ctx context.Context, conn *pgx.Conn, name string) []license {
 	return out
 }
 
-func loadRecords(ctx context.Context, conn *pgx.Conn, appKeys []string, from, to time.Time) []record {
+func loadRecords(ctx context.Context, conn *pgx.Conn, appKeys []string, from, to time.Time, scopes []string) []record {
 	rows, err := conn.Query(ctx, `
 SELECT created_at, request_id, COALESCE(credit_code,''), COALESCE(id_card_mask,''), app_key,
        COALESCE(data_scope,''), COALESCE(charged_scope,''), COALESCE(charge_state,'')
 FROM audit_log
 WHERE app_key = ANY($1) AND found_data AND created_at >= $2 AND created_at < $3
-ORDER BY created_at`, appKeys, from, to)
+  AND data_scope = ANY($4)
+ORDER BY created_at`, appKeys, from, to, scopes)
 	if err != nil {
 		fail("查询审计失败: %v", err)
 	}
@@ -227,6 +230,21 @@ ORDER BY created_at`, appKeys, from, to)
 	}
 	if err := rows.Err(); err != nil {
 		fail("读取审计失败: %v", err)
+	}
+	return out
+}
+
+// parseScopes 把逗号分隔的查得类型解析成去重后的切片，保持输入顺序。
+func parseScopes(s string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		p = strings.TrimSpace(p)
+		if p == "" || seen[p] {
+			continue
+		}
+		seen[p] = true
+		out = append(out, p)
 	}
 	return out
 }
