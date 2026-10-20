@@ -43,11 +43,12 @@ func (s *Store) Close() { s.pool.Close() }
 
 func (s *Store) FindByAppKey(ctx context.Context, appKey string) (*model.LicenseView, error) {
 	const q = `SELECT license_id, app_key, client_uuid, status,
-		COALESCE(rate_both_fen,0), COALESCE(rate_invoice_fen,0), COALESCE(rate_tax_fen,0)
+		COALESCE(rate_both_fen,0), COALESCE(rate_invoice_fen,0), COALESCE(rate_tax_fen,0),
+		allow_invoice, allow_tax
 		FROM license WHERE app_key=$1`
 	var v model.LicenseView
 	err := s.pool.QueryRow(ctx, q, appKey).Scan(&v.LicenseID, &v.AppKey, &v.ClientUUID, &v.Status,
-		&v.Rates.BothFen, &v.Rates.InvoiceFen, &v.Rates.TaxFen)
+		&v.Rates.BothFen, &v.Rates.InvoiceFen, &v.Rates.TaxFen, &v.AllowInvoice, &v.AllowTax)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -76,12 +77,13 @@ func (s *Store) GetAppSecret(ctx context.Context, licenseID string) (string, err
 // auth.licenseWithSecretFinder）。查无返回 (nil, "", nil)。
 func (s *Store) FindByAppKeyWithSecret(ctx context.Context, appKey string) (*model.LicenseView, string, error) {
 	const q = `SELECT license_id, app_key, client_uuid, status, app_secret_enc,
-		COALESCE(rate_both_fen,0), COALESCE(rate_invoice_fen,0), COALESCE(rate_tax_fen,0)
+		COALESCE(rate_both_fen,0), COALESCE(rate_invoice_fen,0), COALESCE(rate_tax_fen,0),
+		allow_invoice, allow_tax
 		FROM license WHERE app_key=$1`
 	var v model.LicenseView
 	var secret string
 	err := s.pool.QueryRow(ctx, q, appKey).Scan(&v.LicenseID, &v.AppKey, &v.ClientUUID, &v.Status, &secret,
-		&v.Rates.BothFen, &v.Rates.InvoiceFen, &v.Rates.TaxFen)
+		&v.Rates.BothFen, &v.Rates.InvoiceFen, &v.Rates.TaxFen, &v.AllowInvoice, &v.AllowTax)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, "", nil
 	}

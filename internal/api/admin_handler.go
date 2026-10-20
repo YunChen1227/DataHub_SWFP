@@ -143,15 +143,20 @@ func (s *Server) adminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		Mobile string `json:"mobile"`
 		// rates 缺省(null) = 不改合同价；给出则整份覆盖（某档 0 = 该档走全局缺省费率）。
 		Rates *model.FeeRates `json:"rates"`
+		// allowInvoice / allowTax 缺省(null) = 不改该接口开关；两项都开 = 开通票税。
+		AllowInvoice *bool `json:"allowInvoice"`
+		AllowTax     *bool `json:"allowTax"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeAdminError(w, http.StatusBadRequest, "请求体解析失败")
 		return
 	}
 	u, err := svc.UpdateUser(r.Context(), r.PathValue("id"), admin.UpdateUserInput{
-		Status: in.Status,
-		Mobile: in.Mobile,
-		Rates:  in.Rates,
+		Status:       in.Status,
+		Mobile:       in.Mobile,
+		Rates:        in.Rates,
+		AllowInvoice: in.AllowInvoice,
+		AllowTax:     in.AllowTax,
 	})
 	if err != nil {
 		writeAdminError(w, http.StatusBadRequest, err.Error())

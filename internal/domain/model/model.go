@@ -34,10 +34,21 @@ type LicenseView struct {
 	Status     string // ACTIVE / SUSPENDED / EXPIRED
 	// Rates 是该客户的合同价（三档，单位分）；某档为 0 时由全局缺省兜底。
 	Rates FeeRates
+	// AllowInvoice / AllowTax 是该客户已开通的接口维度；票税 = 两项都开。
+	AllowInvoice bool
+	AllowTax     bool
 }
 
 // Active reports whether the license may call the service.
 func (l *LicenseView) Active() bool { return l != nil && l.Status == "ACTIVE" }
+
+// Allowed 返回该客户已开通的维度集合。
+func (l *LicenseView) Allowed() DimSet {
+	if l == nil {
+		return DimSet{}
+	}
+	return DimSet{Invoice: l.AllowInvoice, Tax: l.AllowTax}
+}
 
 // UpstreamRequest carries the parameters the upstream client needs. Want 是本次
 // 请求的维度（寻源引擎据此选优先级列表；空集按全维度处理）。

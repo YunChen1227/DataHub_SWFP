@@ -85,13 +85,14 @@ func (s *Store) usersByQuery(ctx context.Context, route, q string, args ...any) 
 func (s *Store) GetUser(ctx context.Context, licenseID, route string) (*model.UserDetail, error) {
 	const q = `SELECT license_id, app_key, COALESCE(name,''), COALESCE(mobile,''), status,
 	             client_uuid, secret_created_at, valid_to, created_at,
-	             COALESCE(rate_both_fen,0), COALESCE(rate_invoice_fen,0), COALESCE(rate_tax_fen,0)
+	             COALESCE(rate_both_fen,0), COALESCE(rate_invoice_fen,0), COALESCE(rate_tax_fen,0),
+	             allow_invoice, allow_tax
 	             FROM license WHERE license_id=$1`
 	d := &model.UserDetail{}
 	err := s.pool.QueryRow(ctx, q, licenseID).Scan(
 		&d.LicenseID, &d.AppKey, &d.Name, &d.Mobile, &d.Status,
 		&d.ClientUUID, &d.SecretCreatedAt, &d.ValidTo, &d.CreatedAt,
-		&d.Rates.BothFen, &d.Rates.InvoiceFen, &d.Rates.TaxFen)
+		&d.Rates.BothFen, &d.Rates.InvoiceFen, &d.Rates.TaxFen, &d.AllowInvoice, &d.AllowTax)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -118,11 +119,11 @@ func (s *Store) CreateUser(ctx context.Context, d *model.UserDetail, secret stri
 	const insLicense = `INSERT INTO license
 		(license_id, app_key, app_secret_enc, client_uuid, name, mobile, status,
 		 valid_from, valid_to, secret_created_at,
-		 rate_both_fen, rate_invoice_fen, rate_tax_fen)
-		VALUES ($1,$2,$3,$4,$5,$6,$7, now(), now() + interval '3650 days', now(), $8,$9,$10)`
+		 rate_both_fen, rate_invoice_fen, rate_tax_fen, allow_invoice, allow_tax)
+		VALUES ($1,$2,$3,$4,$5,$6,$7, now(), now() + interval '3650 days', now(), $8,$9,$10,$11,$12)`
 	if _, err := tx.Exec(ctx, insLicense,
 		d.LicenseID, d.AppKey, secret, d.ClientUUID, d.Name, d.Mobile, d.Status,
-		d.Rates.BothFen, d.Rates.InvoiceFen, d.Rates.TaxFen); err != nil {
+		d.Rates.BothFen, d.Rates.InvoiceFen, d.Rates.TaxFen, d.AllowInvoice, d.AllowTax); err != nil {
 		return err
 	}
 	// 计数行 (license, route, dim) 由首次累加时 UPSERT 按需创建，无需在此预插。
@@ -141,6 +142,14 @@ func (s *Store) SetRates(ctx context.Context, licenseID string, rates model.FeeR
 		`UPDATE license SET rate_both_fen=$2, rate_invoice_fen=$3, rate_tax_fen=$4, updated_at=now()
 		 WHERE license_id=$1`,
 		licenseID, rates.BothFen, rates.InvoiceFen, rates.TaxFen)
+	return err
+}
+
+// SetDimSwitch 更新该客户的发票 / 税务接口开关。
+func (s *Store) SetDimSwitch(ctx context.Context, licenseID string, invoice, tax bool) error {
+	_, err := s.pool.Exec(ctx,
+		`UPDATE license SET allow_invoice=$2, allow_tax=$3, updated_at=now() WHERE license_id=$1`,
+		licenseID, invoice, tax)
 	return err
 }
 

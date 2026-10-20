@@ -85,11 +85,13 @@ func (s *Store) CreateUser(_ context.Context, d *model.UserDetail, secret string
 	}
 	s.licenses[d.LicenseID] = &licenseRec{
 		view: model.LicenseView{
-			LicenseID:  d.LicenseID,
-			AppKey:     d.AppKey,
-			ClientUUID: d.ClientUUID,
-			Status:     d.Status,
-			Rates:      d.Rates,
+			LicenseID:    d.LicenseID,
+			AppKey:       d.AppKey,
+			ClientUUID:   d.ClientUUID,
+			Status:       d.Status,
+			Rates:        d.Rates,
+			AllowInvoice: d.AllowInvoice,
+			AllowTax:     d.AllowTax,
 		},
 		name:            d.Name,
 		mobile:          d.Mobile,
@@ -120,6 +122,16 @@ func (s *Store) SetRates(_ context.Context, licenseID string, rates model.FeeRat
 	defer s.mu.Unlock()
 	if rec := s.licenses[licenseID]; rec != nil {
 		rec.view.Rates = rates
+	}
+	return nil
+}
+
+func (s *Store) SetDimSwitch(_ context.Context, licenseID string, invoice, tax bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if rec := s.licenses[licenseID]; rec != nil {
+		rec.view.AllowInvoice = invoice
+		rec.view.AllowTax = tax
 	}
 	return nil
 }
@@ -170,6 +182,8 @@ func (s *Store) userDetailLocked(licenseID, route string) *model.UserDetail {
 		ServiceUsed:     q.serviceUsed,
 		TotalCalls:      q.totalCalls,
 		Rates:           rec.view.Rates,
+		AllowInvoice:    rec.view.AllowInvoice,
+		AllowTax:        rec.view.AllowTax,
 		SecretCreatedAt: rec.secretCreatedAt,
 		ValidTo:         rec.validTo,
 		CreatedAt:       rec.createdAt,

@@ -126,6 +126,8 @@ type UserAdminRepository interface {
 	UpdateUser(ctx context.Context, licenseID string, status string, mobile string) error
 	// SetRates 更新该客户的三档合同价（单位分；某档 0 = 走全局缺省费率）。
 	SetRates(ctx context.Context, licenseID string, rates model.FeeRates) error
+	// SetDimSwitch 更新该客户的发票 / 税务接口开关（两项都开 = 开通票税）。
+	SetDimSwitch(ctx context.Context, licenseID string, invoice, tax bool) error
 	DeleteUser(ctx context.Context, licenseID string) error
 	RotateSecret(ctx context.Context, licenseID, secret string) error
 }

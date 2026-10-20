@@ -63,6 +63,34 @@ func main() {
 	users, _ := lm["users"].([]any)
 	rec.Check("用户列表", "包含至少 1 个用户", len(users) > 0, lr)
 
+	// 6b. 接口开关：新建用户发票、税务默认都关，任何请求都返回 1009。
+	dims, _ := gm["allowInvoice"].(bool)
+	dimt, _ := gm["allowTax"].(bool)
+	rec.Check("新建用户接口开关", "allowInvoice=false allowTax=false", !dims && !dimt, gr)
+	rClosed := harness.QuerySWFP(appKey, secret1, base(), nil)
+	rec.Check("未开通接口时请求", "errorCode=505007", rClosed.ErrorCode == "505007", rClosed.Raw)
+
+	// 只开税：票税（含不传 dataType）被拒，税务放行。
+	stt, tm, tr := harness.Call(http.MethodPatch, adminBase+"/users/"+licenseID,
+		map[string]any{"allowTax": true}, auth)
+	onlyTax, _ := tm["allowTax"].(bool)
+	invOff, _ := tm["allowInvoice"].(bool)
+	rec.Check("只开通税务", "allowTax=true allowInvoice=false", stt == 200 && onlyTax && !invOff, tr)
+	rBoth := harness.QuerySWFP(appKey, secret1, base(), nil)
+	rec.Check("只开税时请求票税", "errorCode=505007 且提示仅允许税务",
+		rBoth.ErrorCode == "505007" && strings.Contains(rBoth.Raw, "仅允许访问税务接口"), rBoth.Raw)
+	taxOnly := base()
+	taxOnly["dataType"] = "tax"
+	rTax := harness.QuerySWFP(appKey, secret1, taxOnly, nil)
+	rec.Check("只开税时请求税务", "errorCode=0", rTax.ErrorCode == "0", rTax.Raw)
+
+	// 两项都开 = 开通票税，后续老流程照常。
+	sto, om, or := harness.Call(http.MethodPatch, adminBase+"/users/"+licenseID,
+		map[string]any{"allowInvoice": true, "allowTax": true}, auth)
+	oi, _ := om["allowInvoice"].(bool)
+	ot, _ := om["allowTax"].(bool)
+	rec.Check("开通发票+税务", "allowInvoice=true allowTax=true", sto == 200 && oi && ot, or)
+
 	// 7. 轮换密钥：旧 secret 应失败，新 secret 应成功
 	r := harness.QuerySWFP(appKey, secret1, base(), nil)
 	rec.Check("轮换前旧 secret 可用", "errorCode=0", r.ErrorCode == "0", r.Raw)
@@ -100,6 +128,9 @@ func main() {
 	kept, _ := km["rates"].(map[string]any)
 	keptBoth, _ := kept["bothFen"].(float64)
 	rec.Check("合同价不被无关更新冲掉", "bothFen 仍为 888", keptBoth == 888, kr)
+	ki, _ := km["allowInvoice"].(bool)
+	kt, _ := km["allowTax"].(bool)
+	rec.Check("接口开关不被无关更新冲掉", "allowInvoice=true allowTax=true", ki && kt, kr)
 
 	// 9. 审计：按 appKey 过滤 + PII 掩码（用 demo 主账户，确保有记录）
 	_, am, ar := harness.Call(http.MethodGet, adminBase+"/audits?appKey="+harness.AppKey+"&limit=200", nil, auth)

@@ -562,9 +562,11 @@ func loadSyAllowlist(route string, uc upstreamConfig, logger *slog.Logger) (*ups
 func seedDemo(store *memory.Store, domain, demoSecret string) {
 	up := strings.ToUpper(domain)
 	store.SeedLicense(&model.LicenseView{
-		LicenseID:  "LIC-DEMO-" + up,
-		AppKey:     model.DemoAppKey(domainOwner(domain)),
-		ClientUUID: "demo-client-" + domain,
-		Status:     "ACTIVE",
+		LicenseID:    "LIC-DEMO-" + up,
+		AppKey:       model.DemoAppKey(domainOwner(domain)),
+		ClientUUID:   "demo-client-" + domain,
+		Status:       "ACTIVE",
+		AllowInvoice: true,
+		AllowTax:     true,
 	}, demoSecret, "Demo 商户("+up+")", "13800001234")
 }

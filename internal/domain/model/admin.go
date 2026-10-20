@@ -25,6 +25,8 @@ type UserDetail struct {
 	ServiceUsed     int64     `json:"serviceUsed"`     // 累计成功查得数 (当前路由作用域)
 	TotalCalls      int64     `json:"totalCalls"`      // 累计调用上游次数 (当前路由作用域)
 	Rates           FeeRates  `json:"rates"`           // 三档合同价（分）；0 = 走全局缺省
+	AllowInvoice    bool      `json:"allowInvoice"`    // 已开通发票接口
+	AllowTax        bool      `json:"allowTax"`        // 已开通税务接口；两项都开 = 开通票税
 	SecretCreatedAt time.Time `json:"secretCreatedAt"` // 当前密钥创建/轮换时间
 	ValidTo         time.Time `json:"validTo"`         // 授权过期日期
 	CreatedAt       time.Time `json:"createdAt"`

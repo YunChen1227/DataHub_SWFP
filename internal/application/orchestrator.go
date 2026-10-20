@@ -128,6 +128,13 @@ func (o *QueryOrchestrator) Handle(ctx context.Context, signed *model.SignedRequ
 	// 原始请求维度（发票/税务/两者）——与实得维度 DataScope 分开记，二者的差额
 	// 就是「客户要了但没给到」的部分，是计费争议时的第一手证据。
 	rec.ReqScope = upReq.Want.String()
+	// 接口开关：请求维度超出客户已开通范围直接拒绝，不调上游、不计费。
+	if err := auth.CheckDims(lic, upReq.Want); err != nil {
+		ae := errs.AsAppError(err)
+		rec.ErrMsg = ae.Error()
+		log.Info("dim not allowed", "want", upReq.Want.String(), "allowed", lic.Allowed().String())
+		return fail(ae.Busi, ae.Msg)
+	}
 	// 计费主体落明文：免费期窗口按 (license, creditCode, category) 判定，脱敏值
 	// (IDCardMask) 无法作为计费键，也无法用于对客解释免费期。合规依据见
 	// 设计_主体年度计费.md §8.1。

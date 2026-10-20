@@ -23,6 +23,14 @@ function yuan(v) {
   return (v / 100).toFixed(2)
 }
 
+// dimLabel 显示客户已开通的接口；两项都开即开通票税。
+function dimLabel(u) {
+  if (u.allowInvoice && u.allowTax) return '发票+税务'
+  if (u.allowInvoice) return '仅发票'
+  if (u.allowTax) return '仅税务'
+  return '未开通'
+}
+
 // rateInput 把输入的「元」换算回分（整数），空值/非法值按 0（走全局缺省）处理。
 function rateInput(v) {
   const n = Number(v)
@@ -81,6 +89,8 @@ export default function Users() {
       await api.updateUser(editing.licenseId, {
         status: editing.status,
         mobile: editing.mobile || '',
+        allowInvoice: !!editing.allowInvoice,
+        allowTax: !!editing.allowTax,
         rates: {
           bothFen: rateInput(editing.rateBoth),
           invoiceFen: rateInput(editing.rateInvoice),
@@ -157,7 +167,7 @@ export default function Users() {
           <table>
             <thead>
               <tr>
-                <th>uuid</th><th>名称</th><th>手机号</th><th>状态</th>
+                <th>uuid</th><th>名称</th><th>手机号</th><th>状态</th><th>开通接口</th>
                 <th>调用次数</th><th>成功查得数</th>
                 <th>发票+税务(元)</th><th>单发票(元)</th><th>单税务(元)</th>
                 <th>密钥创建时间</th><th>过期日期</th><th>创建时间</th><th>操作</th>
@@ -170,6 +180,7 @@ export default function Users() {
                   <td>{u.name || '-'}</td>
                   <td>{maskMobile(u.mobile)}</td>
                   <td><span className={'badge ' + u.status}>{u.status}</span></td>
+                  <td>{dimLabel(u)}</td>
                   <td><strong>{u.totalCalls}</strong></td>
                   <td><strong>{u.serviceUsed}</strong></td>
                   <td>{yuan(u.rates?.bothFen)}</td>
@@ -199,7 +210,7 @@ export default function Users() {
                 </tr>
               ))}
               {users.length === 0 && (
-                <tr><td colSpan="13" className="muted">暂无用户</td></tr>
+                <tr><td colSpan="14" className="muted">暂无用户</td></tr>
               )}
             </tbody>
           </table>
@@ -221,6 +232,32 @@ export default function Users() {
             <div className="field">
               <label>手机号</label>
               <input value={editing.mobile || ''} onChange={(e) => setEditing({ ...editing, mobile: e.target.value })} placeholder="13800001234" />
+            </div>
+            <div className="field">
+              <label>开通接口</label>
+              <div>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 16 }}>
+                  <input
+                    type="checkbox"
+                    checked={!!editing.allowInvoice}
+                    onChange={(e) => setEditing({ ...editing, allowInvoice: e.target.checked })}
+                  />
+                  发票
+                </label>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <input
+                    type="checkbox"
+                    checked={!!editing.allowTax}
+                    onChange={(e) => setEditing({ ...editing, allowTax: e.target.checked })}
+                  />
+                  税务
+                </label>
+              </div>
+              <p className="muted">
+                {editing.allowInvoice && editing.allowTax
+                  ? '已自动开通票税接口（dataType=both 或不传）。'
+                  : '请求超出已开通的接口时返回 1009 服务尚未开通；两项都勾选才开通票税接口。'}
+              </p>
             </div>
             <p className="muted">
               合同价按【实际查得的维度】分三档计费（单位元，留空 = 走全局缺省费率）：

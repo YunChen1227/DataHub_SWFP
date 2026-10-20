@@ -117,9 +117,10 @@ func stripLineComment(line string) string {
 // seedDemo (cmd/relay/main.go)。
 func SeedDemo(ctx context.Context, s *Store, route string) error {
 	const insLicense = `INSERT INTO license
-		(license_id, app_key, app_secret_enc, client_uuid, name, mobile, status, valid_from, valid_to, secret_created_at)
+		(license_id, app_key, app_secret_enc, client_uuid, name, mobile, status, valid_from, valid_to, secret_created_at,
+		 allow_invoice, allow_tax)
 		SELECT $1, $2, 'demo-app-secret', $3, $4, '13800001234', 'ACTIVE',
-			now(), now() + interval '3650 days', now()
+			now(), now() + interval '3650 days', now(), TRUE, TRUE
 		WHERE NOT EXISTS (SELECT 1 FROM license WHERE license_id = $1)`
 	domain := model.RouteDomain(route)
 	up := strings.ToUpper(domain)

@@ -169,10 +169,13 @@ func (s *Service) CreateUser(ctx context.Context, in CreateUserInput) (*CreateUs
 
 // UpdateUserInput carries the editable fields (empty value = leave unchanged)。
 // Rates 为 nil 时不改合同价；非 nil 时整份覆盖（某档填 0 = 该档走全局缺省费率）。
+// AllowInvoice / AllowTax 为 nil 时不改对应接口开关。
 type UpdateUserInput struct {
-	Status string
-	Mobile string
-	Rates  *model.FeeRates
+	Status       string
+	Mobile       string
+	Rates        *model.FeeRates
+	AllowInvoice *bool
+	AllowTax     *bool
 }
 
 func (s *Service) UpdateUser(ctx context.Context, licenseID string, in UpdateUserInput) (*model.UserDetail, error) {
@@ -196,6 +199,18 @@ func (s *Service) UpdateUser(ctx context.Context, licenseID string, in UpdateUse
 	}
 	if in.Rates != nil {
 		if err := s.users.SetRates(ctx, licenseID, *in.Rates); err != nil {
+			return nil, err
+		}
+	}
+	if in.AllowInvoice != nil || in.AllowTax != nil {
+		invoice, tax := cur.AllowInvoice, cur.AllowTax
+		if in.AllowInvoice != nil {
+			invoice = *in.AllowInvoice
+		}
+		if in.AllowTax != nil {
+			tax = *in.AllowTax
+		}
+		if err := s.users.SetDimSwitch(ctx, licenseID, invoice, tax); err != nil {
 			return nil, err
 		}
 	}
