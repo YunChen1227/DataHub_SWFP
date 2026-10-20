@@ -6,9 +6,10 @@
 //
 // 可选环境变量：
 //
-//	MONTH=2026-09          水滴账单所属的北京时间自然月，用于「我方本月调用明细」和本月计数
-//	MATCH_SECONDS=60       水滴时间与我方调用时间相差多少秒以内算同一次调用
-//	OUT=test_res/xxx.xlsx  缺省 test_res/水滴存疑税号对账-<月份>.xlsx
+//	MATCH_SECONDS=60       水滴时间与我方调用时间相差超过多少秒时在备注里标出
+//	OUT=test_res/xxx.xlsx  缺省 test_res/水滴存疑税号对账.xlsx
+//
+// 输出三个 sheet：总览（票/税各自的查得、查无、失败、我方无调用条数）、票明细、税明细。
 //
 // 口径：
 //   - 水滴调用 = upstream_call.provider='entcredit' 且 status<>'skipped'（skipped 表示没发出请求）。
@@ -27,7 +28,6 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -79,17 +79,11 @@ type call struct {
 
 func main() {
 	configFile := env("CONFIG_FILE", "config.aliyun.prod.yaml")
-	month := env("MONTH", "2026-09")
-	from, err := time.ParseInLocation("2006-01", month, cst)
-	if err != nil {
-		fail("MONTH 格式应为 YYYY-MM: %v", err)
-	}
-	to := from.AddDate(0, 1, 0)
 	matchSec, err := strconv.ParseFloat(env("MATCH_SECONDS", "60"), 64)
 	if err != nil {
 		fail("MATCH_SECONDS 应为数字: %v", err)
 	}
-	out := env("OUT", filepath.Join("test_res", fmt.Sprintf("水滴存疑税号对账-%s.xlsx", month)))
+	out := env("OUT", filepath.Join("test_res", "水滴存疑税号对账.xlsx"))
 
 	bill := parseBill()
 	codes := map[string]bool{}
@@ -135,7 +129,6 @@ func main() {
 	}
 
 	byCode := loadCalls(ctx, conn, `a.credit_code = ANY($1)`, codeList)
-	monthCalls := loadCalls(ctx, conn, `uc.created_at >= $1 AND uc.created_at < $2`, from, to)
 
 	group := map[string][]call{}
 	for _, c := range byCode {
@@ -143,123 +136,73 @@ func main() {
 		group[k] = append(group[k], c)
 	}
 
-	type verdictKey struct{ dim, verdict string }
-	verdictCount := map[verdictKey]int{}
-	detail := make([][]any, 0, len(bill))
+	results := []string{"查得", "查无", "失败", "我方无调用"}
+	count := map[string]map[string]int{"票": {}, "税": {}}
+	mismatch := map[string]int{}
+	details := map[string][][]any{"票": {}, "税": {}}
 	for _, b := range bill {
 		cands := group[b.dim+"|"+b.code]
 		var best *call
 		bestDiff := math.MaxFloat64
-		inMonth := 0
 		for i := range cands {
-			c := &cands[i]
-			if !c.at.Before(from) && c.at.Before(to) {
-				inMonth++
-			}
-			if d := math.Abs(c.at.Sub(b.at).Seconds()); d < bestDiff {
-				best, bestDiff = c, d
+			if d := math.Abs(cands[i].at.Sub(b.at).Seconds()); d < bestDiff {
+				best, bestDiff = &cands[i], d
 			}
 		}
-		verdict := ""
-		row := []any{b.dim, b.code, b.at.Format("2006-01-02 15:04:05")}
-		switch {
-		case best == nil:
-			verdict = "我方无此税号该维度的任何调用"
-			row = append(row, nil, nil, nil, nil, nil, nil, nil, nil, nil)
-		default:
-			switch {
-			case bestDiff > matchSec:
-				verdict = fmt.Sprintf("我方有调用但时间对不上（>%g秒）", matchSec)
-			case best.status == "error":
-				verdict = "我方记为调用失败"
-			case best.status == "empty":
-				verdict = "我方记为查无"
-			default:
-				verdict = "一致（我方查得）"
+		var row []any
+		result, note := "", ""
+		if best == nil {
+			result = "我方无调用"
+			note = "我方没有这个税号该维度的任何调用记录"
+			row = []any{b.code, b.at.Format("2006-01-02 15:04:05"), result, nil, nil, nil, nil, nil, nil, nil, nil, int64(0), note}
+		} else {
+			result = statusName(best.status)
+			if bestDiff > matchSec {
+				note = fmt.Sprintf("时间相差超过 %g 秒，可能不是同一次调用", matchSec)
+				mismatch[b.dim]++
 			}
-			row = append(row,
+			row = []any{b.code, b.at.Format("2006-01-02 15:04:05"), result,
 				best.at.Format("2006-01-02 15:04:05"), int64(math.Round(bestDiff)),
-				statusName(best.status), best.upCode, best.upMsg, best.upUID,
-				best.customer, best.appKey, best.requestID)
+				best.upCode, best.upMsg, best.upUID, best.customer, best.appKey, best.requestID,
+				int64(len(cands)), note}
 		}
-		row = append(row, int64(len(cands)), int64(inMonth), verdict)
-		detail = append(detail, row)
-		verdictCount[verdictKey{b.dim, verdict}]++
+		count[b.dim][result]++
+		details[b.dim] = append(details[b.dim], row)
 	}
 
-	inBill := map[string]bool{}
-	for _, b := range bill {
-		inBill[b.dim+"|"+b.code] = true
-	}
-	type statKey struct{ dim, status string }
-	monthStat := map[statKey]int{}
-	monthCodes := map[statKey]map[string]bool{}
-	ours := make([][]any, 0, len(monthCalls))
-	for _, c := range monthCalls {
-		k := statKey{c.dim, c.status}
-		monthStat[k]++
-		if monthCodes[k] == nil {
-			monthCodes[k] = map[string]bool{}
+	overview := [][]any{{"维度", "存疑条数", "查得", "查无", "失败", "我方无调用", "其中时间对不上"}}
+	totals := make([]int64, 6)
+	for _, dim := range []string{"票", "税"} {
+		row := []any{dim, int64(len(details[dim]))}
+		totals[0] += int64(len(details[dim]))
+		for i, r := range results {
+			row = append(row, int64(count[dim][r]))
+			totals[i+1] += int64(count[dim][r])
 		}
-		monthCodes[k][c.code] = true
-		ours = append(ours, []any{
-			c.dim, c.code, c.at.Format("2006-01-02 15:04:05"), c.label, statusName(c.status),
-			c.upCode, c.upMsg, c.upUID, c.latencyMs, c.customer, c.appKey, c.requestID,
-			yesNo(inBill[c.dim+"|"+c.code]),
-		})
+		row = append(row, int64(mismatch[dim]))
+		totals[5] += int64(mismatch[dim])
+		overview = append(overview, row)
 	}
-
-	summary := [][]any{{"一、水滴存疑表逐条核对", "", ""}, {"维度", "结论", "条数"}}
-	keys := make([]verdictKey, 0, len(verdictCount))
-	for k := range verdictCount {
-		keys = append(keys, k)
+	overview = append(overview, []any{"合计", totals[0], totals[1], totals[2], totals[3], totals[4], totals[5]})
+	notes := [][]any{
+		{},
+		{"口径", "水滴 = upstream_call.provider='entcredit'，排除 skipped（未发出请求）"},
+		{"", "票 = 发票数据聚合（invoice1/invoice2），税 = 税务数据聚合（tax1/tax2）"},
+		{"", "每条存疑记录取我方同维度、同税号、时间最近的一次调用，按该次调用结果判定查得/查无/失败"},
+		{"", "查得 = 证通返回 001；查无 = 证通返回 999；失败 = 超时、网关错误或证通 E 开头错误码"},
+		{"", fmt.Sprintf("时间相差超过 %g 秒的仍按最近一次调用判定，并单独计入「其中时间对不上」", matchSec)},
+		{"", "生成时间 " + time.Now().In(cst).Format("2006-01-02 15:04:05")},
 	}
-	sort.Slice(keys, func(i, j int) bool {
-		if keys[i].dim != keys[j].dim {
-			return keys[i].dim < keys[j].dim
-		}
-		return keys[i].verdict < keys[j].verdict
-	})
-	hdr := map[int]bool{0: true, 1: true}
-	for _, k := range keys {
-		summary = append(summary, []any{k.dim, k.verdict, int64(verdictCount[k])})
-	}
-	summary = append(summary, []any{"", "", ""}, []any{"二、我方 " + from.Format("2006年1月") + " 对水滴的全部调用", "", ""})
-	hdr[len(summary)-1] = true
-	summary = append(summary, []any{"维度 / 结果", "调用次数", "去重税号数"})
-	hdr[len(summary)-1] = true
-	sk := make([]statKey, 0, len(monthStat))
-	for k := range monthStat {
-		sk = append(sk, k)
-	}
-	sort.Slice(sk, func(i, j int) bool {
-		if sk[i].dim != sk[j].dim {
-			return sk[i].dim < sk[j].dim
-		}
-		return sk[i].status < sk[j].status
-	})
-	for _, k := range sk {
-		summary = append(summary, []any{k.dim + " / " + statusName(k.status), int64(monthStat[k]), int64(len(monthCodes[k]))})
-	}
-	summary = append(summary,
-		[]any{"", "", ""},
-		[]any{"口径", "水滴 = upstream_call.provider='entcredit'，排除 skipped（未发出请求）", ""},
-		[]any{"", "票 = invoice1/invoice2（发票数据聚合），税 = tax1/tax2（税务数据聚合）", ""},
-		[]any{"", fmt.Sprintf("同维度同税号取时间最近的一次调用，相差 %g 秒以内算同一次", matchSec), ""},
-		[]any{"", "生成时间 " + time.Now().In(cst).Format("2006-01-02 15:04:05"), ""},
-	)
+	overview = append(overview, notes...)
 
 	wb := &workbook{}
-	wb.add("汇总", nil, summary, []float64{40, 64, 14})
-	wb.sheets[0].hdrRows = hdr
-	wb.add("存疑税号逐条核对",
-		[]string{"维度", "税号", "水滴时间", "我方最近调用时间", "时间差(秒)", "我方结果", "证通返回码", "证通返回信息",
-			"水滴订单号", "客户", "appKey", "request id", "我方该税号该维度调用次数(全部)", "其中本月次数", "结论"},
-		detail, []float64{6, 22, 20, 20, 10, 10, 10, 20, 26, 28, 16, 40, 14, 12, 30})
-	wb.add("我方本月水滴调用明细",
-		[]string{"维度", "税号", "调用时间", "source_label", "结果", "证通返回码", "证通返回信息", "水滴订单号",
-			"耗时ms", "客户", "appKey", "request id", "在存疑表中"},
-		ours, []float64{6, 22, 20, 12, 8, 10, 20, 26, 10, 28, 16, 40, 10})
+	wb.add("总览", nil, overview, []float64{10, 12, 10, 10, 10, 12, 16})
+	wb.sheets[0].hdrRows = map[int]bool{0: true}
+	headers := []string{"税号", "水滴时间", "我方结果", "我方调用时间", "时间差(秒)", "证通返回码", "证通返回信息",
+		"水滴订单号", "客户", "appKey", "request id", "我方该税号调用次数", "备注"}
+	widths := []float64{22, 20, 12, 20, 10, 10, 20, 26, 28, 16, 40, 12, 34}
+	wb.add("票明细", headers, details["票"], widths)
+	wb.add("税明细", headers, details["税"], widths)
 
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		fail("创建输出目录失败: %v", err)
@@ -267,10 +210,9 @@ func main() {
 	if err := wb.save(out); err != nil {
 		fail("写 Excel 失败: %v", err)
 	}
-	for _, k := range keys {
-		fmt.Printf("%s  %-30s %d\n", k.dim, k.verdict, verdictCount[k])
+	for _, r := range overview[:4] {
+		fmt.Println(r...)
 	}
-	fmt.Printf("我方 %s 水滴调用共 %d 次\n", from.Format("2006年1月"), len(monthCalls))
 	fmt.Println("已输出:", out)
 }
 
@@ -334,13 +276,6 @@ func statusName(s string) string {
 		return "失败"
 	}
 	return s
-}
-
-func yesNo(b bool) string {
-	if b {
-		return "是"
-	}
-	return "否"
 }
 
 // 存疑税号.xlsx：维度,税号,水滴记录时间（北京时间）
