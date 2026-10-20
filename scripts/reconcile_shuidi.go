@@ -1,22 +1,24 @@
 //go:build ignore
 
-// reconcile_shuidi: 用我方对水滴（证通 entcredit）的调用记录，核对水滴给的「存疑税号.xlsx」（只读）。
+// reconcile_shuidi: 核对水滴（证通）给的「存疑税号.xlsx」：每条记录在我方都调用过哪些上游、
+// 各自查得还是查无、最终由哪个上游查得（只读）。
 //
 //	CONFIG_FILE=config.aliyun.prod.yaml go run ./scripts/reconcile_shuidi.go
 //
 // 可选环境变量：
 //
-//	MATCH_SECONDS=60       水滴时间与我方调用时间相差超过多少秒时在备注里标出
+//	MATCH_SECONDS=60       水滴时间与我方请求时间相差超过多少秒时在备注里标出
 //	OUT=test_res/xxx.xlsx  缺省 test_res/水滴存疑税号对账.xlsx
 //
-// 输出三个 sheet：总览（票/税各自的查得、查无、失败、我方无调用条数）、票明细、税明细。
+// 输出三个 sheet：总览、票明细、税明细。
 //
 // 口径：
-//   - 水滴调用 = upstream_call.provider='entcredit' 且 status<>'skipped'（skipped 表示没发出请求）。
-//   - 「票」= source_label invoice1/invoice2（发票数据聚合），「税」= tax1/tax2（税务数据聚合）。
-//   - 税号取 audit_log.credit_code（按 request_id 关联），时间按北京时间。
-//   - 每条水滴记录在我方找同维度、同税号、时间最近的一次调用；税号的查找不限月份，
-//     这样跨月调用也能识别出来。
+//   - 我方请求取 audit_log（按 credit_code 查，不限客户、不限时间），逐源调用取 upstream_call
+//     （按 request_id 关联），status=skipped 表示该源没有发出请求。
+//   - 「票」看覆盖发票维度的请求和上游调用，「税」看覆盖税务维度的。
+//   - 每条水滴记录匹配我方一次请求：优先取同税号、调用过证通该维度、时间差在 MATCH_SECONDS
+//     以内的请求；没有就取同税号同维度时间最近的请求。
+//   - 最终成功上游 = 匹配到的请求里，第一个对该维度查得 (status=ok) 的上游。
 package main
 
 import (
@@ -28,6 +30,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -68,13 +71,49 @@ type billRow struct {
 	at        time.Time
 }
 
-type call struct {
-	dim, code                      string
-	at                             time.Time
-	label, status                  string
-	upCode, upMsg, upUID, customer string
-	appKey, requestID              string
-	latencyMs                      int64
+type request struct {
+	id, code, reqScope, dataScope string
+	busiCode                      int32
+	appKey, customer              string
+	at                            time.Time
+	calls                         []upCall
+}
+
+type upCall struct {
+	seq                    int32
+	provider, label, alias string
+	dimInv, dimTax         bool
+	status                 string
+	upCode, upMsg, upUID   string
+	skipReason             string
+}
+
+func (c upCall) covers(dim string) bool {
+	if dim == "票" {
+		return c.dimInv
+	}
+	return c.dimTax
+}
+
+func (r *request) wants(dim string) bool {
+	if r.reqScope == "" || r.reqScope == "none" {
+		return true
+	}
+	if dim == "票" {
+		return strings.Contains(r.reqScope, "invoice")
+	}
+	return strings.Contains(r.reqScope, "tax")
+}
+
+// dimCalls 返回本次请求里覆盖该维度、真正发出的上游调用（按调用顺序）。
+func (r *request) dimCalls(dim string) []upCall {
+	var out []upCall
+	for _, c := range r.calls {
+		if c.status != "skipped" && c.covers(dim) {
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 func main() {
@@ -86,13 +125,13 @@ func main() {
 	out := env("OUT", filepath.Join("test_res", "水滴存疑税号对账.xlsx"))
 
 	bill := parseBill()
-	codes := map[string]bool{}
+	codeSet := map[string]bool{}
 	for _, b := range bill {
-		codes[b.code] = true
+		codeSet[b.code] = true
 	}
-	codeList := make([]string, 0, len(codes))
-	for c := range codes {
-		codeList = append(codeList, c)
+	codes := make([]string, 0, len(codeSet))
+	for c := range codeSet {
+		codes = append(codes, c)
 	}
 
 	raw, err := os.ReadFile(configFile)
@@ -128,79 +167,135 @@ func main() {
 		}
 	}
 
-	byCode := loadCalls(ctx, conn, `a.credit_code = ANY($1)`, codeList)
-
-	group := map[string][]call{}
-	for _, c := range byCode {
-		k := c.dim + "|" + c.code
-		group[k] = append(group[k], c)
+	reqs := loadRequests(ctx, conn, codes)
+	loadUpstreamCalls(ctx, conn, reqs)
+	byCode := map[string][]*request{}
+	for _, r := range reqs {
+		byCode[r.code] = append(byCode[r.code], r)
 	}
 
-	results := []string{"查得", "查无", "失败", "我方无调用"}
-	count := map[string]map[string]int{"票": {}, "税": {}}
+	ztResults := []string{"查得", "查无", "失败", "未调用证通", "我方无请求"}
+	ztCount := map[string]map[string]int{"票": {}, "税": {}}
+	finalCount := map[string]map[string]int{"票": {}, "税": {}}
+	finalNames := map[string]bool{}
 	mismatch := map[string]int{}
 	details := map[string][][]any{"票": {}, "税": {}}
+
 	for _, b := range bill {
-		cands := group[b.dim+"|"+b.code]
-		var best *call
-		bestDiff := math.MaxFloat64
-		for i := range cands {
-			if d := math.Abs(cands[i].at.Sub(b.at).Seconds()); d < bestDiff {
-				best, bestDiff = &cands[i], d
+		var cands []*request
+		for _, r := range byCode[b.code] {
+			if r.wants(b.dim) {
+				cands = append(cands, r)
 			}
 		}
-		var row []any
-		result, note := "", ""
+		best, diff := pickRequest(cands, b, matchSec)
+		history := historySummary(cands, b.dim)
+
 		if best == nil {
-			result = "我方无调用"
-			note = "我方没有这个税号该维度的任何调用记录"
-			row = []any{b.code, b.at.Format("2006-01-02 15:04:05"), result, nil, nil, nil, nil, nil, nil, nil, nil, int64(0), note}
-		} else {
-			result = statusName(best.status)
-			if bestDiff > matchSec {
-				note = fmt.Sprintf("时间相差超过 %g 秒，可能不是同一次调用", matchSec)
-				mismatch[b.dim]++
-			}
-			row = []any{b.code, b.at.Format("2006-01-02 15:04:05"), result,
-				best.at.Format("2006-01-02 15:04:05"), int64(math.Round(bestDiff)),
-				best.upCode, best.upMsg, best.upUID, best.customer, best.appKey, best.requestID,
-				int64(len(cands)), note}
+			ztCount[b.dim]["我方无请求"]++
+			finalCount[b.dim]["我方无请求"]++
+			finalNames["我方无请求"] = true
+			details[b.dim] = append(details[b.dim], []any{
+				b.code, b.at.Format("2006-01-02 15:04:05"), nil, nil, nil,
+				"我方无请求", nil, nil, nil, "我方无请求", nil, nil, nil, nil, int64(0), history,
+				"所有客户都没有请求过这个税号的该维度",
+			})
+			continue
 		}
-		count[b.dim][result]++
-		details[b.dim] = append(details[b.dim], row)
+
+		calls := best.dimCalls(b.dim)
+		ztResult, ztCode, ztUID := "未调用证通", "", ""
+		var chain []string
+		final := ""
+		for _, c := range calls {
+			chain = append(chain, fmt.Sprintf("%s:%s", providerName(c), statusName(c.status)))
+			if c.provider == "entcredit" {
+				ztResult, ztCode, ztUID = statusName(c.status), c.upCode, c.upUID
+			}
+			if final == "" && c.status == "ok" {
+				final = providerName(c)
+			}
+		}
+		switch {
+		case final != "":
+		case len(calls) == 0:
+			final = "未调用任何上游"
+		default:
+			final = "无（上游均未查得）"
+		}
+		note := ""
+		if diff > matchSec {
+			note = fmt.Sprintf("时间相差超过 %g 秒，可能不是同一次请求", matchSec)
+			mismatch[b.dim]++
+		}
+		if ztResult == "未调用证通" {
+			if s := ztSkipReason(best, b.dim); s != "" {
+				note = strings.TrimPrefix(note+"；证通未调用原因："+s, "；")
+			}
+		}
+		ztCount[b.dim][ztResult]++
+		finalCount[b.dim][final]++
+		finalNames[final] = true
+		details[b.dim] = append(details[b.dim], []any{
+			b.code, b.at.Format("2006-01-02 15:04:05"),
+			best.at.Format("2006-01-02 15:04:05"), int64(math.Round(diff)), scopeName(best.reqScope),
+			ztResult, ztCode, ztUID, strings.Join(chain, " → "), final, scopeName(best.dataScope),
+			best.customer, best.appKey, best.id, int64(len(cands)), history, note,
+		})
 	}
 
-	overview := [][]any{{"维度", "存疑条数", "查得", "查无", "失败", "我方无调用", "其中时间对不上"}}
-	totals := make([]int64, 6)
+	overview := [][]any{{"一、证通（水滴）在匹配请求里的结果", "", "", "", "", "", ""},
+		{"维度", "存疑条数", "查得", "查无", "失败", "未调用证通", "我方无请求"}}
+	hdr := map[int]bool{0: true, 1: true}
+	tot := make([]int64, len(ztResults)+1)
 	for _, dim := range []string{"票", "税"} {
 		row := []any{dim, int64(len(details[dim]))}
-		totals[0] += int64(len(details[dim]))
-		for i, r := range results {
-			row = append(row, int64(count[dim][r]))
-			totals[i+1] += int64(count[dim][r])
+		tot[0] += int64(len(details[dim]))
+		for i, r := range ztResults {
+			row = append(row, int64(ztCount[dim][r]))
+			tot[i+1] += int64(ztCount[dim][r])
 		}
-		row = append(row, int64(mismatch[dim]))
-		totals[5] += int64(mismatch[dim])
 		overview = append(overview, row)
 	}
-	overview = append(overview, []any{"合计", totals[0], totals[1], totals[2], totals[3], totals[4], totals[5]})
-	notes := [][]any{
-		{},
-		{"口径", "水滴 = upstream_call.provider='entcredit'，排除 skipped（未发出请求）"},
-		{"", "票 = 发票数据聚合（invoice1/invoice2），税 = 税务数据聚合（tax1/tax2）"},
-		{"", "每条存疑记录取我方同维度、同税号、时间最近的一次调用，按该次调用结果判定查得/查无/失败"},
-		{"", "查得 = 证通返回 001；查无 = 证通返回 999；失败 = 超时、网关错误或证通 E 开头错误码"},
-		{"", fmt.Sprintf("时间相差超过 %g 秒的仍按最近一次调用判定，并单独计入「其中时间对不上」", matchSec)},
-		{"", "生成时间 " + time.Now().In(cst).Format("2006-01-02 15:04:05")},
+	totRow := []any{"合计"}
+	for _, v := range tot {
+		totRow = append(totRow, v)
 	}
-	overview = append(overview, notes...)
+	overview = append(overview, totRow, []any{})
+
+	names := make([]string, 0, len(finalNames))
+	for n := range finalNames {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	overview = append(overview, []any{"二、最终成功上游", ""})
+	hdr[len(overview)-1] = true
+	overview = append(overview, append([]any{"维度"}, toAny(names)...))
+	hdr[len(overview)-1] = true
+	for _, dim := range []string{"票", "税"} {
+		row := []any{dim}
+		for _, n := range names {
+			row = append(row, int64(finalCount[dim][n]))
+		}
+		overview = append(overview, row)
+	}
+	overview = append(overview,
+		[]any{},
+		[]any{"时间对不上", fmt.Sprintf("票 %d 条，税 %d 条（相差超过 %g 秒，仍按最近一次请求判定）", mismatch["票"], mismatch["税"], matchSec)},
+		[]any{"口径", "我方请求不限客户、不限时间；只看覆盖该维度且真正发出的上游调用（排除 skipped）"},
+		[]any{"", "优先匹配调用过证通该维度、时间差在阈值内的请求，否则取时间最近的请求"},
+		[]any{"", "查得 = 上游返回有数据；查无 = 上游返回无数据（证通 999）；失败 = 超时、网关错误或上游错误码"},
+		[]any{"", "最终成功上游 = 该请求里第一个对该维度查得的上游"},
+		[]any{"", "生成时间 " + time.Now().In(cst).Format("2006-01-02 15:04:05")},
+	)
 
 	wb := &workbook{}
-	wb.add("总览", nil, overview, []float64{10, 12, 10, 10, 10, 12, 16})
-	wb.sheets[0].hdrRows = map[int]bool{0: true}
-	headers := []string{"税号", "水滴时间", "我方结果", "我方调用时间", "时间差(秒)", "证通返回码", "证通返回信息",
-		"水滴订单号", "客户", "appKey", "request id", "我方该税号调用次数", "备注"}
-	widths := []float64{22, 20, 12, 20, 10, 10, 20, 26, 28, 16, 40, 12, 34}
+	wb.add("总览", nil, overview, []float64{34, 14, 14, 14, 14, 14, 14, 14})
+	wb.sheets[0].hdrRows = hdr
+	headers := []string{"税号", "水滴时间", "我方请求时间", "时间差(秒)", "请求维度",
+		"证通结果", "证通返回码", "水滴订单号", "本次上游调用链", "最终成功上游", "下游查得维度",
+		"客户", "appKey", "request id", "该税号该维度请求次数", "历史全部请求的上游结果", "备注"}
+	widths := []float64{22, 20, 20, 10, 12, 12, 10, 26, 40, 18, 12, 28, 16, 40, 12, 46, 40}
 	wb.add("票明细", headers, details["票"], widths)
 	wb.add("税明细", headers, details["税"], widths)
 
@@ -210,42 +305,170 @@ func main() {
 	if err := wb.save(out); err != nil {
 		fail("写 Excel 失败: %v", err)
 	}
-	for _, r := range overview[:4] {
-		fmt.Println(r...)
+	for _, r := range overview {
+		if len(r) > 0 {
+			fmt.Println(r...)
+		}
 	}
 	fmt.Println("已输出:", out)
 }
 
-func loadCalls(ctx context.Context, conn *pgx.Conn, where string, args ...any) []call {
-	q := `
-SELECT CASE WHEN uc.source_label LIKE 'invoice%' THEN '票' ELSE '税' END,
-       COALESCE(a.credit_code, ''), uc.created_at, uc.source_label, uc.status,
-       uc.upstream_code, uc.upstream_msg, uc.upstream_uid, COALESCE(l.name, ''),
-       uc.app_key, uc.request_id, uc.latency_ms
-FROM upstream_call uc
-LEFT JOIN LATERAL (
-    SELECT credit_code FROM audit_log WHERE request_id = uc.request_id LIMIT 1
-) a ON TRUE
-LEFT JOIN license l ON l.app_key = uc.app_key
-WHERE uc.provider = 'entcredit' AND uc.status <> 'skipped' AND ` + where + `
-ORDER BY uc.created_at`
-	rows, err := conn.Query(ctx, q, args...)
+// pickRequest 优先取调用过证通该维度且时间差在阈值内的请求，否则取时间最近的请求。
+func pickRequest(cands []*request, b billRow, matchSec float64) (*request, float64) {
+	var best, bestZt *request
+	bestDiff, ztDiff := math.MaxFloat64, math.MaxFloat64
+	for _, r := range cands {
+		d := math.Abs(r.at.Sub(b.at).Seconds())
+		if d < bestDiff {
+			best, bestDiff = r, d
+		}
+		for _, c := range r.dimCalls(b.dim) {
+			if c.provider == "entcredit" && d <= matchSec && d < ztDiff {
+				bestZt, ztDiff = r, d
+			}
+		}
+	}
+	if bestZt != nil {
+		return bestZt, ztDiff
+	}
+	return best, bestDiff
+}
+
+// historySummary 汇总该税号该维度所有请求里各上游的结果，如「证通:查得×2，惠众C:查无×1」。
+func historySummary(cands []*request, dim string) string {
+	if len(cands) == 0 {
+		return "无"
+	}
+	count := map[string]int{}
+	var order []string
+	for _, r := range cands {
+		for _, c := range r.dimCalls(dim) {
+			k := providerName(c) + ":" + statusName(c.status)
+			if count[k] == 0 {
+				order = append(order, k)
+			}
+			count[k]++
+		}
+	}
+	if len(order) == 0 {
+		return "有请求但未调用任何上游"
+	}
+	parts := make([]string, 0, len(order))
+	for _, k := range order {
+		parts = append(parts, fmt.Sprintf("%s×%d", k, count[k]))
+	}
+	return strings.Join(parts, "，")
+}
+
+func ztSkipReason(r *request, dim string) string {
+	for _, c := range r.calls {
+		if c.provider == "entcredit" && c.covers(dim) && c.status == "skipped" {
+			return c.skipReason
+		}
+	}
+	return ""
+}
+
+func loadRequests(ctx context.Context, conn *pgx.Conn, codes []string) []*request {
+	rows, err := conn.Query(ctx, `
+SELECT a.request_id, a.credit_code, a.created_at, COALESCE(a.req_scope,''), COALESCE(a.data_scope,''),
+       COALESCE(a.busi_code,0), a.app_key, COALESCE(l.name,'')
+FROM audit_log a
+LEFT JOIN license l ON l.app_key = a.app_key
+WHERE a.credit_code = ANY($1)
+ORDER BY a.created_at`, codes)
+	if err != nil {
+		fail("查询请求失败: %v", err)
+	}
+	defer rows.Close()
+	var out []*request
+	for rows.Next() {
+		r := &request{}
+		if err := rows.Scan(&r.id, &r.code, &r.at, &r.reqScope, &r.dataScope, &r.busiCode, &r.appKey, &r.customer); err != nil {
+			fail("读取请求失败: %v", err)
+		}
+		r.at = r.at.In(cst)
+		out = append(out, r)
+	}
+	if err := rows.Err(); err != nil {
+		fail("读取请求失败: %v", err)
+	}
+	return out
+}
+
+func loadUpstreamCalls(ctx context.Context, conn *pgx.Conn, reqs []*request) {
+	byID := map[string]*request{}
+	ids := make([]string, 0, len(reqs))
+	for _, r := range reqs {
+		if _, ok := byID[r.id]; !ok {
+			ids = append(ids, r.id)
+		}
+		byID[r.id] = r
+	}
+	if len(ids) == 0 {
+		return
+	}
+	rows, err := conn.Query(ctx, `
+SELECT request_id, seq, provider, source_label, source_alias, dim_invoice, dim_tax, status,
+       upstream_code, upstream_msg, upstream_uid, skip_reason
+FROM upstream_call
+WHERE request_id = ANY($1)
+ORDER BY request_id, (seq = 0), seq, id`, ids)
 	if err != nil {
 		fail("查询上游调用失败: %v", err)
 	}
 	defer rows.Close()
-	var out []call
 	for rows.Next() {
-		var c call
-		if err := rows.Scan(&c.dim, &c.code, &c.at, &c.label, &c.status,
-			&c.upCode, &c.upMsg, &c.upUID, &c.customer, &c.appKey, &c.requestID, &c.latencyMs); err != nil {
+		var id string
+		var c upCall
+		if err := rows.Scan(&id, &c.seq, &c.provider, &c.label, &c.alias, &c.dimInv, &c.dimTax, &c.status,
+			&c.upCode, &c.upMsg, &c.upUID, &c.skipReason); err != nil {
 			fail("读取上游调用失败: %v", err)
 		}
-		c.at = c.at.In(cst)
-		out = append(out, c)
+		if r := byID[id]; r != nil {
+			r.calls = append(r.calls, c)
+		}
 	}
 	if err := rows.Err(); err != nil {
 		fail("读取上游调用失败: %v", err)
+	}
+}
+
+func providerName(c upCall) string {
+	switch c.provider {
+	case "entcredit":
+		if strings.HasPrefix(c.label, "invoice") {
+			return "证通发票"
+		}
+		return "证通税务"
+	case "ctax":
+		return "惠众C"
+	case "sy":
+		return "税友"
+	case "salesdata":
+		return "销项"
+	}
+	return c.provider + "/" + c.label
+}
+
+func scopeName(s string) string {
+	switch s {
+	case "invoice":
+		return "发票"
+	case "tax":
+		return "税务"
+	case "invoice+tax":
+		return "发票+税务"
+	case "", "none":
+		return "无"
+	}
+	return s
+}
+
+func toAny(ss []string) []any {
+	out := make([]any, len(ss))
+	for i, s := range ss {
+		out[i] = s
 	}
 	return out
 }
