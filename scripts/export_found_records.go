@@ -1,15 +1,16 @@
 //go:build ignore
 
-// export_found_records: 导出某客户某月全部「查得」请求的对账明细（只读）。
+// export_found_records: 导出某客户一段时间内全部「查得」请求的对账明细（只读）。
 //
 //	CONFIG_FILE=config.aliyun.prod.yaml go run ./scripts/export_found_records.go
 //
 // 可选环境变量：
 //
 //	CUSTOMER=北京联信征信咨询有限责任公司   license.name，精确匹配
-//	MONTH=2026-10                           北京时间自然月
+//	FROM=2026-09-01                         起始日（北京时间，含当天）
+//	TO=2026-10-28                           截止日（北京时间，含当天）；缺省为今天
 //	SCOPES=tax,invoice+tax                  只导出这些查得类型（逗号分隔）；缺省只抓「税」和「票税」
-//	OUT=test_res/xxx.xlsx                   缺省 test_res/<客户>-<月份>-查得明细.xlsx
+//	OUT=test_res/xxx.xlsx                   缺省 test_res/<客户>-<起>至<止>-查得明细.xlsx
 //
 // 口径：audit_log.found_data = true（下游 body.code=001）；查得维度取 data_scope，
 // 不区分由哪个上游源查得。request id 即返回给下游的 head.logId（audit_log.request_id）。
@@ -83,17 +84,28 @@ type record struct {
 func main() {
 	configFile := env("CONFIG_FILE", "config.aliyun.prod.yaml")
 	customer := env("CUSTOMER", "北京联信征信咨询有限责任公司")
-	month := env("MONTH", "2026-10")
-	from, err := time.ParseInLocation("2006-01", month, cst)
+	from, err := time.ParseInLocation("2006-01-02", env("FROM", "2026-09-01"), cst)
 	if err != nil {
-		fail("MONTH 格式应为 YYYY-MM: %v", err)
+		fail("FROM 格式应为 YYYY-MM-DD: %v", err)
 	}
-	to := from.AddDate(0, 1, 0)
+	until := time.Now().In(cst)
+	if v := os.Getenv("TO"); v != "" {
+		until, err = time.ParseInLocation("2006-01-02", v, cst)
+		if err != nil {
+			fail("TO 格式应为 YYYY-MM-DD: %v", err)
+		}
+	}
+	// 查询是左闭右开，截止日要含当天，所以上界取次日零点。
+	to := time.Date(until.Year(), until.Month(), until.Day(), 0, 0, 0, 0, cst).AddDate(0, 0, 1)
+	if !from.Before(to) {
+		fail("FROM 必须早于 TO")
+	}
+	span := from.Format("2006-01-02") + "至" + to.AddDate(0, 0, -1).Format("2006-01-02")
 	scopes := parseScopes(env("SCOPES", "tax,invoice+tax"))
 	if len(scopes) == 0 {
 		fail("SCOPES 为空：请指定要导出的查得类型，如 tax,invoice+tax")
 	}
-	out := env("OUT", filepath.Join("test_res", fmt.Sprintf("%s-%s-查得明细.xlsx", customer, month)))
+	out := env("OUT", filepath.Join("test_res", fmt.Sprintf("%s-%s-查得明细.xlsx", customer, span)))
 
 	raw, err := os.ReadFile(configFile)
 	if err != nil {
@@ -157,11 +169,10 @@ func main() {
 	}
 
 	wb := &workbook{}
-	monthLabel := from.Format("2006年1月")
 	var totFound int64
 	summary := [][]any{
 		{"客户名称", customer},
-		{"账期", monthLabel},
+		{"账期", span},
 		{"产品名称", "查得量"},
 	}
 	for _, s := range scopes {
@@ -169,10 +180,10 @@ func main() {
 		summary = append(summary, []any{scopeName(s), found[s]})
 	}
 	summary = append(summary, []any{"小计", totFound})
-	wb.add("对账单", nil, summary, []float64{30, 12})
+	wb.add("对账单", nil, summary, []float64{30, 28})
 	wb.sheets[len(wb.sheets)-1].hdrRows = map[int]bool{0: true, 1: true, 2: true, len(summary) - 1: true}
 
-	wb.add(from.Format("1月")+"明细",
+	wb.add("明细",
 		[]string{"调用时间", "request id", "税号", "appKey", "查得税", "查得票", "查得类型", "备注"},
 		detail, []float64{20, 40, 22, 16, 8, 8, 14, 30})
 
@@ -183,7 +194,7 @@ func main() {
 		fail("写 Excel 失败: %v", err)
 	}
 	fmt.Printf("%s %s：查得 %d 条（税 %d / 票+税 %d）\n",
-		customer, monthLabel, totFound, found["tax"], found["invoice+tax"])
+		customer, span, totFound, found["tax"], found["invoice+tax"])
 	fmt.Println("已输出:", out)
 }
 
