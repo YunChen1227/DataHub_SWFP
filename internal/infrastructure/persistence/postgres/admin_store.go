@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -208,28 +209,9 @@ func (s *Store) ListAudits(ctx context.Context, f model.AuditFilter) ([]*model.A
 		COALESCE(credit_code,''), COALESCE(charged_scope,''), COALESCE(covered_scope,''),
 		COALESCE(charge_state,'')
 		FROM audit_log WHERE 1=1`
-	args := []any{}
-	n := 0
-	if f.Version != "" {
-		n++
-		q += " AND version=$" + itoa(n)
-		args = append(args, f.Version)
-	}
-	if f.AppKey != "" {
-		n++
-		q += " AND app_key=$" + itoa(n)
-		args = append(args, f.AppKey)
-	}
-	if len(f.AppKeys) > 0 {
-		n++
-		q += " AND app_key = ANY($" + itoa(n) + ")"
-		args = append(args, f.AppKeys)
-	}
-	if f.BusiCode != nil {
-		n++
-		q += " AND busi_code=$" + itoa(n)
-		args = append(args, *f.BusiCode)
-	}
+	where, args := auditWhere(f)
+	q += where
+	n := len(args)
 	q += " ORDER BY id DESC"
 	if f.Limit > 0 {
 		n++
@@ -262,6 +244,43 @@ func (s *Store) ListAudits(ctx context.Context, f model.AuditFilter) ([]*model.A
 		out = append(out, &r)
 	}
 	return out, rows.Err()
+}
+
+func (s *Store) CountAudits(ctx context.Context, f model.AuditFilter) (int64, error) {
+	where, args := auditWhere(f)
+	var total int64
+	err := s.pool.QueryRow(ctx, "SELECT COUNT(*) FROM audit_log WHERE 1=1"+where, args...).Scan(&total)
+	return total, err
+}
+
+// auditWhere builds the " AND ..." conditions shared by ListAudits and CountAudits,
+// with placeholders numbered from $1.
+func auditWhere(f model.AuditFilter) (string, []any) {
+	var b strings.Builder
+	args := []any{}
+	add := func(cond string, v any) {
+		args = append(args, v)
+		b.WriteString(" AND " + strings.ReplaceAll(cond, "?", "$"+itoa(len(args))))
+	}
+	if f.Version != "" {
+		add("version=?", f.Version)
+	}
+	if f.AppKey != "" {
+		add("app_key=?", f.AppKey)
+	}
+	if len(f.AppKeys) > 0 {
+		add("app_key = ANY(?)", f.AppKeys)
+	}
+	if f.BusiCode != nil {
+		add("busi_code=?", *f.BusiCode)
+	}
+	if f.Reqid != "" {
+		add("(reqid=? OR request_id=?)", f.Reqid)
+	}
+	if f.CreditCode != "" {
+		add("credit_code=?", f.CreditCode)
+	}
+	return b.String(), args
 }
 
 // UsageStats aggregates per (app_key, 时间桶) request/success counts from the

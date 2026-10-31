@@ -62,6 +62,21 @@ type UpstreamCallRepository interface {
 	SourceStats(ctx context.Context, f model.SourceStatFilter) ([]*model.SourceStat, error)
 }
 
+// PayloadRepository 留存每次请求的原始数据（request_payload / upstream_payload）。
+// AppendPayload 把请求行与其各源行一起写入，按 request_id（及 source_label）幂等：
+// 已存在的行忽略，故失败后整条重放是安全的。
+type PayloadRepository interface {
+	AppendPayload(ctx context.Context, p *model.RequestPayload) error
+}
+
+// ReportRepository 为出账/对账导出取明细，按时间正序返回。
+type ReportRepository interface {
+	// DownstreamRows 返回区间内查得 (found_data) 的请求。
+	DownstreamRows(ctx context.Context, f model.ReportFilter) ([]*model.DownstreamRow, error)
+	// UpstreamCalls 返回区间内某 provider 实际发出的调用（不含 skipped）。
+	UpstreamCalls(ctx context.Context, f model.ReportFilter) ([]*model.UpstreamCallRow, error)
+}
+
 // SubjectBillingRepository 实现「主体年度计费」的免费期状态机 (设计_主体年度计费.md)：
 // 同一客户 + 同一社会信用代码 + 同一类目，首次查得计费一次，此后一年内免费。
 //
@@ -136,6 +151,8 @@ type UserAdminRepository interface {
 type AuditRepository interface {
 	AppendAudit(ctx context.Context, rec *model.AuditRecord) error
 	ListAudits(ctx context.Context, f model.AuditFilter) ([]*model.AuditRecord, error)
+	// CountAudits returns how many rows match f, ignoring Limit/Offset (分页总数)。
+	CountAudits(ctx context.Context, f model.AuditFilter) (int64, error)
 	// UsageStats aggregates request/success counts per (user, 时间桶) for the
 	// admin 「按年/月/日」统计面板 (§16.4)。时间桶按北京时间 (+08:00) 归档。
 	UsageStats(ctx context.Context, f model.StatsFilter) ([]*model.UsageStat, error)

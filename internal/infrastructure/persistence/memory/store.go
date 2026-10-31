@@ -61,6 +61,8 @@ type Store struct {
 	charges    []*model.SubjectCharge
 	chargeKeys map[string]struct{} // licenseID|route|reqid 幂等去重
 
+	payloads map[string]*model.RequestPayload // requestID -> 原始数据留存（payload_store.go）
+
 	seq      int64
 	auditSeq int64
 	adminSeq int64

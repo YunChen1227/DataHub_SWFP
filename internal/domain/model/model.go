@@ -80,6 +80,10 @@ type UpstreamResult struct {
 	Got     DimSet       // 本次实际查得的维度 = 计费依据
 	Sources []SourceCall // 逐源寻源轨迹（含未调用的源）
 	CostFen int64        // 本次上游总成本（分）
+
+	// RawRange 是契约映射前的寻源分段 JSON ({label:{status,data,error}})，即各上游
+	// 返回的原始业务数据；只用于落库留存，不对下游输出。
+	RawRange string
 }
 
 // RequeryResult is the outcome of an idempotent re-query (DESIGN §7.3).

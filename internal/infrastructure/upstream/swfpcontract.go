@@ -194,6 +194,7 @@ func (c *SwfpContract) Query(ctx context.Context, req *model.UpstreamRequest) (*
 	}
 	out := *res
 	out.Range = mapped
+	out.RawRange = res.Range
 	return &out, nil
 }
 

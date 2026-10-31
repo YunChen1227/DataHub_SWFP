@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -43,6 +44,9 @@ type domainStorage struct {
 	upstreamCallRepo port.UpstreamCallRepository
 	// subjectRepo 是主体年度计费的免费期状态机 (billing_coverage/billing_charge)。
 	subjectRepo port.SubjectBillingRepository
+	// payloadRepo 留存每次请求的原始数据 (request_payload/upstream_payload)。
+	payloadRepo port.PayloadRepository
+	reportRepo  port.ReportRepository
 	secrets     port.SecretProvider
 	// auth 是本域共享的鉴权服务（license+secret 进程内缓存）。按域而非按路由建：
 	// v8/v9 共用 v8v9 域的同一实例，后台在任一路由改 license 都能命中同一份缓存
@@ -58,6 +62,9 @@ type routeStack struct {
 	admin   *admin.Service
 	requery *job.RequeryWorker
 	books   *application.Bookkeeper
+	// spool 暂存写库失败的原始数据，由后台协程定时重放进 payloadRepo。
+	spool       *application.PayloadSpool
+	payloadRepo port.PayloadRepository
 }
 
 // domainOwner returns the route whose db/redis config seeds a domain's storage
@@ -173,6 +180,7 @@ func main() {
 		adminByRoute[route] = st.admin
 		bookkeepers = append(bookkeepers, st.books)
 		go st.requery.Run(ctx)
+		go st.spool.Run(ctx, st.payloadRepo, 5*time.Minute)
 		logger.Info("route stack ready", "route", route, "domain", model.RouteDomain(route),
 			"upstream", cfg.versions[route].upstreamKind(), "sources", len(cfg.versions[route].upstreams))
 	}
@@ -258,7 +266,7 @@ func buildDomainStorage(ctx context.Context, cfg config, domain string, logger *
 		}
 		ds := &domainStorage{
 			licenseRepo: pg, ledgerRepo: pg, quotaRepo: rq, auditRepo: pg,
-			adminRepo: pg, userRepo: pg, upstreamCallRepo: pg, subjectRepo: pg,
+			adminRepo: pg, userRepo: pg, upstreamCallRepo: pg, subjectRepo: pg, payloadRepo: pg, reportRepo: pg,
 			secrets: secret.NewStore(pg),
 			cleanup: func() { rq.Close(); pg.Close() },
 		}
@@ -269,7 +277,7 @@ func buildDomainStorage(ctx context.Context, cfg config, domain string, logger *
 		seedDemo(store, domain, cfg.demoAppSecret)
 		ds := &domainStorage{
 			licenseRepo: store, ledgerRepo: store, quotaRepo: store, auditRepo: store,
-			adminRepo: store, userRepo: store, upstreamCallRepo: store, subjectRepo: store,
+			adminRepo: store, userRepo: store, upstreamCallRepo: store, subjectRepo: store, payloadRepo: store, reportRepo: store,
 			secrets: secret.NewStore(store),
 			cleanup: func() {},
 		}
@@ -296,13 +304,16 @@ func buildRouteStack(cfg config, route string, ds *domainStorage, httpClient *ht
 		JWTSecret: cfg.adminJWTSecret,
 		TokenTTL:  cfg.adminTokenTTL,
 	}).WithLicenseChangeHook(authSvc.Invalidate). // 后台改密/停用/删除即时失效鉴权缓存
-		WithUpstreamCalls(ds.upstreamCallRepo)     // 审计按源下钻（上游成本对账）
+		WithUpstreamCalls(ds.upstreamCallRepo).    // 审计按源下钻（上游成本对账）
+		WithReports(ds.reportRepo)                 // 用量统计页的出账/对账导出
 	// 异步记账：结算 + 审计移出响应关键路径（每请求省 3-5 次串行 DB 写）；
 	// 队列满降级同步，优雅停机时 drain（见 main 的 shutdown 顺序）。
 	// 主体年度计费挂在记账器上：判定要在结算/审计之前重算收费标准与金额。
 	// 不挂接即退化为按次计费（每次查得都足额收费），故这里不做条件装配。
+	spool := application.NewPayloadSpool(filepath.Join(cfg.payloadSpoolDir, route), log)
 	books := application.NewBookkeeper(quotaSvc, ds.auditRepo, 0, 0, log).
 		WithUpstreamCalls(ds.upstreamCallRepo).
+		WithPayloads(ds.payloadRepo, spool).
 		WithSubjectBilling(ds.subjectRepo, billSvc, cfg.freeWindow)
 	orch := application.NewQueryOrchestrator(route, authSvc, quotaSvc, billSvc, upClient, ds.auditRepo, log).
 		WithBookkeeper(books).
@@ -319,7 +330,7 @@ func buildRouteStack(cfg config, route string, ds *domainStorage, httpClient *ht
 	}
 	requery := job.NewRequeryWorker(ds.ledgerRepo, ds.licenseRepo, upClient, billSvc, quotaSvc, cfg.requeryInterval, log)
 
-	return &routeStack{orch: orch, admin: adminSvc, requery: requery, books: books}, nil
+	return &routeStack{orch: orch, admin: adminSvc, requery: requery, books: books, spool: spool, payloadRepo: ds.payloadRepo}, nil
 }
 
 // buildUpstreams 把一条路由的上游条目装配成一个 port.UpstreamPort：逐条构建单源

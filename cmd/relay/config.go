@@ -99,6 +99,9 @@ type config struct {
 
 	storageDriver string
 	migrationsDir string
+	// payloadSpoolDir 暂存写库失败的原始数据（request_payload/upstream_payload），
+	// 定时重放入库，保证不遗漏。
+	payloadSpoolDir string
 
 	versions map[string]versionConfig
 }
@@ -209,8 +212,9 @@ type fileConfig struct {
 		Seed      *bool  `yaml:"seed"`
 	} `yaml:"demo"`
 	Storage struct {
-		Driver        string `yaml:"driver"`
-		MigrationsDir string `yaml:"migrationsDir"`
+		Driver          string `yaml:"driver"`
+		MigrationsDir   string `yaml:"migrationsDir"`
+		PayloadSpoolDir string `yaml:"payloadSpoolDir"`
 	} `yaml:"storage"`
 	Versions map[string]fileVersion `yaml:"versions"`
 }
@@ -257,6 +261,8 @@ func loadConfig() (config, error) {
 
 		storageDriver: def(fc.Storage.Driver, "memory"),
 		migrationsDir: def(fc.Storage.MigrationsDir, "migrations"),
+
+		payloadSpoolDir: def(fc.Storage.PayloadSpoolDir, "data/payload_spool"),
 
 		versions: make(map[string]versionConfig, len(model.Versions)),
 	}

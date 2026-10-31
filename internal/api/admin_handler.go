@@ -36,6 +36,10 @@ func (s *Server) registerAdminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /admin/api/{ver}/stats", s.requireAdmin(s.adminUsageStats))
 	mux.HandleFunc("GET /admin/api/{ver}/stats/sources", s.requireAdmin(s.adminSourceStats))
 
+	mux.HandleFunc("GET /admin/api/{ver}/reports/vendors", s.requireAdmin(s.adminReportVendors))
+	mux.HandleFunc("GET /admin/api/{ver}/reports/downstream", s.requireAdmin(s.adminDownstreamReport))
+	mux.HandleFunc("GET /admin/api/{ver}/reports/upstream", s.requireAdmin(s.adminUpstreamReport))
+
 	if s.spaDir != "" {
 		mux.HandleFunc("GET /admin/", s.serveSPA)
 		mux.HandleFunc("GET /admin", func(w http.ResponseWriter, r *http.Request) {
@@ -199,9 +203,11 @@ func (s *Server) adminListAudits(w http.ResponseWriter, r *http.Request) {
 	}
 	q := r.URL.Query()
 	f := model.AuditFilter{
-		AppKey: q.Get("appKey"),
-		Limit:  atoiDefault(q.Get("limit"), 100),
-		Offset: atoiDefault(q.Get("offset"), 0),
+		AppKey:     q.Get("appKey"),
+		Reqid:      strings.TrimSpace(q.Get("reqid")),
+		CreditCode: strings.ToUpper(strings.TrimSpace(q.Get("creditCode"))),
+		Limit:      atoiDefault(q.Get("limit"), 100),
+		Offset:     atoiDefault(q.Get("offset"), 0),
 	}
 	if bc := q.Get("busiCode"); bc != "" {
 		if n, err := strconv.Atoi(bc); err == nil {
@@ -221,7 +227,7 @@ func (s *Server) adminListAudits(w http.ResponseWriter, r *http.Request) {
 		}
 		if len(appKeys) == 0 {
 			// 无匹配用户：直接返回空结果，避免退化为全量查询。
-			writeAdminJSON(w, http.StatusOK, map[string]any{"audits": []*model.AuditRecord{}})
+			writeAdminJSON(w, http.StatusOK, map[string]any{"audits": []*model.AuditRecord{}, "total": 0})
 			return
 		}
 		f.AppKeys = appKeys
@@ -231,7 +237,12 @@ func (s *Server) adminListAudits(w http.ResponseWriter, r *http.Request) {
 		writeAdminError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeAdminJSON(w, http.StatusOK, map[string]any{"audits": audits})
+	total, err := svc.CountAudits(r.Context(), f)
+	if err != nil {
+		writeAdminError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeAdminJSON(w, http.StatusOK, map[string]any{"audits": audits, "total": total})
 }
 
 // adminListUpstreamCalls 按 requestId 下钻某次请求的逐源调用明细：调了哪些源、各源

@@ -210,16 +210,7 @@ func (s *Store) ListAudits(_ context.Context, f model.AuditFilter) ([]*model.Aud
 	// newest first.
 	for i := len(s.audits) - 1; i >= 0; i-- {
 		a := s.audits[i]
-		if f.Version != "" && a.Version != f.Version {
-			continue
-		}
-		if f.AppKey != "" && a.AppKey != f.AppKey {
-			continue
-		}
-		if len(f.AppKeys) > 0 && !containsStr(f.AppKeys, a.AppKey) {
-			continue
-		}
-		if f.BusiCode != nil && a.BusiCode != *f.BusiCode {
+		if !matchAudit(a, f) {
 			continue
 		}
 		if skipped < f.Offset {
@@ -233,6 +224,31 @@ func (s *Store) ListAudits(_ context.Context, f model.AuditFilter) ([]*model.Aud
 		}
 	}
 	return out, nil
+}
+
+func (s *Store) CountAudits(_ context.Context, f model.AuditFilter) (int64, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var n int64
+	for _, a := range s.audits {
+		if matchAudit(a, f) {
+			n++
+		}
+	}
+	return n, nil
+}
+
+func matchAudit(a *model.AuditRecord, f model.AuditFilter) bool {
+	switch {
+	case f.Version != "" && a.Version != f.Version,
+		f.AppKey != "" && a.AppKey != f.AppKey,
+		len(f.AppKeys) > 0 && !containsStr(f.AppKeys, a.AppKey),
+		f.BusiCode != nil && a.BusiCode != *f.BusiCode,
+		f.Reqid != "" && a.Reqid != f.Reqid && a.RequestID != f.Reqid,
+		f.CreditCode != "" && a.CreditCode != f.CreditCode:
+		return false
+	}
+	return true
 }
 
 func containsStr(xs []string, v string) bool {

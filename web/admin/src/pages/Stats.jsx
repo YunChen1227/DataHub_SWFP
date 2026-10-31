@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { api, timeRange } from '../api.js'
+import { api, downloadReport, timeRange } from '../api.js'
 
 const COLS = 7
 
@@ -74,6 +74,129 @@ function SourceBreakdown({ gran, bucket, appKey }) {
   )
 }
 
+// today 返回北京时间的今天 (YYYY-MM-DD)。
+function today() {
+  return new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
+}
+
+// firstOfMonth 返回北京时间本月 1 日。
+function firstOfMonth() {
+  return today().slice(0, 8) + '01'
+}
+
+// ReportExport 导出出账/对账 Excel：下游账单按客户，上游对账按上游公司。
+function ReportExport() {
+  const [kind, setKind] = useState('downstream')
+  const [from, setFrom] = useState(firstOfMonth())
+  const [to, setTo] = useState(today())
+  const [customers, setCustomers] = useState([])
+  const [customer, setCustomer] = useState('')
+  const [vendors, setVendors] = useState([])
+  const [vendor, setVendor] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  useEffect(() => {
+    api
+      .listUsers()
+      .then((d) => {
+        const names = [...new Set((d.users || []).map((u) => u.name).filter(Boolean))]
+        names.sort((a, b) => a.localeCompare(b, 'zh'))
+        setCustomers(names)
+      })
+      .catch((e) => setErr(e.message))
+    api
+      .reportVendors()
+      .then((d) => {
+        setVendors(d.vendors || [])
+        if (d.vendors && d.vendors.length) setVendor(d.vendors[0].id)
+      })
+      .catch((e) => setErr(e.message))
+  }, [])
+
+  const exportExcel = async (e) => {
+    e.preventDefault()
+    setErr('')
+    setBusy(true)
+    try {
+      if (kind === 'downstream') {
+        await downloadReport('downstream', { customer, from, to })
+      } else {
+        await downloadReport('upstream', { vendor, from, to })
+      }
+    } catch (e2) {
+      setErr(e2.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="card">
+      <h2>导出对账单</h2>
+      <p className="muted">
+        下游账单：所选客户在区间内的查得次数，按实际查得维度分「票 / 税 / 票税」，并标出近 12 个月金额全为 0（不计费）的条目。
+        上游对账：所选上游在区间内的全部调用，含查无与失败。日期按北京时间，含截止日当天，单次最长 366 天。
+      </p>
+      <form className="toolbar" onSubmit={exportExcel}>
+        <div>
+          <label>类型</label>
+          <div className="version-switch" role="group" aria-label="导出类型">
+            <button
+              type="button"
+              className={'btn small' + (kind === 'downstream' ? '' : ' ghost')}
+              onClick={() => setKind('downstream')}
+            >
+              下游账单
+            </button>
+            <button
+              type="button"
+              className={'btn small' + (kind === 'upstream' ? '' : ' ghost')}
+              onClick={() => setKind('upstream')}
+            >
+              上游对账
+            </button>
+          </div>
+        </div>
+        <div>
+          <label>起始日期</label>
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} required />
+        </div>
+        <div>
+          <label>截止日期</label>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} required />
+        </div>
+        {kind === 'downstream' ? (
+          <div>
+            <label>客户</label>
+            <select value={customer} onChange={(e) => setCustomer(e.target.value)}>
+              <option value="">全部客户</option>
+              {customers.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div>
+            <label>上游</label>
+            <select value={vendor} onChange={(e) => setVendor(e.target.value)}>
+              {vendors.map((v) => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div>
+          <button className="btn" type="submit" disabled={busy || (kind === 'upstream' && !vendor)}>
+            {busy ? '生成中…' : '导出 Excel'}
+          </button>
+        </div>
+      </form>
+      {err && <div className="error">{err}</div>}
+    </div>
+  )
+}
+
 export default function Stats() {
   const [gran, setGran] = useState('day')
   const [period, setPeriod] = useState('') // 限定的具体年/月/日；空=全部时间
@@ -120,6 +243,8 @@ export default function Stats() {
   const totalOk = rows.reduce((s, r) => s + (r.success || 0), 0)
 
   return (
+    <>
+    <ReportExport />
     <div className="card">
       <h2>SWFP 用量统计（按时间）</h2>
       <p className="muted">
@@ -231,5 +356,6 @@ export default function Stats() {
         </table>
       </div>
     </div>
+    </>
   )
 }

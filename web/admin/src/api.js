@@ -66,6 +66,41 @@ export const api = {
   usageStats: (query) => req('GET', '/stats' + (query || '')),
   // 某用户某时间桶内的按源分布：这些请求是哪个源查成功的。
   sourceStats: (query) => req('GET', '/stats/sources' + (query || '')),
+  // 上游对账可选的上游公司。
+  reportVendors: () => req('GET', '/reports/vendors'),
+}
+
+// downloadReport 拉取出账/对账 Excel 并触发浏览器下载。kind 为 downstream / upstream，
+// params 为查询参数对象。失败时抛出带后端错误信息的 Error。
+export async function downloadReport(kind, params) {
+  const headers = {}
+  if (token) headers['Authorization'] = 'Bearer ' + token
+  const qs = new URLSearchParams(params).toString()
+  const res = await fetch(BASE + '/' + version + '/reports/' + kind + '?' + qs, { headers })
+  if (!res.ok) {
+    const text = await res.text()
+    let msg = 'HTTP ' + res.status
+    try {
+      msg = JSON.parse(text).error || msg
+    } catch {
+      // 非 JSON 错误体：保留状态码
+    }
+    const err = new Error(msg)
+    err.status = res.status
+    throw err
+  }
+  const blob = await res.blob()
+  const cd = res.headers.get('Content-Disposition') || ''
+  const m = cd.match(/filename\*=UTF-8''([^;]+)/i)
+  const filename = m ? decodeURIComponent(m[1]) : kind + '.xlsx'
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 // timeRange 把「粒度 + 选中周期值」换算成 [from, to) 的 RFC3339 边界 (北京时间

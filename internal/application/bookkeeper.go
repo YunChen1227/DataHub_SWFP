@@ -23,6 +23,7 @@ type bookTask struct {
 	// 类目重算金额）。参数校验失败的路径两者皆空。
 	creditCode string
 	rates      model.FeeRates
+	cmd        *model.QueryCommand // 下游入参，留存进 request_payload
 }
 
 // settleInput 组装结算输入。busiCode 取审计记录里的最终下游业务码——它在响应
@@ -95,6 +96,10 @@ type Bookkeeper struct {
 	calls port.UpstreamCallRepository // 逐源明细；nil 时跳过（未装配/测试）
 	log   *slog.Logger
 
+	// 原始数据留存；写库失败时落 spool 待重放。payloads 为 nil 时跳过。
+	payloads port.PayloadRepository
+	spool    *PayloadSpool
+
 	// 主体年度计费；subjects 或 billing 为 nil 时整个判定跳过，decision 保持
 	// Decide 给出的按次计费毛口径（未装配时的退化行为，见 WithSubjectBilling）。
 	subjects   port.SubjectBillingRepository
@@ -136,6 +141,13 @@ func NewBookkeeper(q *quota.Service, audit port.AuditRepository, queueSize, work
 // 台账里的汇总列仍然可用。
 func (b *Bookkeeper) WithUpstreamCalls(r port.UpstreamCallRepository) *Bookkeeper {
 	b.calls = r
+	return b
+}
+
+// WithPayloads 挂接原始数据留存（request_payload / upstream_payload）。spool 可为
+// nil（写库失败只记日志）；生产装配必须给，否则 DB 抖动期间的原始数据会丢。
+func (b *Bookkeeper) WithPayloads(r port.PayloadRepository, spool *PayloadSpool) *Bookkeeper {
+	b.payloads, b.spool = r, spool
 	return b
 }
 
@@ -207,6 +219,30 @@ func (b *Bookkeeper) process(t bookTask) {
 			b.log.Error("async audit append failed", "requestId", t.rec.RequestID, "err", err)
 		}
 	}
+	b.storePayload(ctx, t)
+}
+
+func (b *Bookkeeper) storePayload(ctx context.Context, t bookTask) {
+	if b.payloads == nil {
+		return
+	}
+	p := t.payload()
+	if p == nil {
+		return
+	}
+	err := b.payloads.AppendPayload(ctx, p)
+	if err == nil {
+		return
+	}
+	if b.spool == nil {
+		b.log.Error("payload append failed (no spool, data lost)", "requestId", p.RequestID, "err", err)
+		return
+	}
+	if serr := b.spool.Put(p); serr != nil {
+		b.log.Error("payload append and spool both failed, data lost", "requestId", p.RequestID, "err", err, "spoolErr", serr)
+		return
+	}
+	b.log.Warn("payload append failed, spooled for replay", "requestId", p.RequestID, "err", err)
 }
 
 // chargeSubject 执行主体年度计费判定，并把结论回填进 decision 与审计记录。

@@ -1,13 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../api.js'
 
-const COLS = 18
-
-// fen 把「分」显示为元；0 显示为 -（未产生金额）。
-function fen(v) {
-  if (!v) return '-'
-  return (v / 100).toFixed(2)
-}
+const COLS = 11
+const PAGE_SIZES = [10, 20, 50, 100]
 
 const FEE_LABEL = {
   both: '发票+税务',
@@ -23,7 +18,7 @@ const STATUS_LABEL = {
   skipped: '未调用',
 }
 
-// SourceCalls 展开某次请求的逐源调用明细：上游成本对账与「为什么按这档收费」的一手证据。
+// SourceCalls 展开某次请求的逐源调用明细：「为什么按这档收费」的一手证据。
 function SourceCalls({ requestId }) {
   const [calls, setCalls] = useState(null)
   const [err, setErr] = useState('')
@@ -47,9 +42,8 @@ function SourceCalls({ requestId }) {
     <table>
       <thead>
         <tr>
-          <th>序</th><th>源</th><th>段名</th><th>对外编号</th><th>上游</th>
-          <th>维度</th><th>结果</th><th>上游code</th><th>上游uid</th>
-          <th>耗时(ms)</th><th>成本(元)</th><th>说明</th>
+          <th>序</th><th>源</th><th>维度</th><th>结果</th>
+          <th>上游code</th><th>上游uid</th><th>说明</th>
         </tr>
       </thead>
       <tbody>
@@ -57,9 +51,6 @@ function SourceCalls({ requestId }) {
           <tr key={c.label + '-' + c.seq}>
             <td>{c.seq || '-'}</td>
             <td>{c.source}</td>
-            <td className="muted">{c.label}</td>
-            <td>{c.alias}</td>
-            <td className="muted">{c.provider}</td>
             <td className="muted">
               {[c.dims?.invoice && '发票', c.dims?.tax && '税务'].filter(Boolean).join('+') || '-'}
             </td>
@@ -68,8 +59,6 @@ function SourceCalls({ requestId }) {
             </td>
             <td>{c.code || '-'}</td>
             <td className="muted">{c.uid || '-'}</td>
-            <td>{c.latencyMs || 0}</td>
-            <td>{fen(c.costFen)}</td>
             <td className="muted">{c.reason || c.msg || ''}</td>
           </tr>
         ))}
@@ -80,23 +69,32 @@ function SourceCalls({ requestId }) {
 
 export default function Audits() {
   const [rows, setRows] = useState([])
+  const [total, setTotal] = useState(0)
   const [err, setErr] = useState('')
   const [keyword, setKeyword] = useState('')
-  const [busiCode, setBusiCode] = useState('')
+  const [reqid, setReqid] = useState('')
+  const [creditCode, setCreditCode] = useState('')
+  const [pageSize, setPageSize] = useState(PAGE_SIZES[0])
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [openId, setOpenId] = useState(null)
 
-  const load = async () => {
+  const pages = Math.max(1, Math.ceil(total / pageSize))
+
+  const load = async (p = page, size = pageSize) => {
     setErr('')
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      if (keyword) params.set('q', keyword)
-      if (busiCode) params.set('busiCode', busiCode)
-      params.set('limit', '200')
-      const q = params.toString()
-      const { audits } = await api.listAudits(q ? '?' + q : '')
-      setRows(audits || [])
+      if (keyword.trim()) params.set('q', keyword.trim())
+      if (reqid.trim()) params.set('reqid', reqid.trim())
+      if (creditCode.trim()) params.set('creditCode', creditCode.trim())
+      params.set('limit', String(size))
+      params.set('offset', String((p - 1) * size))
+      const d = await api.listAudits('?' + params.toString())
+      setRows(d.audits || [])
+      setTotal(d.total || 0)
+      setPage(p)
       setOpenId(null)
     } catch (e) {
       setErr(e.message)
@@ -106,24 +104,41 @@ export default function Audits() {
   }
 
   useEffect(() => {
-    load()
+    load(1)
   }, [])
+
+  const changePageSize = (size) => {
+    setPageSize(size)
+    load(1, size)
+  }
 
   return (
     <div className="card">
       <h2>SWFP 操作记录 / 审计日志</h2>
       <p className="muted">
-        展示 SWFP 路由的调用审计，creditCode 入参已脱敏。收费标准按【实际查得的维度】判定：
-        请求两项而只查得发票时按【单发票】收费。点「逐源明细」查看本次调了哪些源、各源成本与跳过原因。
+        展示 SWFP 路由的调用审计。收费标准按【实际查得的维度】判定：
+        请求两项而只查得发票时按【单发票】收费。点「逐源明细」查看本次调了哪些源及跳过原因。
       </p>
-      <form className="toolbar" onSubmit={(e) => { e.preventDefault(); load() }}>
+      <form className="toolbar" onSubmit={(e) => { e.preventDefault(); load(1) }}>
         <div>
-          <label>检索（uuid / appKey）</label>
+          <label>uuid / 名称</label>
           <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="全部" />
         </div>
         <div>
-          <label>busiCode 筛选</label>
-          <input value={busiCode} onChange={(e) => setBusiCode(e.target.value)} placeholder="如 10 / 1000 / 1007" />
+          <label>reqid</label>
+          <input value={reqid} onChange={(e) => setReqid(e.target.value)} placeholder="reqid 或 requestId" />
+        </div>
+        <div>
+          <label>税号</label>
+          <input value={creditCode} onChange={(e) => setCreditCode(e.target.value)} placeholder="统一社会信用代码" />
+        </div>
+        <div>
+          <label>每页</label>
+          <select value={pageSize} onChange={(e) => changePageSize(Number(e.target.value))} disabled={loading}>
+            {PAGE_SIZES.map((n) => (
+              <option key={n} value={n}>{n} 条</option>
+            ))}
+          </select>
         </div>
         <div>
           <button className="btn" type="submit" disabled={loading}>{loading ? '查询中…' : '查询'}</button>
@@ -136,11 +151,10 @@ export default function Audits() {
         <table>
           <thead>
             <tr>
-              <th>时间</th><th>requestId</th><th>appKey</th><th>来源IP</th>
-              <th>请求维度</th><th>实得维度</th><th>收费标准</th><th>应收(元)</th><th>上游成本(元)</th>
-              <th>调用上游</th><th>查得数据</th>
+              <th>时间</th><th>requestId</th>
+              <th>请求维度</th><th>实得维度</th><th>收费标准</th><th>查得数据</th>
               <th>busiCode</th><th>上游code</th><th>上游uid</th>
-              <th>耗时(ms)</th><th>creditCode(脱敏)</th><th>错误</th><th>明细</th>
+              <th>错误</th><th>明细</th>
             </tr>
           </thead>
           <tbody>
@@ -149,20 +163,13 @@ export default function Audits() {
                 <tr>
                   <td className="muted">{new Date(a.createdAt).toLocaleString()}</td>
                   <td><code>{a.requestId}</code></td>
-                  <td>{a.appKey || '-'}</td>
-                  <td>{a.clientIp || '-'}</td>
                   <td className="muted">{a.reqScope || '-'}</td>
                   <td className="muted">{a.dataScope || '-'}</td>
                   <td>{FEE_LABEL[a.feeStandard] || a.feeStandard || '-'}</td>
-                  <td>{fen(a.amountFen)}</td>
-                  <td>{fen(a.upstreamCostFen)}</td>
-                  <td className={a.calledUpstream ? 'tag-ok' : 'tag-no'}>{a.calledUpstream ? '是' : '否'}</td>
                   <td className={a.foundData ? 'tag-ok' : 'tag-no'}>{a.foundData ? '是' : '否'}</td>
                   <td>{a.busiCode}</td>
                   <td>{a.upstreamCode || '-'}</td>
                   <td>{a.upstreamUid || '-'}</td>
-                  <td>{a.latencyMs}</td>
-                  <td className="muted">{a.idCardMask || '-'}</td>
                   <td className="tag-err">{a.errMsg || ''}</td>
                   <td>
                     <button className="btn" type="button" onClick={() => setOpenId(openId === a.id ? null : a.id)}>
@@ -184,6 +191,16 @@ export default function Audits() {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="toolbar" style={{ marginTop: 14, alignItems: 'center' }}>
+        <span className="muted">共 {total} 条，第 {page} / {pages} 页</span>
+        <button className="btn" type="button" disabled={loading || page <= 1} onClick={() => load(page - 1)}>
+          上一页
+        </button>
+        <button className="btn" type="button" disabled={loading || page >= pages} onClick={() => load(page + 1)}>
+          下一页
+        </button>
       </div>
     </div>
   )

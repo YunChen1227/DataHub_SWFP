@@ -17,6 +17,7 @@ powershell -ExecutionPolicy Bypass -File .\test\run.ps1 -ConfigFile config.local
 | `01_health_routes.go` | `/healthz` 与 SWFP query/quota 路由可达 |
 | `06_admin_crud.go` | 管理后台登录、用户 CRUD、密钥轮换、审计 |
 | `12_swfp_query.go` | SWFP 主接口全场景（五源聚合、scope=basic、查无/部分失败等） |
+| `14_report_export.go` | 用量统计页出账/对账导出：下游账单、四家上游对账的 xlsx，参数错误与鉴权 |
 
 ## Mock 上游
 

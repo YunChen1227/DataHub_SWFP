@@ -13,6 +13,7 @@ import (
 	"github.com/datahub/relay/internal/common/jwt"
 	"github.com/datahub/relay/internal/domain/model"
 	"github.com/datahub/relay/internal/domain/port"
+	"github.com/datahub/relay/internal/domain/report"
 )
 
 var (
@@ -39,7 +40,9 @@ type Service struct {
 	audits port.AuditRepository
 	// calls 是逐源明细仓储（upstream_call），供审计按源下钻；可为 nil。
 	calls port.UpstreamCallRepository
-	cfg   Config
+	// reports 生成出账/对账 Excel；可为 nil（导出接口返回不可用）。
+	reports *report.Service
+	cfg     Config
 	// onLicenseChange 在用户被修改/删除/轮换密钥后回调（参数为 appKey），用于
 	// 即时失效鉴权层的 license 缓存（auth.Service.Invalidate），保证停用/换钥
 	// 不必等缓存 TTL 过期。可为 nil。
@@ -259,6 +262,11 @@ func (s *Service) ListAudits(ctx context.Context, f model.AuditFilter) ([]*model
 	// 按本后台服务的路由作用域过滤：共享 license 的 v8/v9 操作日志互不混淆。
 	f.Version = s.route
 	return s.audits.ListAudits(ctx, f)
+}
+
+func (s *Service) CountAudits(ctx context.Context, f model.AuditFilter) (int64, error) {
+	f.Version = s.route
+	return s.audits.CountAudits(ctx, f)
 }
 
 // WithUpstreamCalls 挂接逐源明细仓储，开启审计的「按源下钻」。

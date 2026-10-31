@@ -89,7 +89,7 @@ func (o *QueryOrchestrator) Handle(ctx context.Context, signed *model.SignedRequ
 	// token/decision 由 runCore 在拿到上游确定结论时成对填入，PENDING/失败路径留 nil；
 	// sources 是逐源轨迹（含未调用的源），落 upstream_call 子表用于上游成本对账；
 	// creditCode/rates 供主体年度计费判定与金额重算。
-	task := bookTask{rec: rec}
+	task := bookTask{rec: rec, cmd: cmd}
 	defer func() {
 		rec.FoundData = rec.BusiCode == int(errs.BusiSuccess)
 		rec.LatencyMs = lat()

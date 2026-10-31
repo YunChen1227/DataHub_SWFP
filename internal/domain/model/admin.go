@@ -82,8 +82,11 @@ type AuditFilter struct {
 	AppKey   string
 	AppKeys  []string
 	BusiCode *int
-	Limit    int
-	Offset   int
+	// Reqid 精确匹配 reqid 或 request_id：客户贴来的可能是响应 body.reqid，也可能是 requestId。
+	Reqid      string
+	CreditCode string // 税号 (统一社会信用代码) 精确匹配，调用方负责去空格/转大写
+	Limit      int
+	Offset     int
 }
 
 // StatsGranularity 是用量统计的时间桶粒度 (按年/月/日)。
