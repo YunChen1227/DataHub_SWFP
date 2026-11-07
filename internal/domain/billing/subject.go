@@ -44,6 +44,29 @@ func (s *Service) ApplyCoverage(d *model.BillingDecision, res *model.CoverageRes
 	d.ChargeState = model.ChargeCharged
 }
 
+// NonZero 返回 got 中近 12 个月金额不为 0 的类目：判定为 0 的类目扣掉，无从判定
+// （nil，该源没有取数规则）的类目保留，照常计费。
+func NonZero(got model.DimSet, invZero, taxZero *bool) model.DimSet {
+	out := got
+	if invZero != nil && *invZero {
+		out.Invoice = false
+	}
+	if taxZero != nil && *taxZero {
+		out.Tax = false
+	}
+	return out
+}
+
+// MarkZero 标记本次查得的类目近 12 个月金额全为 0：不计费、不动免费期窗口。
+func MarkZero(d *model.BillingDecision, zero model.DimSet) {
+	if d == nil {
+		return
+	}
+	d.Charged, d.Covered, d.Zero = model.DimSet{}, model.DimSet{}, zero
+	d.Standard, d.AmountFen = model.FeeNone, 0
+	d.ChargeState = model.ChargeZero
+}
+
 // MarkCoverageDeferred 标记主体计费判定本身失败（免费期库不可用）。**fail-closed**：
 // 本次按 0 收并标 DEFERRED，由对账任务凭台账上的 credit_code + reqid 重放那条幂等的
 // 原子 SQL 补记。

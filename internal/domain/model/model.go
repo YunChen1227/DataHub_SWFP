@@ -161,10 +161,12 @@ type BillingDecision struct {
 	// 主体年度计费（billing.Service.ApplyCoverage 填充，见 subject.go）：Decide 先按
 	// 实得维度给出毛口径的 Standard/AmountFen，随后 ApplyCoverage 把其中「还在免费期」
 	// 的类目扣掉并重算金额。Charged 是真正产生应收的类目，Covered 是查得了但免费的
-	// 类目，两者之并恒等于 Result.Got。未装配主体计费仓储时三者保持零值，
-	// Standard/AmountFen 即退化为按次计费。
+	// 类目，Zero 是查得了但近 12 个月金额为 0 的类目（不计费、不开免费期），三者之并
+	// 恒等于 Result.Got。未装配主体计费仓储时都保持零值，Standard/AmountFen 即退化为
+	// 按次计费。
 	Charged     DimSet
 	Covered     DimSet
+	Zero        DimSet
 	ChargeState ChargeState
 }
 

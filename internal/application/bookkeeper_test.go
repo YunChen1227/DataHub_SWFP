@@ -2,7 +2,9 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/datahub/relay/internal/domain/billing"
 	"github.com/datahub/relay/internal/domain/model"
@@ -248,6 +250,94 @@ func TestSubjectBilling_NotFoundDoesNotCharge(t *testing.T) {
 	second := runQuery(t, store, q, "s2", code, model.AllDims())
 	if second.AmountFen != 1000 {
 		t.Errorf("查无之后首次查得应全额计费, got %d", second.AmountFen)
+	}
+}
+
+// runRawQuery 同 runQuery，但带上游原始数据，使零数据判定参与计费。inv/tax 为该次
+// 近 12 个月的开票金额、应纳税额（空串 = 该维度没查得）。
+func runRawQuery(t *testing.T, store *memory.Store, q *quota.Service, reqid, creditCode, inv, tax string) *model.Ledger {
+	t.Helper()
+	tok := seedBegin(t, store, q, reqid)
+	var got model.DimSet
+	var sources []model.SourceCall
+	raw := map[string]any{}
+	month := time.Now().In(time.FixedZone("CST", 8*3600)).Format("2006-01")
+	if inv != "" {
+		got.Invoice = true
+		sources = append(sources, model.SourceCall{Label: "invoice2", Provider: "entcredit", Status: model.CallOK, Dims: model.DimSet{Invoice: true}})
+		raw["invoice2"] = map[string]any{"status": "ok", "data": map[string]any{
+			"nsrfpxx": map[string]any{"kphzxxList": []any{map[string]any{"ssyf": month, "kpje": inv}}}}}
+	}
+	if tax != "" {
+		got.Tax = true
+		sources = append(sources, model.SourceCall{Label: "tax2", Provider: "entcredit", Status: model.CallOK, Dims: model.DimSet{Tax: true}})
+		raw["tax2"] = map[string]any{"status": "ok", "data": map[string]any{
+			"nsrswxx": map[string]any{"sbsjList": []any{map[string]any{"sssjz": month + "-01", "ynse": tax}}}}}
+	}
+	rawJSON, _ := json.Marshal(raw)
+	dec := billing.New(billing.DefaultTable()).
+		WithDefaultRates(model.FeeRates{BothFen: 1000, InvoiceFen: 600, TaxFen: 500}).
+		Decide(&model.UpstreamResult{Code: "001", Got: got, RawRange: string(rawJSON)}, model.FeeRates{})
+
+	b := subjectBooks(store, q).WithPayloads(store, nil)
+	b.Submit(bookTask{
+		token: tok, decision: dec, creditCode: creditCode, sources: sources,
+		rec: &model.AuditRecord{RequestID: "req-" + reqid, Version: "swfp", AppKey: "ak-test",
+			CreditCode: creditCode, BusiCode: 10, FoundData: true, CreatedAt: time.Now()},
+	})
+	b.Close()
+	l, err := store.FindByReqid(context.Background(), "ak-test", "swfp", reqid)
+	if err != nil || l == nil {
+		t.Fatalf("FindByReqid(%s): %v %v", reqid, l, err)
+	}
+	return l
+}
+
+// TestSubjectBilling_ZeroAmountDoesNotOpenWindow 首次查得但近 12 个月金额为 0：不计费、
+// 不开免费期；之后第一次有金额的查得才计费。
+func TestSubjectBilling_ZeroAmountDoesNotOpenWindow(t *testing.T) {
+	store := memory.New()
+	q := quota.New(store, store)
+	ctx := context.Background()
+	const code = "91310000MA1FL0Q40X"
+
+	first := runRawQuery(t, store, q, "z1", code, "0", "")
+	if first.ChargeState != model.ChargeZero || first.AmountFen != 0 || first.FeeStandard != model.FeeNone {
+		t.Fatalf("金额为 0 应为 ZERO/none/0, got %q/%q/%d", first.ChargeState, first.FeeStandard, first.AmountFen)
+	}
+	if cov, _ := store.SubjectCoverage(ctx, "LIC-T1", "swfp", code); cov.Invoice.Covered {
+		t.Fatalf("金额为 0 不得开免费期: %+v", cov)
+	}
+	if p := store.Payload("req-z1"); p == nil || p.InvZero == nil || !*p.InvZero {
+		t.Fatalf("payload 仍应落库并标发票为0: %+v", p)
+	}
+
+	second := runRawQuery(t, store, q, "z2", code, "100", "")
+	if second.ChargeState != model.ChargeCharged || second.AmountFen != 600 {
+		t.Fatalf("之后有金额的查得应计费 600, got %q/%d", second.ChargeState, second.AmountFen)
+	}
+	bill, _ := store.BillingCounters(ctx, "LIC-T1", "swfp")
+	if bill.ChargedInvoice != 1 || bill.AmountFen != 600 {
+		t.Fatalf("计费计数器不符: %+v", bill)
+	}
+}
+
+// TestSubjectBilling_BothWithOneSideZero 票税查得但发票金额为 0：只按税务收费。
+func TestSubjectBilling_BothWithOneSideZero(t *testing.T) {
+	store := memory.New()
+	q := quota.New(store, store)
+	const code = "91310000MA1FL0Q40X"
+
+	l := runRawQuery(t, store, q, "z1", code, "0", "5")
+	if l.ChargeState != model.ChargeCharged || l.FeeStandard != model.FeeTax || l.AmountFen != 500 {
+		t.Fatalf("应只按税务收 500, got %q/%q/%d", l.ChargeState, l.FeeStandard, l.AmountFen)
+	}
+	if l.ChargedScope != "tax" {
+		t.Fatalf("charged=%q, want tax", l.ChargedScope)
+	}
+	cov, _ := store.SubjectCoverage(context.Background(), "LIC-T1", "swfp", code)
+	if cov.Invoice.Covered || !cov.Tax.Covered {
+		t.Fatalf("只应开税务免费期: %+v", cov)
 	}
 }
 

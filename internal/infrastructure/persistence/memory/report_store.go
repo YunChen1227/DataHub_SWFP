@@ -16,7 +16,7 @@ func (s *Store) DownstreamRows(_ context.Context, f model.ReportFilter) ([]*mode
 	defer s.mu.Unlock()
 	var out []*model.DownstreamRow
 	for _, a := range s.audits {
-		if !a.FoundData || a.Version != f.Version || a.CreatedAt.Before(f.From) || !a.CreatedAt.Before(f.To) {
+		if a.CreditCode == "" || a.Version != f.Version || a.CreatedAt.Before(f.From) || !a.CreatedAt.Before(f.To) {
 			continue
 		}
 		if len(f.AppKeys) > 0 && !containsStr(f.AppKeys, a.AppKey) {
@@ -26,17 +26,34 @@ func (s *Store) DownstreamRows(_ context.Context, f model.ReportFilter) ([]*mode
 			CreatedAt: a.CreatedAt, RequestID: a.RequestID, Reqid: a.Reqid, AppKey: a.AppKey,
 			CustomerName: s.nameForAppKeyLocked(a.AppKey), CreditCode: a.CreditCode,
 			ReqScope: a.ReqScope, DataScope: a.DataScope, FeeStandard: a.FeeStandard,
-			ChargeState: string(a.ChargeState), Providers: s.okProvidersLocked(a.RequestID),
+			ChargedScope: a.ChargedScope, ChargeState: string(a.ChargeState),
+			FoundData: a.FoundData, BusiCode: a.BusiCode,
+			Providers: s.okProvidersLocked(a.RequestID),
 		}
 		if p := s.payloads[a.RequestID]; p != nil {
 			r.HasPayload = true
 			r.ZeroVerdict = p.ZeroVerdict
 			r.CompanyName = companyName(p.ResponseRange)
 		}
+		if lid, ok := s.appKeyIndex[a.AppKey]; ok {
+			r.InvCoverage = s.coverageProofLocked(lid, a.Version, a.CreditCode, model.CatInvoice)
+			r.TaxCoverage = s.coverageProofLocked(lid, a.Version, a.CreditCode, model.CatTax)
+		}
 		out = append(out, r)
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].CreatedAt.Before(out[j].CreatedAt) })
 	return out, nil
+}
+
+func (s *Store) coverageProofLocked(licenseID, route, creditCode string, cat model.Category) model.CoverageProof {
+	rec := s.coverage[coverageKey(licenseID, route, creditCode, cat)]
+	if rec == nil {
+		return model.CoverageProof{}
+	}
+	return model.CoverageProof{
+		ChargedAt: rec.chargedAt, ExpiresAt: rec.expiresAt,
+		ChargeRequestID: rec.chargeRequestID, ChargeReqid: rec.chargeReqid,
+	}
 }
 
 func (s *Store) UpstreamCalls(_ context.Context, f model.ReportFilter) ([]*model.UpstreamCallRow, error) {
@@ -58,6 +75,47 @@ func (s *Store) UpstreamCalls(_ context.Context, f model.ReportFilter) ([]*model
 			Label: c.Label, SourceName: c.Source, Provider: c.Provider, Status: c.Status,
 			Code: c.Code, Msg: c.Msg, UID: c.UID, LogID: c.LogID,
 			DimInvoice: c.Dims.Invoice, DimTax: c.Dims.Tax,
+		}
+		if p := s.payloads[c.RequestID]; p != nil {
+			for _, u := range p.Sources {
+				if u.SourceLabel == c.Label {
+					r.HasPayload = true
+					r.ZeroVerdict = u.ZeroVerdict
+				}
+			}
+		}
+		out = append(out, r)
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].CreatedAt.Before(out[j].CreatedAt) })
+	return out, nil
+}
+
+func (s *Store) UpstreamHistory(_ context.Context, f model.ReportFilter, creditCodes []string) ([]*model.UpstreamHistoryRow, error) {
+	if len(creditCodes) == 0 {
+		return nil, nil
+	}
+	want := map[string]bool{}
+	for _, c := range creditCodes {
+		want[c] = true
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	codes := map[string]string{}
+	for _, a := range s.audits {
+		codes[a.RequestID] = a.CreditCode
+	}
+	var out []*model.UpstreamHistoryRow
+	for _, c := range s.upstreamCalls {
+		if c.Status != model.CallOK || c.Version != f.Version || c.Provider != f.Provider || !c.CreatedAt.Before(f.To) {
+			continue
+		}
+		cc := codes[c.RequestID]
+		if !want[cc] {
+			continue
+		}
+		r := &model.UpstreamHistoryRow{
+			CreatedAt: c.CreatedAt, RequestID: c.RequestID, CreditCode: cc,
+			Label: c.Label, DimInvoice: c.Dims.Invoice, DimTax: c.Dims.Tax,
 		}
 		if p := s.payloads[c.RequestID]; p != nil {
 			for _, u := range p.Sources {

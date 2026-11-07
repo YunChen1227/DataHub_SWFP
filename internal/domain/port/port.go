@@ -71,10 +71,14 @@ type PayloadRepository interface {
 
 // ReportRepository 为出账/对账导出取明细，按时间正序返回。
 type ReportRepository interface {
-	// DownstreamRows 返回区间内查得 (found_data) 的请求。
+	// DownstreamRows 返回区间内全部有效请求（credit_code <> ''：通过鉴权与参数校验、
+	// 实际发起查询的请求，含查得/查无/上游失败），并带上免费期佐证与零数据判定。
 	DownstreamRows(ctx context.Context, f model.ReportFilter) ([]*model.DownstreamRow, error)
 	// UpstreamCalls 返回区间内某 provider 实际发出的调用（不含 skipped）。
 	UpstreamCalls(ctx context.Context, f model.ReportFilter) ([]*model.UpstreamCallRow, error)
+	// UpstreamHistory 返回某 provider 在 To 之前、针对给定税号集合的全部 ok 调用
+	// （含源级零数据判定），供推算一年计费窗口。creditCodes 为空则不返回。
+	UpstreamHistory(ctx context.Context, f model.ReportFilter, creditCodes []string) ([]*model.UpstreamHistoryRow, error)
 }
 
 // SubjectBillingRepository 实现「主体年度计费」的免费期状态机 (设计_主体年度计费.md)：

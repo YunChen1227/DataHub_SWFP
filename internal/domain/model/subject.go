@@ -52,6 +52,7 @@ type ChargeState string
 const (
 	ChargeCharged  ChargeState = "CHARGED"  // 本次产生应收
 	ChargeFree     ChargeState = "FREE"     // 查得了数据，但全部类目都在免费期内
+	ChargeZero     ChargeState = "ZERO"     // 查得了数据，但近 12 个月金额全为 0：不计费、不开免费期
 	ChargeNoCharge ChargeState = "NOCHARGE" // 没查得数据 (999/002/失败)，无从计费
 	ChargeDeferred ChargeState = "DEFERRED" // 计费判定本身失败，按 0 收，留待对账补记
 )

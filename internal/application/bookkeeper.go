@@ -196,9 +196,15 @@ func (b *Bookkeeper) process(t bookTask) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// 主体年度计费必须最先执行：它会重算 decision 的收费标准与应收金额，而下面的
+	// 零数据判定先于计费：近 12 个月金额为 0 的类目不计费、不开免费期。
+	var p *model.RequestPayload
+	if b.payloads != nil || b.subjects != nil {
+		p = t.payload()
+	}
+
+	// 主体年度计费必须先于结算执行：它会重算 decision 的收费标准与应收金额，而下面的
 	// Settle（写台账 + 计费计数器）与 AppendAudit 都要落这两个值。
-	b.chargeSubject(ctx, t)
+	b.chargeSubject(ctx, t, p)
 
 	if b.quota != nil && t.token != nil && t.decision != nil {
 		if err := b.quota.Settle(ctx, t.token, t.settleInput()); err != nil {
@@ -219,15 +225,11 @@ func (b *Bookkeeper) process(t bookTask) {
 			b.log.Error("async audit append failed", "requestId", t.rec.RequestID, "err", err)
 		}
 	}
-	b.storePayload(ctx, t)
+	b.storePayload(ctx, p)
 }
 
-func (b *Bookkeeper) storePayload(ctx context.Context, t bookTask) {
-	if b.payloads == nil {
-		return
-	}
-	p := t.payload()
-	if p == nil {
+func (b *Bookkeeper) storePayload(ctx context.Context, p *model.RequestPayload) {
+	if b.payloads == nil || p == nil {
 		return
 	}
 	err := b.payloads.AppendPayload(ctx, p)
@@ -247,9 +249,10 @@ func (b *Bookkeeper) storePayload(ctx context.Context, t bookTask) {
 
 // chargeSubject 执行主体年度计费判定，并把结论回填进 decision 与审计记录。
 //
-// 判定只看**实得类目**：查无(999)、部分源异常无实得(002)、全源失败一律不动窗口，
-// 也不产生应收。复查路径（Requery）不携带维度信息，同样落在这条分支上。
-func (b *Bookkeeper) chargeSubject(ctx context.Context, t bookTask) {
+// 判定只看**实得且近 12 个月金额不为 0 的类目**：查无(999)、部分源异常无实得(002)、
+// 全源失败、金额为 0 一律不动窗口，也不产生应收。复查路径（Requery）不携带维度信息，
+// 同样落在无实得的分支上。p 为本次的原始数据留存（含零数据判定），可为 nil。
+func (b *Bookkeeper) chargeSubject(ctx context.Context, t bookTask, p *model.RequestPayload) {
 	if b.subjects == nil || b.billing == nil || t.decision == nil || t.token == nil {
 		return // 未装配主体计费：保持 Decide 的按次计费毛口径
 	}
@@ -260,11 +263,22 @@ func (b *Bookkeeper) chargeSubject(ctx context.Context, t bookTask) {
 		return
 	}
 
+	got := d.Result.Got
+	if p != nil {
+		got = billing.NonZero(got, p.InvZero, p.TaxZero)
+	}
+	zero := got.Missing(d.Result.Got)
+	if got.Empty() {
+		billing.MarkZero(d, zero)
+		t.applyChargeToAudit()
+		return
+	}
+
 	res, err := b.subjects.ApplyCoverage(ctx, model.CoverageRequest{
 		LicenseID:  t.token.LicenseID,
 		Route:      t.token.Route,
 		CreditCode: t.creditCode,
-		Got:        d.Result.Got,
+		Got:        got,
 		Reqid:      t.token.Reqid,
 		RequestID:  t.rec.RequestID,
 		Window:     b.freeWindow,
@@ -280,6 +294,7 @@ func (b *Bookkeeper) chargeSubject(ctx context.Context, t bookTask) {
 	}
 
 	b.billing.ApplyCoverage(d, res, t.rates)
+	d.Zero = zero
 	t.applyChargeToAudit()
 	if d.Charged.Empty() {
 		return // 全部类目命中免费期：不写计费流水
