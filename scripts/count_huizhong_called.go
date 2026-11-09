@@ -17,8 +17,11 @@ package main
 
 import (
 	"context"
+	"encoding/csv"
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -119,6 +122,70 @@ WHERE credit_code = ANY($1)
 	fmt.Printf("统计月份(北京时间): %s ~ %s\n", from.Format("2006-01-02"), to.Format("2006-01-02"))
 	fmt.Printf("其中10月被我方任一下游调用过的税号数: %d\n", called)
 	fmt.Printf("其中10月完全未被我方任一下游调用过的税号数: %d\n", notCalled)
+
+	// 逐条明细：每个税号被哪些下游调用（及各自次数）。
+	type caller struct {
+		name string
+		cnt  int
+	}
+	detail := map[string][]caller{}
+	rows, err := conn.Query(ctx, `
+SELECT a.credit_code, COALESCE(NULLIF(l.name,''), a.app_key) AS downstream, COUNT(*)
+FROM audit_log a
+LEFT JOIN license l ON l.app_key = a.app_key
+WHERE a.credit_code = ANY($1)
+  AND a.created_at >= $2 AND a.created_at < $3
+GROUP BY a.credit_code, downstream
+ORDER BY a.credit_code, downstream`, uniq, from, to)
+	if err != nil {
+		fail("查询明细失败: %v", err)
+	}
+	for rows.Next() {
+		var code, name string
+		var cnt int
+		if err := rows.Scan(&code, &name, &cnt); err != nil {
+			fail("读取明细失败: %v", err)
+		}
+		detail[code] = append(detail[code], caller{name, cnt})
+	}
+	if err := rows.Err(); err != nil {
+		fail("读取明细失败: %v", err)
+	}
+
+	sorted := append([]string(nil), uniq...)
+	sort.Strings(sorted)
+
+	outCSV := env("OUT", fmt.Sprintf("huizhong_callers_%s.csv", month))
+	f, err := os.Create(outCSV)
+	if err != nil {
+		fail("创建CSV失败: %v", err)
+	}
+	defer f.Close()
+	f.WriteString("\xEF\xBB\xBF") // UTF-8 BOM，便于 Excel 打开
+	w := csv.NewWriter(f)
+	w.Write([]string{"税号", "是否被调用", "下游数", "下游明细(名称:次数)"})
+
+	fmt.Printf("\n=== 每个税号的下游调用情况 (%s) ===\n", month)
+	for _, code := range sorted {
+		cs := detail[code]
+		if len(cs) == 0 {
+			fmt.Printf("%s  (无下游调用)\n", code)
+			w.Write([]string{code, "否", "0", ""})
+			continue
+		}
+		parts := make([]string, 0, len(cs))
+		for _, c := range cs {
+			parts = append(parts, fmt.Sprintf("%s(%d)", c.name, c.cnt))
+		}
+		joined := strings.Join(parts, "; ")
+		fmt.Printf("%s  调用下游: %s\n", code, joined)
+		w.Write([]string{code, "是", fmt.Sprintf("%d", len(cs)), joined})
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		fail("写CSV失败: %v", err)
+	}
+	fmt.Printf("\n明细已导出: %s\n", outCSV)
 }
 
 // huizhongCodes 为惠众 10 月账单里的全部税号（10月明细A + 10月明细C，共 486 个，已含重复由程序去重）。
