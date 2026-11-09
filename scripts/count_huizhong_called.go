@@ -1,12 +1,15 @@
 //go:build ignore
 
 // count_huizhong_called: 统计惠众 10 月账单里的 486 个税号中，
-// 有多少在 2026 年 10 月（北京时间）被我方「任一下游」调用过，有多少完全没被调用过。
-// 只读线上库，直接在终端打印两个数字。
+// 有多少在 2026 年 10 月（北京时间）被我方「任一下游」调用过，有多少完全没被调用过，
+// 并逐条列出每个税号被哪些下游调用、各自次数。结果写入 Excel，不打印明细到终端。
 //
 // 用法（已内置默认配置文件，直接运行即可）：
 //
 //	CONFIG_FILE=config.aliyun.prod.yaml go run ./scripts/count_huizhong_called.go
+//
+// 输出：当前目录 惠众10月税号下游调用-2026-10.xlsx（可用 OUT 环境变量改路径）。
+//	sheet：汇总 / 逐条下游明细（每税号一行）/ 展开明细（每税号×下游一行）。
 //
 // 口径：
 //   - 「调用过」= audit_log 里存在该税号(credit_code)且 created_at 落在 2026-10 北京自然月的记录；
@@ -17,13 +20,13 @@ package main
 
 import (
 	"context"
-	"encoding/csv"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/datahub/relay/internal/common/xlsx"
 	"github.com/jackc/pgx/v5"
 	"gopkg.in/yaml.v3"
 )
@@ -118,10 +121,6 @@ WHERE credit_code = ANY($1)
 
 	total := len(uniq)
 	notCalled := total - called
-	fmt.Printf("惠众10月账单税号总数(去重): %d\n", total)
-	fmt.Printf("统计月份(北京时间): %s ~ %s\n", from.Format("2006-01-02"), to.Format("2006-01-02"))
-	fmt.Printf("其中10月被我方任一下游调用过的税号数: %d\n", called)
-	fmt.Printf("其中10月完全未被我方任一下游调用过的税号数: %d\n", notCalled)
 
 	// 逐条明细：每个税号被哪些下游调用（及各自次数）。
 	type caller struct {
@@ -155,37 +154,47 @@ ORDER BY a.credit_code, downstream`, uniq, from, to)
 	sorted := append([]string(nil), uniq...)
 	sort.Strings(sorted)
 
-	outCSV := env("OUT", fmt.Sprintf("huizhong_callers_%s.csv", month))
-	f, err := os.Create(outCSV)
-	if err != nil {
-		fail("创建CSV失败: %v", err)
-	}
-	defer f.Close()
-	f.WriteString("\xEF\xBB\xBF") // UTF-8 BOM，便于 Excel 打开
-	w := csv.NewWriter(f)
-	w.Write([]string{"税号", "是否被调用", "下游数", "下游明细(名称:次数)"})
-
-	fmt.Printf("\n=== 每个税号的下游调用情况 (%s) ===\n", month)
+	wb := &xlsx.Workbook{}
+	// 汇总
+	wb.Add("汇总", []string{"指标", "值"}, [][]any{
+		{"惠众10月账单税号总数(去重)", total},
+		{"统计月份(北京时间)", fmt.Sprintf("%s ~ %s", from.Format("2006-01-02"), to.Format("2006-01-02"))},
+		{"10月被我方任一下游调用过的税号数", called},
+		{"10月完全未被我方任一下游调用过的税号数", notCalled},
+	}, []float64{40, 36})
+	// 逐条（每税号一行，下游合并到一列）
+	wide := make([][]any, 0, len(sorted))
+	// 展开（每税号×下游一行）
+	long := make([][]any, 0, len(sorted))
 	for _, code := range sorted {
 		cs := detail[code]
 		if len(cs) == 0 {
-			fmt.Printf("%s  (无下游调用)\n", code)
-			w.Write([]string{code, "否", "0", ""})
+			wide = append(wide, []any{code, "否", 0, ""})
+			long = append(long, []any{code, "(无下游调用)", nil})
 			continue
 		}
 		parts := make([]string, 0, len(cs))
 		for _, c := range cs {
 			parts = append(parts, fmt.Sprintf("%s(%d)", c.name, c.cnt))
+			long = append(long, []any{code, c.name, c.cnt})
 		}
-		joined := strings.Join(parts, "; ")
-		fmt.Printf("%s  调用下游: %s\n", code, joined)
-		w.Write([]string{code, "是", fmt.Sprintf("%d", len(cs)), joined})
+		wide = append(wide, []any{code, "是", len(cs), strings.Join(parts, "; ")})
 	}
-	w.Flush()
-	if err := w.Error(); err != nil {
-		fail("写CSV失败: %v", err)
+	wb.Add("逐条下游明细", []string{"税号", "是否被调用", "下游数", "下游明细(名称:次数)"}, wide,
+		[]float64{22, 12, 10, 80})
+	wb.Add("展开明细", []string{"税号", "下游", "调用次数"}, long,
+		[]float64{22, 40, 12})
+
+	out := env("OUT", fmt.Sprintf("惠众10月税号下游调用-%s.xlsx", month))
+	f, err := os.Create(out)
+	if err != nil {
+		fail("创建Excel失败: %v", err)
 	}
-	fmt.Printf("\n明细已导出: %s\n", outCSV)
+	defer f.Close()
+	if err := wb.Write(f); err != nil {
+		fail("写Excel失败: %v", err)
+	}
+	fmt.Printf("已生成: %s （税号总数 %d，被调用 %d，未调用 %d）\n", out, total, called, notCalled)
 }
 
 // huizhongCodes 为惠众 10 月账单里的全部税号（10月明细A + 10月明细C，共 486 个，已含重复由程序去重）。
