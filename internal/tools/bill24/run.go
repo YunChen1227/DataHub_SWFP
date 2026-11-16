@@ -21,13 +21,20 @@ type job struct {
 	appID    func(Item) string
 	fetch    func(ctx context.Context, db *pgx.Conn, m Month) ([]Item, error)
 	caller   func(rawDir string) (caller, error)
+	// foundOnly 为查得口径：库里查得即计费，不重调、不做金额判定。
+	foundOnly bool
 }
 
 // RunDownstream 生成某下游客户（缺省北京联信）的 24 个月口径月度对账单。
 //
 // 环境变量：CUSTOMER（license.name 模糊匹配，缺省 北京联信）、RELAY_BASE_URL、
 // SWFP_APP_KEY / SWFP_SECRET（重调用的凭证）、ISSUER（标题里的出单方，即我方）。
-func RunDownstream() error {
+func RunDownstream() error { return runDownstream(false) }
+
+// RunDownstreamFound 生成某下游客户的查得口径月度对账单（不重调、不判金额）。
+func RunDownstreamFound() error { return runDownstream(true) }
+
+func runDownstream(foundOnly bool) error {
 	cfg, err := loadConfig()
 	if err != nil {
 		return err
@@ -65,6 +72,7 @@ func RunDownstream() error {
 			c.rawDir = rawDir
 			return &c, nil
 		},
+		foundOnly: foundOnly,
 	})
 }
 
@@ -79,7 +87,12 @@ var upstreamNames = map[string]string{
 // RunUpstream 生成某上游的 24 个月口径月度对账单（上游账单不分下游客户）。
 //
 // 环境变量：ISSUER（标题里的出单方，缺省上游简称）、OUR_NAME（客户名称，即我方）。
-func RunUpstream(provider string) error {
+func RunUpstream(provider string) error { return runUpstream(provider, false) }
+
+// RunUpstreamFound 生成某上游的查得口径月度对账单（不重调、不判金额）。
+func RunUpstreamFound(provider string) error { return runUpstream(provider, true) }
+
+func runUpstream(provider string, foundOnly bool) error {
 	name, ok := upstreamNames[provider]
 	if !ok {
 		return fmt.Errorf("未知上游 %s", provider)
@@ -112,6 +125,7 @@ func RunUpstream(provider string) error {
 		caller: func(rawDir string) (caller, error) {
 			return newUpstreamCaller(cfg, provider, rawDir)
 		},
+		foundOnly: foundOnly,
 	})
 }
 
@@ -119,6 +133,9 @@ func run(ctx context.Context, db *pgx.Conn, j job) error {
 	months, err := parseMonths(env("MONTHS", "2026-09,2026-10"))
 	if err != nil {
 		return err
+	}
+	if j.foundOnly {
+		return runFound(ctx, db, j, months)
 	}
 	outRoot := env("OUT_DIR", filepath.Join("test_res", "bill24"))
 	workers := envInt("WORKERS", 6)
@@ -129,6 +146,7 @@ func run(ctx context.Context, db *pgx.Conn, j job) error {
 		if err != nil {
 			return fmt.Errorf("%s 抓取: %w", m.Name, err)
 		}
+		items = dedupe(items)
 		total := len(items)
 		if limit > 0 && len(items) > limit {
 			items = items[:limit]
@@ -153,6 +171,37 @@ func run(ctx context.Context, db *pgx.Conn, j job) error {
 			return err
 		}
 		printSummary(m, results, out)
+	}
+	return nil
+}
+
+// runFound 是查得口径：库里查得的记录全部计费，不重调。DEDUPE=0 时按调用逐条列出，
+// 否则同月同 (税号, 接口) 只计首次。
+func runFound(ctx context.Context, db *pgx.Conn, j job, months []Month) error {
+	outRoot := env("OUT_DIR", filepath.Join("test_res", "bill_found"))
+	perCall := env("DEDUPE", "1") == "0"
+	for _, m := range months {
+		items, err := j.fetch(ctx, db, m)
+		if err != nil {
+			return fmt.Errorf("%s 抓取: %w", m.Name, err)
+		}
+		if perCall {
+			items = withCredit(items)
+		} else {
+			items = dedupe(items)
+		}
+		results := make([]Result, len(items))
+		count := map[Iface]int{}
+		for i, it := range items {
+			results[i] = Result{Item: it, Outcome: OutcomeBill}
+			count[it.Iface]++
+		}
+		out := filepath.Join(outRoot, fmt.Sprintf("%s-月度对账单-查得口径-%s.xlsx", j.name, m.Name))
+		if err := writeBill(out, j, m, results); err != nil {
+			return err
+		}
+		fmt.Printf("%s %s 查得：只调用票 %d / 只调用税 %d / 同时调用票税 %d，合计 %d\n写出 %s\n",
+			j.name, m.Name, count[IfaceInvoice], count[IfaceTax], count[IfaceBoth], len(items), out)
 	}
 	return nil
 }

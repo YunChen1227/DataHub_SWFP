@@ -46,8 +46,11 @@ func writeBill(path string, j job, m Month, results []Result) error {
 		}
 		rows = append(rows, []any{nil, date, iface.Product(), count[iface], nil, nil, iface.Label()})
 	}
-	rows = append(rows, []any{nil, "小计", nil, len(bill), nil, nil,
-		fmt.Sprintf("近24月总金额<=0 不计费 %d 条，待确认 %d 条（见同名 sheet）", len(zero), len(pend))})
+	note := fmt.Sprintf("近24月总金额<=0 不计费 %d 条，待确认 %d 条（见同名 sheet）", len(zero), len(pend))
+	if j.foundOnly {
+		note = "查得口径，未做金额判定"
+	}
+	rows = append(rows, []any{nil, "小计", nil, len(bill), nil, nil, note})
 	sum := wb.Add("对账单", nil, rows, []float64{4, 12, 52, 12, 10, 10, 46})
 	sum.HeaderRows = map[int]bool{2: true}
 	last := len(Ifaces) + 3
@@ -64,6 +67,10 @@ func writeBill(path string, j job, m Month, results []Result) error {
 	wb.Add(fmt.Sprintf("%d月明细", int(m.From.Month())),
 		[]string{"调用时间", "税号", "appId", "企业名称", "计费税", "计费票", "备注"},
 		detail, []float64{20, 22, 16, 30, 8, 8, 20})
+
+	if j.foundOnly {
+		return save(path, wb)
+	}
 
 	zeroRows := make([][]any, 0, len(zero))
 	for _, r := range zero {
@@ -86,6 +93,10 @@ func writeBill(path string, j job, m Month, results []Result) error {
 		[]string{"调用时间", "税号", "接口", "重调结果", "说明", "requestId"},
 		pendRows, []float64{20, 22, 14, 10, 60, 36})
 
+	return save(path, wb)
+}
+
+func save(path string, wb *xlsx.Workbook) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}

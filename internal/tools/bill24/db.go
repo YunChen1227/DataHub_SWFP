@@ -89,7 +89,7 @@ ORDER BY a.created_at`, route, appKeys, m.From, m.To)
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	return dedupe(items), nil
+	return items, nil
 }
 
 // fetchUpstream 抓某上游当月 status=ok 的调用（不分下游客户）。同一 request_id 的
@@ -152,7 +152,19 @@ ORDER BY u.created_at`, route, provider, m.From, m.To)
 		}
 		items = append(items, Item{Credit: a.credit, Iface: iface, At: a.at, RequestID: id, AppKey: a.key})
 	}
-	return dedupe(items), nil
+	sort.SliceStable(items, func(i, j int) bool { return items[i].At.Before(items[j].At) })
+	return items, nil
+}
+
+// withCredit 去掉没有税号的记录，保留每次调用。
+func withCredit(items []Item) []Item {
+	out := items[:0:0]
+	for _, it := range items {
+		if it.Credit != "" {
+			out = append(out, it)
+		}
+	}
+	return out
 }
 
 // dedupe 同一 (税号, 接口) 只保留首次请求；结果按请求时间排序。
