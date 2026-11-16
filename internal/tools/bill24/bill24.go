@@ -185,7 +185,15 @@ func loadConfig() (*Config, error) {
 	if !ok {
 		return nil, fmt.Errorf("配置 %s 里没有 versions.%s", path, env("ROUTE", "swfp"))
 	}
-	return &Config{DB: v.Database, Upstreams: v.Upstreams}, nil
+	db := v.Database
+	// 数据库连接可用环境变量覆盖（换登录账号用，如 DB_USER=chenyun_dev_new）。
+	db.Host = env("DB_HOST", db.Host)
+	db.Name = env("DB_NAME", db.Name)
+	db.User = env("DB_USER", db.User)
+	db.Password = env("DB_PASSWORD", db.Password)
+	db.SSLMode = env("DB_SSLMODE", db.SSLMode)
+	db.Port = envInt("DB_PORT", db.Port)
+	return &Config{DB: db, Upstreams: v.Upstreams}, nil
 }
 
 // upstreamsOf 返回某个 provider 的全部配置条目（证通有发票/税务两条）。

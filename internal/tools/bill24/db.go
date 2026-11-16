@@ -25,14 +25,15 @@ func connect(ctx context.Context, c DBConfig) (*pgx.Conn, error) {
 	}
 	conn, err := pgx.Connect(ctx, u.String())
 	if err != nil {
-		return nil, fmt.Errorf("连接数据库 %s/%s: %w", c.Host, c.Name, err)
+		return nil, fmt.Errorf("连接数据库 %s/%s (user=%s): %w", c.Host, c.Name, c.User, err)
 	}
+	fmt.Printf("已连接数据库 %s/%s  user=%s\n", c.Host, c.Name, c.User)
 	return conn, nil
 }
 
-// customerAppKeys 返回 license.name 模糊匹配 customer 的全部 app_key 与展示名。
+// customerAppKeys 返回 license.name 模糊匹配或 app_key 精确匹配 customer 的全部 app_key 与展示名。
 func customerAppKeys(ctx context.Context, db *pgx.Conn, customer string) (keys []string, name string, err error) {
-	rows, err := db.Query(ctx, `SELECT app_key, name FROM license WHERE name LIKE '%' || $1 || '%' ORDER BY created_at`, customer)
+	rows, err := db.Query(ctx, `SELECT app_key, name FROM license WHERE name LIKE '%' || $1 || '%' OR app_key = $1 ORDER BY created_at`, customer)
 	if err != nil {
 		return nil, "", fmt.Errorf("查 license: %w", err)
 	}
