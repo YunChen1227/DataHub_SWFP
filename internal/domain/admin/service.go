@@ -7,10 +7,12 @@ package admin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/datahub/relay/internal/common/jwt"
+	"github.com/datahub/relay/internal/domain/allowlist"
 	"github.com/datahub/relay/internal/domain/model"
 	"github.com/datahub/relay/internal/domain/port"
 	"github.com/datahub/relay/internal/domain/report"
@@ -47,6 +49,8 @@ type Service struct {
 	// 即时失效鉴权层的 license 缓存（auth.Service.Invalidate），保证停用/换钥
 	// 不必等缓存 TTL 过期。可为 nil。
 	onLicenseChange func(appKey string)
+	// allowGate 是全局上游白名单闸；可为 nil（接口返回不可用）。
+	allowGate *allowlist.Gate
 }
 
 func New(route string, admins port.AdminUserRepository, users port.UserAdminRepository, audits port.AuditRepository, cfg Config) *Service {
@@ -60,6 +64,45 @@ func New(route string, admins port.AdminUserRepository, users port.UserAdminRepo
 func (s *Service) WithLicenseChangeHook(fn func(appKey string)) *Service {
 	s.onLicenseChange = fn
 	return s
+}
+
+// WithUpstreamAllowGate 挂接全局上游白名单闸，供管理页开关。
+func (s *Service) WithUpstreamAllowGate(g *allowlist.Gate) *Service {
+	s.allowGate = g
+	return s
+}
+
+// GetUpstreamAllowlist 返回开关状态与名单统计。
+func (s *Service) GetUpstreamAllowlist() (*model.UpstreamAllowlistView, error) {
+	if s.allowGate == nil {
+		return nil, errors.New("上游白名单未装配")
+	}
+	v := s.allowGate.View()
+	return &v, nil
+}
+
+// SetUpstreamAllowlistEnabled 热切换全局上游白名单开关，并写一条审计记录。
+func (s *Service) SetUpstreamAllowlistEnabled(ctx context.Context, enabled bool, operator string) (*model.UpstreamAllowlistView, error) {
+	if s.allowGate == nil {
+		return nil, errors.New("上游白名单未装配")
+	}
+	before := s.allowGate.Enabled()
+	if err := s.allowGate.SetEnabled(ctx, enabled); err != nil {
+		return nil, err
+	}
+	if s.audits != nil {
+		msg := fmt.Sprintf("上游白名单开关: %v → %v (operator=%s)", before, enabled, operator)
+		_ = s.audits.AppendAudit(ctx, &model.AuditRecord{
+			RequestID: fmt.Sprintf("admin-allowlist-%d", time.Now().UnixNano()),
+			Version:   s.route,
+			AppKey:    "admin",
+			BusiMsg:   msg,
+			ErrMsg:    msg,
+			CreatedAt: time.Now(),
+		})
+	}
+	v := s.allowGate.View()
+	return &v, nil
 }
 
 // notifyLicenseChange 触发变更回调（nil 安全）。

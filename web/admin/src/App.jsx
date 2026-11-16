@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import { getToken, setToken } from './api.js'
 import Login from './pages/Login.jsx'
+import UpstreamAllowlist from './pages/UpstreamAllowlist.jsx'
 import Users from './pages/Users.jsx'
 import Audits from './pages/Audits.jsx'
 import Stats from './pages/Stats.jsx'
 
 const TABS = [
+  { id: 'allowlist', label: '上游白名单' },
   { id: 'users', label: '用户管理' },
   { id: 'stats', label: '用量统计' },
   { id: 'audits', label: '操作记录' },
@@ -13,7 +15,7 @@ const TABS = [
 
 export default function App() {
   const [authed, setAuthed] = useState(!!getToken())
-  const [tab, setTab] = useState('users')
+  const [tab, setTab] = useState('allowlist')
 
   if (!authed) {
     return <Login onLogin={() => setAuthed(true)} />
@@ -42,6 +44,7 @@ export default function App() {
         <button className="btn ghost small" onClick={logout}>退出登录</button>
       </header>
       <div className="container">
+        {tab === 'allowlist' && <UpstreamAllowlist />}
         {tab === 'users' && <Users />}
         {tab === 'stats' && <Stats />}
         {tab === 'audits' && <Audits />}

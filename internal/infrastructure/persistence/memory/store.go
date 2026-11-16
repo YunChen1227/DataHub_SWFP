@@ -63,6 +63,10 @@ type Store struct {
 
 	payloads map[string]*model.RequestPayload // requestID -> 原始数据留存（payload_store.go）
 
+	// 全局上游白名单（allowlist_store.go）
+	settings  map[string]string
+	allowlist map[string]*model.UpstreamAllowEntry // creditCode|provider -> entry
+
 	seq      int64
 	auditSeq int64
 	adminSeq int64

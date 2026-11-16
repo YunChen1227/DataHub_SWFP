@@ -13,4 +13,6 @@ DROP TABLE IF EXISTS quota               CASCADE;
 DROP TABLE IF EXISTS license             CASCADE;
 DROP TABLE IF EXISTS admin_user          CASCADE;
 DROP TABLE IF EXISTS ip_whitelist_global CASCADE;  -- v0.7 已废弃
+DROP TABLE IF EXISTS upstream_allowlist  CASCADE;
+DROP TABLE IF EXISTS system_setting      CASCADE;
 DROP TABLE IF EXISTS schema_migrations   CASCADE;

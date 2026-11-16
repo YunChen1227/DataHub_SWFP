@@ -11,6 +11,7 @@ import (
 	"github.com/datahub/relay/internal/common/appctx"
 	"github.com/datahub/relay/internal/common/errs"
 	"github.com/datahub/relay/internal/common/mask"
+	"github.com/datahub/relay/internal/domain/allowlist"
 	"github.com/datahub/relay/internal/domain/auth"
 	"github.com/datahub/relay/internal/domain/billing"
 	"github.com/datahub/relay/internal/domain/mapping"
@@ -33,8 +34,11 @@ type QueryOrchestrator struct {
 	// subjects 只在此处**只读**使用（客户自查免费期）；写侧判定在 Bookkeeper 里，
 	// 不放在请求关键路径上。
 	subjects port.SubjectBillingRepository
-	parseFn  func(*model.QueryCommand) (*model.UpstreamRequest, error)
-	log      *slog.Logger
+	// allowGate 是全局上游白名单闸（管理后台可热切换）。开启时税号/维度不匹配
+	// 直接拒绝，不发上游。
+	allowGate *allowlist.Gate
+	parseFn   func(*model.QueryCommand) (*model.UpstreamRequest, error)
+	log       *slog.Logger
 }
 
 func NewQueryOrchestrator(route string, a *auth.Service, q *quota.Service, b *billing.Service, up port.UpstreamPort, audit port.AuditRepository, log *slog.Logger) *QueryOrchestrator {
@@ -63,6 +67,12 @@ func (o *QueryOrchestrator) WithBookkeeper(b *Bookkeeper) *QueryOrchestrator {
 // 返回「本服务未启用主体计费」，查询主流程不受影响。
 func (o *QueryOrchestrator) WithSubjectBilling(r port.SubjectBillingRepository) *QueryOrchestrator {
 	o.subjects = r
+	return o
+}
+
+// WithUpstreamAllowGate 挂接全局上游白名单闸。未挂接或闸关闭时行为与改造前一致。
+func (o *QueryOrchestrator) WithUpstreamAllowGate(g *allowlist.Gate) *QueryOrchestrator {
+	o.allowGate = g
 	return o
 }
 
@@ -133,6 +143,14 @@ func (o *QueryOrchestrator) Handle(ctx context.Context, signed *model.SignedRequ
 		ae := errs.AsAppError(err)
 		rec.ErrMsg = ae.Error()
 		log.Info("dim not allowed", "want", upReq.Want.String(), "allowed", lic.Allowed().String())
+		return fail(ae.Busi, ae.Msg)
+	}
+	// 全局上游白名单：开启时税号必须在名单内，且维度并集覆盖 Want，否则硬拒绝。
+	if err := o.allowGate.Check(upReq.CreditCode, upReq.Want); err != nil {
+		ae := errs.AsAppError(err)
+		rec.ErrMsg = ae.Error()
+		log.Info("upstream allowlist rejected", "want", upReq.Want.String(),
+			"allowed", o.allowGate.Union(upReq.CreditCode).String())
 		return fail(ae.Busi, ae.Msg)
 	}
 	// 计费主体落明文：免费期窗口按 (license, creditCode, category) 判定，脱敏值

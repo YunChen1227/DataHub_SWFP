@@ -40,6 +40,9 @@ func (s *Server) registerAdminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /admin/api/{ver}/reports/downstream", s.requireAdmin(s.adminDownstreamReport))
 	mux.HandleFunc("GET /admin/api/{ver}/reports/upstream", s.requireAdmin(s.adminUpstreamReport))
 
+	mux.HandleFunc("GET /admin/api/{ver}/upstream-allowlist", s.requireAdmin(s.adminGetUpstreamAllowlist))
+	mux.HandleFunc("PUT /admin/api/{ver}/upstream-allowlist/enabled", s.requireAdmin(s.adminSetUpstreamAllowlistEnabled))
+
 	if s.spaDir != "" {
 		mux.HandleFunc("GET /admin/", s.serveSPA)
 		mux.HandleFunc("GET /admin", func(w http.ResponseWriter, r *http.Request) {
@@ -358,6 +361,39 @@ func (s *Server) serveSPA(w http.ResponseWriter, r *http.Request) {
 		full = filepath.Join(s.spaDir, "index.html")
 	}
 	http.ServeFile(w, r, full)
+}
+
+func (s *Server) adminGetUpstreamAllowlist(w http.ResponseWriter, r *http.Request) {
+	svc, ok := s.adminFor(w, r)
+	if !ok {
+		return
+	}
+	v, err := svc.GetUpstreamAllowlist()
+	if err != nil {
+		writeAdminError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeAdminJSON(w, http.StatusOK, v)
+}
+
+func (s *Server) adminSetUpstreamAllowlistEnabled(w http.ResponseWriter, r *http.Request) {
+	svc, ok := s.adminFor(w, r)
+	if !ok {
+		return
+	}
+	var in struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeAdminError(w, http.StatusBadRequest, "请求体解析失败")
+		return
+	}
+	v, err := svc.SetUpstreamAllowlistEnabled(r.Context(), in.Enabled, adminOperator(r))
+	if err != nil {
+		writeAdminError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeAdminJSON(w, http.StatusOK, v)
 }
 
 func writeAdminJSON(w http.ResponseWriter, status int, v any) {

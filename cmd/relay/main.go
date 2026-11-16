@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/datahub/relay/internal/api"
 	"github.com/datahub/relay/internal/application"
 	"github.com/datahub/relay/internal/domain/admin"
+	"github.com/datahub/relay/internal/domain/allowlist"
 	"github.com/datahub/relay/internal/domain/auth"
 	"github.com/datahub/relay/internal/domain/billing"
 	"github.com/datahub/relay/internal/domain/model"
@@ -51,8 +53,10 @@ type domainStorage struct {
 	// auth 是本域共享的鉴权服务（license+secret 进程内缓存）。按域而非按路由建：
 	// v8/v9 共用 v8v9 域的同一实例，后台在任一路由改 license 都能命中同一份缓存
 	// 失效（admin.WithLicenseChangeHook → auth.Invalidate）。
-	auth    *auth.Service
-	cleanup func()
+	auth *auth.Service
+	// allowGate 是本域共享的全局上游白名单闸（管理后台可热切换）。
+	allowGate *allowlist.Gate
+	cleanup   func()
 }
 
 // routeStack is one fully-wired route (独立 orchestrator + 后台服务 + 复查 worker
@@ -271,6 +275,10 @@ func buildDomainStorage(ctx context.Context, cfg config, domain string, logger *
 			cleanup: func() { rq.Close(); pg.Close() },
 		}
 		ds.auth = auth.New(ds.licenseRepo, ds.secrets, auth.Md5Verifier{})
+		if err := wireAllowGate(ctx, ds, pg, domain, logger); err != nil {
+			pg.Close()
+			return nil, err
+		}
 		return ds, nil
 	default:
 		store := memory.New()
@@ -282,8 +290,48 @@ func buildDomainStorage(ctx context.Context, cfg config, domain string, logger *
 			cleanup: func() {},
 		}
 		ds.auth = auth.New(ds.licenseRepo, ds.secrets, auth.Md5Verifier{})
+		if err := wireAllowGate(ctx, ds, store, domain, logger); err != nil {
+			return nil, err
+		}
 		return ds, nil
 	}
+}
+
+// wireAllowGate 装配全局上游白名单闸：读 CSV 进内存（并在有仓储时落库），再加载开关。
+// CSV 缺失不阻止启动（闸保持关闭、名单为空）；CSV 非法则拒绝启动。
+func wireAllowGate(ctx context.Context, ds *domainStorage, repo port.UpstreamAllowlistRepository, domain string, logger *slog.Logger) error {
+	gate := allowlist.New(repo)
+	csvPath := filepath.Join("data", "upstream_allowlist.csv")
+	if entries, err := allowlist.LoadCSV(csvPath); err == nil {
+		if err := gate.LoadEntries(entries); err != nil {
+			return fmt.Errorf("load upstream allowlist csv: %w", err)
+		}
+		if err := repo.ReplaceAllowlist(ctx, entries); err != nil {
+			return fmt.Errorf("persist upstream allowlist: %w", err)
+		}
+		logger.Info("upstream allowlist loaded from csv", "domain", domain, "file", csvPath, "total", gate.Stats().Total)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("read upstream allowlist csv: %w", err)
+	} else {
+		// 无 CSV 时尝试从 DB 已有名单恢复（重启后开关与名单仍在）。
+		if err := gate.LoadFromRepo(ctx); err != nil {
+			return fmt.Errorf("load upstream allowlist from db: %w", err)
+		}
+		logger.Info("upstream allowlist csv missing; using db/empty", "domain", domain, "total", gate.Stats().Total)
+	}
+	// 开关以 DB 为准（CSV 只提供名单）。CSV 路径已把 enabled 置 false，这里再读一次。
+	if v, err := repo.GetSetting(ctx, allowlist.SettingKeyEnabled); err != nil {
+		return fmt.Errorf("read upstream allowlist enabled: %w", err)
+	} else if v == "true" || v == "1" {
+		if err := gate.SetEnabled(ctx, true); err != nil {
+			return err
+		}
+	}
+	ds.allowGate = gate
+	st := gate.Stats()
+	logger.Info("upstream allowlist gate ready", "domain", domain, "enabled", gate.Enabled(),
+		"total", st.Total, "byProvider", st.ByProvider)
+	return nil
 }
 
 // buildRouteStack wires the per-route dependencies (auth/quota/billing/orchestrator/
@@ -292,7 +340,7 @@ func buildRouteStack(cfg config, route string, ds *domainStorage, httpClient *ht
 	vc := cfg.versions[route]
 	log := logger.With("route", route)
 
-	upClient, routeKind, err := buildUpstreams(route, vc.upstreams, cfg.sourcingBudget, httpClient, log)
+	upClient, routeKind, err := buildUpstreams(route, vc.upstreams, cfg.sourcingBudget, httpClient, log, ds.allowGate)
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +353,8 @@ func buildRouteStack(cfg config, route string, ds *domainStorage, httpClient *ht
 		TokenTTL:  cfg.adminTokenTTL,
 	}).WithLicenseChangeHook(authSvc.Invalidate). // 后台改密/停用/删除即时失效鉴权缓存
 		WithUpstreamCalls(ds.upstreamCallRepo).    // 审计按源下钻（上游成本对账）
-		WithReports(ds.reportRepo)                 // 用量统计页的出账/对账导出
+		WithReports(ds.reportRepo).                // 用量统计页的出账/对账导出
+		WithUpstreamAllowGate(ds.allowGate)        // 全局上游白名单开关
 	// 异步记账：结算 + 审计移出响应关键路径（每请求省 3-5 次串行 DB 写）；
 	// 队列满降级同步，优雅停机时 drain（见 main 的 shutdown 顺序）。
 	// 主体年度计费挂在记账器上：判定要在结算/审计之前重算收费标准与金额。
@@ -317,7 +366,8 @@ func buildRouteStack(cfg config, route string, ds *domainStorage, httpClient *ht
 		WithSubjectBilling(ds.subjectRepo, billSvc, cfg.freeWindow)
 	orch := application.NewQueryOrchestrator(route, authSvc, quotaSvc, billSvc, upClient, ds.auditRepo, log).
 		WithBookkeeper(books).
-		WithSubjectBilling(ds.subjectRepo) // 只读：客户自查免费期
+		WithSubjectBilling(ds.subjectRepo). // 只读：客户自查免费期
+		WithUpstreamAllowGate(ds.allowGate)
 	// 网关校验口径必须与该路由上游的真实要求一致（必填字段前置拦截，不透传给
 	// 上游报错）。默认 parse.Parse (mobile必/idCard必/name选) 仅适用于与经济能力
 	// 同口径的上游 (gama/income)。聚合路由所有子源 kind 一致 (loadConfig 已校验)，
@@ -337,7 +387,7 @@ func buildRouteStack(cfg config, route string, ds *domainStorage, httpClient *ht
 // client，按 source 归入逻辑源，交给串行寻源器 upstream.Sourcer（按优先级/成本
 // 排序、命中即停、缺项补齐）。返回寻源器与路由 kind (=首个条目 kind，loadConfig 已
 // 校验同路由 kind 一致；供 parser 选择)。
-func buildUpstreams(route string, ucs []upstreamConfig, budget time.Duration, httpClient *http.Client, logger *slog.Logger) (port.UpstreamPort, string, error) {
+func buildUpstreams(route string, ucs []upstreamConfig, budget time.Duration, httpClient *http.Client, logger *slog.Logger, gate *allowlist.Gate) (port.UpstreamPort, string, error) {
 	if len(ucs) == 0 {
 		// 路由未在配置中给出 (memory 模式常见)：合成一个按路由缺省 kind 的空 client，
 		// 保持"不崩溃"的历史行为——该 client 在被调用前不产生任何副作用。
@@ -421,6 +471,7 @@ func buildUpstreams(route string, ucs []upstreamConfig, budget time.Duration, ht
 	if err != nil {
 		return nil, "", err
 	}
+	sourcer.WithGlobalAllow(gate)
 	logger.Info("upstream sourcing wired", "detail", sourcer.Active())
 	// swfp 有明确的下游返回值文档 (docs/税票分析接口文档.xlsx)：套契约映射层，把
 	// 分段结果整理为 xlsx 两段结构 + 按源分组 + sourceStatus（严格白名单）。

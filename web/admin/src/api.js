@@ -68,6 +68,10 @@ export const api = {
   sourceStats: (query) => req('GET', '/stats/sources' + (query || '')),
   // 上游对账可选的上游公司。
   reportVendors: () => req('GET', '/reports/vendors'),
+  // 全局上游白名单开关与统计。
+  getUpstreamAllowlist: () => req('GET', '/upstream-allowlist'),
+  setUpstreamAllowlistEnabled: (enabled) =>
+    req('PUT', '/upstream-allowlist/enabled', { enabled: !!enabled }),
 }
 
 // downloadReport 拉取出账/对账 Excel 并触发浏览器下载。kind 为 downstream / upstream，

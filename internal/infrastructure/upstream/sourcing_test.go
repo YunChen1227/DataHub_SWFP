@@ -653,3 +653,68 @@ func TestSourcerSyWithoutAllowRejected(t *testing.T) {
 		t.Fatal("sy 未挂白名单应拒绝装配")
 	}
 }
+
+// stubGlobalAllow 是测试用全局白名单闸。
+type stubGlobalAllow struct {
+	on   bool
+	dims map[string]model.DimSet // provider -> dims
+}
+
+func (s *stubGlobalAllow) Enabled() bool { return s.on }
+func (s *stubGlobalAllow) Allowed(_ string, provider string, _ time.Time) model.DimSet {
+	if !s.on {
+		return model.AllDims()
+	}
+	return s.dims[provider]
+}
+
+func TestSourcerGlobalAllowNarrowsProviders(t *testing.T) {
+	var entHits, ctaxHits, salesHits int
+	s, err := NewSourcer([]Source{
+		{Name: "ent_invoice", Provider: ProviderEntCredit, Provides: invoiceDim, Priority: 1,
+			Calls: []Call{{Label: "invoice2", Dims: invoiceDim, Port: okPort(&entHits)}}},
+		{Name: "ctax", Provider: ProviderCTax, Provides: bothDim, Priority: 1,
+			Calls: []Call{{Label: "ctax", Dims: bothDim, Port: okPort(&ctaxHits)}}},
+		{Name: "sales", Provider: ProviderSalesData, Provides: invoiceDim, Priority: 9, Optional: true,
+			Calls: []Call{{Label: "sales", Dims: invoiceDim, Port: okPort(&salesHits)}}},
+	}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.WithGlobalAllow(&stubGlobalAllow{
+		on:   true,
+		dims: map[string]model.DimSet{ProviderEntCredit: invoiceDim},
+	})
+	res, err := s.Query(context.Background(), &model.UpstreamRequest{
+		CreditCode: "91110108551385082Q", Reqid: "ga1", Want: invoiceDim,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entHits != 1 || ctaxHits != 0 || salesHits != 0 {
+		t.Fatalf("只应调证通发票: ent=%d ctax=%d sales=%d", entHits, ctaxHits, salesHits)
+	}
+	if !res.Got.Invoice {
+		t.Fatalf("应查得发票, got=%s", res.Got)
+	}
+}
+
+func TestSourcerGlobalAllowOffDoesNotRestrict(t *testing.T) {
+	var ctaxHits int
+	s, err := NewSourcer([]Source{
+		{Name: "ctax", Provider: ProviderCTax, Provides: bothDim, Priority: 1,
+			Calls: []Call{{Label: "ctax", Dims: bothDim, Port: okPort(&ctaxHits)}}},
+	}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.WithGlobalAllow(&stubGlobalAllow{on: false, dims: map[string]model.DimSet{}})
+	if _, err := s.Query(context.Background(), &model.UpstreamRequest{
+		CreditCode: "91110108551385082Q", Reqid: "ga2", Want: model.AllDims(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if ctaxHits != 1 {
+		t.Fatalf("关闭时应正常调用, hits=%d", ctaxHits)
+	}
+}

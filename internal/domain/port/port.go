@@ -161,3 +161,13 @@ type AuditRepository interface {
 	// admin 「按年/月/日」统计面板 (§16.4)。时间桶按北京时间 (+08:00) 归档。
 	UsageStats(ctx context.Context, f model.StatsFilter) ([]*model.UsageStat, error)
 }
+
+// UpstreamAllowlistRepository 持久化全局上游白名单与运行时开关。
+// 名单按 (credit_code, provider) 唯一；开关键为 upstream_allowlist_enabled。
+type UpstreamAllowlistRepository interface {
+	GetSetting(ctx context.Context, key string) (string, error)
+	SetSetting(ctx context.Context, key, value string) error
+	ListAllowlist(ctx context.Context) ([]*model.UpstreamAllowEntry, error)
+	// ReplaceAllowlist 用 entries 全量替换名单（事务内先清空再写入）。
+	ReplaceAllowlist(ctx context.Context, entries []*model.UpstreamAllowEntry) error
+}

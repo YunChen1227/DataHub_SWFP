@@ -21,7 +21,7 @@ func TestBuildUpstreamsDropsEntCreditPart1(t *testing.T) {
 		ent("tax1", "P0130082"),
 		ent("tax2", "P0130084"),
 	}
-	p, _, err := buildUpstreams("test", all, 0, nil, logger)
+	p, _, err := buildUpstreams("test", all, 0, nil, logger, nil)
 	if err != nil {
 		t.Fatalf("buildUpstreams: %v", err)
 	}
@@ -30,7 +30,7 @@ func TestBuildUpstreamsDropsEntCreditPart1(t *testing.T) {
 	}
 
 	onlyPart1 := []upstreamConfig{ent("invoice1", "P0130081"), ent("tax1", "P0130082")}
-	p, _, err = buildUpstreams("test", onlyPart1, 0, nil, logger)
+	p, _, err = buildUpstreams("test", onlyPart1, 0, nil, logger, nil)
 	if err != nil {
 		t.Fatalf("buildUpstreams(only part1): %v", err)
 	}

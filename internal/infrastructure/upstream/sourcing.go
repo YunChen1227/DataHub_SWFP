@@ -40,6 +40,23 @@ type Sourcer struct {
 	tax      []Source
 	budget   time.Duration
 	calls    int // 全部逻辑源的上游调用总数（决定 Requery 能否直通）
+	// globalAllow 是管理后台可热切换的全局上游白名单。开启时按 (税号, Provider)
+	// 收窄每次调用的维度；关闭或未装配时不限制（各源自身 Allow 仍生效）。
+	globalAllow GlobalAllow
+}
+
+// GlobalAllow 是全局上游白名单闸在寻源侧的最小接口（由 domain/allowlist.Gate 实现）。
+type GlobalAllow interface {
+	Enabled() bool
+	Allowed(creditCode, provider string, now time.Time) model.DimSet
+}
+
+// WithGlobalAllow 挂接全局白名单闸（可热切换）。返回自身便于链式装配。
+func (s *Sourcer) WithGlobalAllow(g GlobalAllow) *Sourcer {
+	if s != nil {
+		s.globalAllow = g
+	}
+	return s
 }
 
 // Source 是寻源优先级列表里的一个候选：一个**逻辑源**，内含 1..N 次上游调用。
@@ -209,12 +226,19 @@ func (s *Sourcer) traverse(ctx context.Context, req *model.UpstreamRequest, tr *
 			tr.reason[src.Name] = "已超出本次总时延预算，未再尝试"
 			continue
 		}
-		s.invoke(ctx, req, tr, src, tr.got.Missing(need).Intersect(src.Provides))
+		want := tr.got.Missing(need).Intersect(src.Provides)
+		if narrowed, skip := s.narrowByGlobal(req.CreditCode, src, want); skip != "" {
+			tr.reason[src.Name] = skip
+			continue
+		} else {
+			want = narrowed
+		}
+		s.invoke(ctx, req, tr, src, want)
 	}
 }
 
 // traverseGated 是白名单阶段：每个白名单源只按 want ∩ Allow ∩ Provides（再扣掉已拿到
-// 的维度）请求；交集为空就不调，只记原因。
+// 的维度）请求；交集为空就不调，只记原因。全局白名单开启时再与全局允许维度取交。
 func (s *Sourcer) traverseGated(ctx context.Context, req *model.UpstreamRequest, tr *trace, want model.DimSet) {
 	now := time.Now()
 	for _, src := range s.gated {
@@ -228,12 +252,35 @@ func (s *Sourcer) traverseGated(ctx context.Context, req *model.UpstreamRequest,
 			tr.reason[src.Name] = fmt.Sprintf("请求维度不在白名单允许范围内（允许=%s），不允许调用", allowed.String())
 			continue
 		}
+		if narrowed, skip := s.narrowByGlobal(req.CreditCode, src, need); skip != "" {
+			tr.reason[src.Name] = skip
+			continue
+		} else {
+			need = narrowed
+		}
 		if left := tr.left(); left <= 0 {
 			tr.reason[src.Name] = "已超出本次总时延预算，未再尝试"
 			continue
 		}
 		s.invoke(ctx, req, tr, src, need)
 	}
+}
+
+// narrowByGlobal 在全局白名单开启时按 (税号, Provider) 收窄 want。
+// 返回 (收窄后的 want, 跳过原因)；跳过原因为空表示可以调用。
+func (s *Sourcer) narrowByGlobal(creditCode string, src Source, want model.DimSet) (model.DimSet, string) {
+	if s.globalAllow == nil || !s.globalAllow.Enabled() {
+		return want, ""
+	}
+	allowed := s.globalAllow.Allowed(creditCode, src.Provider, time.Now())
+	got := want.Intersect(allowed)
+	if allowed.Empty() {
+		return model.DimSet{}, "全局上游白名单未授权该源，不允许调用"
+	}
+	if got.Empty() {
+		return model.DimSet{}, fmt.Sprintf("全局上游白名单未授权该源维度（允许=%s），不允许调用", allowed.String())
+	}
+	return got, ""
 }
 
 // invoke 调用一个逻辑源：内含的互补调用并发发出（它们同属一个源、一起计价，没有
