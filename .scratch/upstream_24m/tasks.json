@@ -1,0 +1,13172 @@
+[
+{
+"qkey": "entcredit|91341600MA8P831P7A|tax",
+"upstream": "entcredit",
+"credit": "91341600MA8P831P7A",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91330103MA2GM3HYXY|tax",
+"upstream": "entcredit",
+"credit": "91330103MA2GM3HYXY",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|913710000673706713|invoice",
+"upstream": "entcredit",
+"credit": "913710000673706713",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91340826MADM4KDQ22|invoice",
+"upstream": "entcredit",
+"credit": "91340826MADM4KDQ22",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91370104MA953QQF31|invoice",
+"upstream": "entcredit",
+"credit": "91370104MA953QQF31",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91120116MABXN9K989|tax",
+"upstream": "entcredit",
+"credit": "91120116MABXN9K989",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91320113MA7N5EDH87|tax",
+"upstream": "entcredit",
+"credit": "91320113MA7N5EDH87",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340100MA8QELW53A|tax",
+"upstream": "entcredit",
+"credit": "91340100MA8QELW53A",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340124MA2MR97N5C|invoice",
+"upstream": "entcredit",
+"credit": "91340124MA2MR97N5C",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91150502MADBMNHF4K|tax",
+"upstream": "entcredit",
+"credit": "91150502MADBMNHF4K",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91500106MAD615N528|tax",
+"upstream": "entcredit",
+"credit": "91500106MAD615N528",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410728MA460G0T03|tax",
+"upstream": "entcredit",
+"credit": "91410728MA460G0T03",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91320115MA1UWLHX66|tax",
+"upstream": "entcredit",
+"credit": "91320115MA1UWLHX66",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410181MA9F96EJ7C|tax",
+"upstream": "entcredit",
+"credit": "91410181MA9F96EJ7C",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91341300MA2MWY286H|tax",
+"upstream": "entcredit",
+"credit": "91341300MA2MWY286H",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91371102MAET9FGJ62|invoice",
+"upstream": "entcredit",
+"credit": "91371102MAET9FGJ62",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91110111MA02MEGF1Y|tax",
+"upstream": "entcredit",
+"credit": "91110111MA02MEGF1Y",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91320113MA1YRB6K99|tax",
+"upstream": "entcredit",
+"credit": "91320113MA1YRB6K99",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91140424MAEFN8185A|tax",
+"upstream": "entcredit",
+"credit": "91140424MAEFN8185A",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91330102MAE85QPM7N|tax",
+"upstream": "entcredit",
+"credit": "91330102MAE85QPM7N",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92340825MA2NQCBH5X|invoice",
+"upstream": "entcredit",
+"credit": "92340825MA2NQCBH5X",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91310115MAK5H66X5W|tax",
+"upstream": "entcredit",
+"credit": "91310115MAK5H66X5W",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370100MAG14KAA9R|tax",
+"upstream": "entcredit",
+"credit": "91370100MAG14KAA9R",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410100MA9FAQ6R13|tax",
+"upstream": "entcredit",
+"credit": "91410100MA9FAQ6R13",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410803MA40K91JX9|tax",
+"upstream": "entcredit",
+"credit": "91410803MA40K91JX9",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91371200056238675R|invoice",
+"upstream": "entcredit",
+"credit": "91371200056238675R",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|913205080566874620|tax",
+"upstream": "entcredit",
+"credit": "913205080566874620",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410182MADBDFY17J|tax",
+"upstream": "entcredit",
+"credit": "91410182MADBDFY17J",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91420117MA7MHWAP8C|invoice",
+"upstream": "entcredit",
+"credit": "91420117MA7MHWAP8C",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91110108MA006N1B9L|tax",
+"upstream": "entcredit",
+"credit": "91110108MA006N1B9L",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91222500MA173D9W6Y|tax",
+"upstream": "entcredit",
+"credit": "91222500MA173D9W6Y",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370700MA3N4XMD1F|invoice",
+"upstream": "entcredit",
+"credit": "91370700MA3N4XMD1F",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91371403MAC54Q7J6L|invoice",
+"upstream": "entcredit",
+"credit": "91371403MAC54Q7J6L",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91371302077974874J|invoice",
+"upstream": "entcredit",
+"credit": "91371302077974874J",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91411025MA9KCJ7X30|tax",
+"upstream": "entcredit",
+"credit": "91411025MA9KCJ7X30",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410505MA4813179B|tax",
+"upstream": "entcredit",
+"credit": "91410505MA4813179B",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91441303MADWUU4N9F|tax",
+"upstream": "entcredit",
+"credit": "91441303MADWUU4N9F",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370104MA3RMMU161|invoice",
+"upstream": "entcredit",
+"credit": "91370104MA3RMMU161",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91110106091892074F|tax",
+"upstream": "entcredit",
+"credit": "91110106091892074F",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91341500MA2T2AQ6X1|invoice",
+"upstream": "entcredit",
+"credit": "91341500MA2T2AQ6X1",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91371521MADBXHM58Q|invoice",
+"upstream": "entcredit",
+"credit": "91371521MADBXHM58Q",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91330106321911163P|tax",
+"upstream": "entcredit",
+"credit": "91330106321911163P",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91610113MAE02F7C7F|tax",
+"upstream": "entcredit",
+"credit": "91610113MAE02F7C7F",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91360108MABTMM7LX4|tax",
+"upstream": "entcredit",
+"credit": "91360108MABTMM7LX4",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410721MA9KWGBD6T|tax",
+"upstream": "entcredit",
+"credit": "91410721MA9KWGBD6T",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410523MAEQR7037B|tax",
+"upstream": "entcredit",
+"credit": "91410523MAEQR7037B",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91320213MA1Y3NL10L|tax",
+"upstream": "entcredit",
+"credit": "91320213MA1Y3NL10L",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91410104MADXLF129T|tax",
+"upstream": "entcredit",
+"credit": "91410104MADXLF129T",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370102MAK3BAM035|tax",
+"upstream": "entcredit",
+"credit": "91370102MAK3BAM035",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91120110MA069LNR69|tax",
+"upstream": "entcredit",
+"credit": "91120110MA069LNR69",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91360122MA7E5CRK8U|tax",
+"upstream": "entcredit",
+"credit": "91360122MA7E5CRK8U",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410307MAD65C0G7X|tax",
+"upstream": "entcredit",
+"credit": "91410307MAD65C0G7X",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91310113MAEP2H9856|tax",
+"upstream": "entcredit",
+"credit": "91310113MAEP2H9856",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370104MAEMKKYG34|invoice",
+"upstream": "entcredit",
+"credit": "91370104MAEMKKYG34",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91420114MABMY7UM2J|tax",
+"upstream": "entcredit",
+"credit": "91420114MABMY7UM2J",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91421000316572291M|tax",
+"upstream": "entcredit",
+"credit": "91421000316572291M",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91530127MAEX0W4568|tax",
+"upstream": "entcredit",
+"credit": "91530127MAEX0W4568",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91210106MABX05HD5L|tax",
+"upstream": "entcredit",
+"credit": "91210106MABX05HD5L",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91320506552466335P|invoice",
+"upstream": "entcredit",
+"credit": "91320506552466335P",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91110108MA00GTW74L|tax",
+"upstream": "entcredit",
+"credit": "91110108MA00GTW74L",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91320102598036103G|tax",
+"upstream": "entcredit",
+"credit": "91320102598036103G",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92370181MA3WCXEX6D|invoice",
+"upstream": "entcredit",
+"credit": "92370181MA3WCXEX6D",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91360802MADNTX9T48|tax",
+"upstream": "entcredit",
+"credit": "91360802MADNTX9T48",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92340705MA2NMNF933|invoice",
+"upstream": "entcredit",
+"credit": "92340705MA2NMNF933",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91130104MA0F82EJ4A|invoice",
+"upstream": "entcredit",
+"credit": "91130104MA0F82EJ4A",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|92410825MA9GYPNAXK|tax",
+"upstream": "entcredit",
+"credit": "92410825MA9GYPNAXK",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370102MA3QLTDG3L|invoice",
+"upstream": "entcredit",
+"credit": "91370102MA3QLTDG3L",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|92371312MA3FFN6E33|invoice",
+"upstream": "entcredit",
+"credit": "92371312MA3FFN6E33",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91341002MA8QGRP99C|invoice",
+"upstream": "entcredit",
+"credit": "91341002MA8QGRP99C",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91320982060167945X|tax",
+"upstream": "entcredit",
+"credit": "91320982060167945X",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91440101MA5CXA67XF|tax",
+"upstream": "entcredit",
+"credit": "91440101MA5CXA67XF",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370105MA949XE3XT|tax",
+"upstream": "entcredit",
+"credit": "91370105MA949XE3XT",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91331002MACL5EXP8F|tax",
+"upstream": "entcredit",
+"credit": "91331002MACL5EXP8F",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91510100MAE436EAXQ|tax",
+"upstream": "entcredit",
+"credit": "91510100MAE436EAXQ",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91130104MA0F82EJ4A|tax",
+"upstream": "entcredit",
+"credit": "91130104MA0F82EJ4A",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|92340300MA2QYUR54W|tax",
+"upstream": "entcredit",
+"credit": "92340300MA2QYUR54W",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91460000MA5TQDJN9W|tax",
+"upstream": "entcredit",
+"credit": "91460000MA5TQDJN9W",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340200325442632T|tax",
+"upstream": "entcredit",
+"credit": "91340200325442632T",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91320508MAK7LF9P70|tax",
+"upstream": "entcredit",
+"credit": "91320508MAK7LF9P70",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91440300MA5HPJN30G|tax",
+"upstream": "entcredit",
+"credit": "91440300MA5HPJN30G",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91610131MAB0W3WN1G|tax",
+"upstream": "entcredit",
+"credit": "91610131MAB0W3WN1G",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340321MAD9BXWJ81|tax",
+"upstream": "entcredit",
+"credit": "91340321MAD9BXWJ81",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91371103MA3QC5W684|invoice",
+"upstream": "entcredit",
+"credit": "91371103MA3QC5W684",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91330502329994493U|tax",
+"upstream": "entcredit",
+"credit": "91330502329994493U",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91371403MAC1666313|tax",
+"upstream": "entcredit",
+"credit": "91371403MAC1666313",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|911407813966984915|invoice",
+"upstream": "entcredit",
+"credit": "911407813966984915",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91520102MABLY8JJXY|tax",
+"upstream": "entcredit",
+"credit": "91520102MABLY8JJXY",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91411627MACXF34T1Q|tax",
+"upstream": "entcredit",
+"credit": "91411627MACXF34T1Q",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91330109MADXGQT623|tax",
+"upstream": "entcredit",
+"credit": "91330109MADXGQT623",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92370909MA7GDKC49U|invoice",
+"upstream": "entcredit",
+"credit": "92370909MA7GDKC49U",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91361002MAD24W8J8L|tax",
+"upstream": "entcredit",
+"credit": "91361002MAD24W8J8L",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91610303MA6XDHC367|tax",
+"upstream": "entcredit",
+"credit": "91610303MA6XDHC367",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92340102MA8NPQT20R|invoice",
+"upstream": "entcredit",
+"credit": "92340102MA8NPQT20R",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91320114MABRD7J37C|tax",
+"upstream": "entcredit",
+"credit": "91320114MABRD7J37C",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91430103MA7BPP4P49|tax",
+"upstream": "entcredit",
+"credit": "91430103MA7BPP4P49",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91371325MAD6G1719J|invoice",
+"upstream": "entcredit",
+"credit": "91371325MAD6G1719J",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91341000MA2N9TM345|invoice",
+"upstream": "entcredit",
+"credit": "91341000MA2N9TM345",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91371302MADDKM677C|tax",
+"upstream": "entcredit",
+"credit": "91371302MADDKM677C",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91341222MA8PH77G1C|tax",
+"upstream": "entcredit",
+"credit": "91341222MA8PH77G1C",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91110105MA01Q81K1H|tax",
+"upstream": "entcredit",
+"credit": "91110105MA01Q81K1H",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340100781084760C|tax",
+"upstream": "entcredit",
+"credit": "91340100781084760C",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91110111MAE9FETD10|tax",
+"upstream": "entcredit",
+"credit": "91110111MAE9FETD10",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340104MA2W0AYDXQ|tax",
+"upstream": "entcredit",
+"credit": "91340104MA2W0AYDXQ",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410100MA445GU69K|tax",
+"upstream": "entcredit",
+"credit": "91410100MA445GU69K",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91341800MAG0RWUF45|invoice",
+"upstream": "entcredit",
+"credit": "91341800MAG0RWUF45",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91360121MAE08KJ360|tax",
+"upstream": "entcredit",
+"credit": "91360121MAE08KJ360",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91411527MADNKBGX2T|tax",
+"upstream": "entcredit",
+"credit": "91411527MADNKBGX2T",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91371312MA3T6UF173|tax",
+"upstream": "entcredit",
+"credit": "91371312MA3T6UF173",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91341700MAE9BYE53M|invoice",
+"upstream": "entcredit",
+"credit": "91341700MAE9BYE53M",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91360121MAC5NGN33L|tax",
+"upstream": "entcredit",
+"credit": "91360121MAC5NGN33L",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91110106596038797J|tax",
+"upstream": "entcredit",
+"credit": "91110106596038797J",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410902MADH9JJR91|tax",
+"upstream": "entcredit",
+"credit": "91410902MADH9JJR91",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410105MA464P659K|tax",
+"upstream": "entcredit",
+"credit": "91410105MA464P659K",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91330522MA2JJKJA9Q|tax",
+"upstream": "entcredit",
+"credit": "91330522MA2JJKJA9Q",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92341100MAE6118E1X|invoice",
+"upstream": "entcredit",
+"credit": "92341100MAE6118E1X",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91130606MA0CGAK50K|tax",
+"upstream": "entcredit",
+"credit": "91130606MA0CGAK50K",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91350205MA31UC2K6G|tax",
+"upstream": "entcredit",
+"credit": "91350205MA31UC2K6G",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91230110MAC1DGAX8R|tax",
+"upstream": "entcredit",
+"credit": "91230110MAC1DGAX8R",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|913705024930382096|tax",
+"upstream": "entcredit",
+"credit": "913705024930382096",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91610112MAEY09R50W|tax",
+"upstream": "entcredit",
+"credit": "91610112MAEY09R50W",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91419001MA9G502913|tax",
+"upstream": "entcredit",
+"credit": "91419001MA9G502913",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91653125MAC4G19XXP|tax",
+"upstream": "entcredit",
+"credit": "91653125MAC4G19XXP",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91341500MAE2Q2B28Y|tax",
+"upstream": "entcredit",
+"credit": "91341500MAE2Q2B28Y",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91421100MA48XJWU2C|tax",
+"upstream": "entcredit",
+"credit": "91421100MA48XJWU2C",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370705MA3WDLG012|invoice",
+"upstream": "entcredit",
+"credit": "91370705MA3WDLG012",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91410103MA463YX84P|tax",
+"upstream": "entcredit",
+"credit": "91410103MA463YX84P",
+"dim": "tax",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2",
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91530100MADCYWLAXH|invoice",
+"upstream": "entcredit",
+"credit": "91530100MADCYWLAXH",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91370600MAK9KL219F|invoice",
+"upstream": "entcredit",
+"credit": "91370600MAK9KL219F",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91370117MABQ3L7M9L|invoice",
+"upstream": "entcredit",
+"credit": "91370117MABQ3L7M9L",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|92341226MA8PBBGX6H|invoice",
+"upstream": "entcredit",
+"credit": "92341226MA8PBBGX6H",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91140621MAK4WKXW8N|invoice",
+"upstream": "entcredit",
+"credit": "91140621MAK4WKXW8N",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91320206081507136J|invoice",
+"upstream": "entcredit",
+"credit": "91320206081507136J",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+],
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2",
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91110113MA01FRCMXG|tax",
+"upstream": "entcredit",
+"credit": "91110113MA01FRCMXG",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91320991MAK0J33205|tax",
+"upstream": "entcredit",
+"credit": "91320991MAK0J33205",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92341323MA2UL3844Y|invoice",
+"upstream": "entcredit",
+"credit": "92341323MA2UL3844Y",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91610304MA6XL6A299|tax",
+"upstream": "entcredit",
+"credit": "91610304MA6XL6A299",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91310116MAD1EDE61G|invoice",
+"upstream": "entcredit",
+"credit": "91310116MAD1EDE61G",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91370781MAK4UY4N73|invoice",
+"upstream": "entcredit",
+"credit": "91370781MAK4UY4N73",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91441900MAK4FKXU9N|tax",
+"upstream": "entcredit",
+"credit": "91441900MAK4FKXU9N",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91140302MADK1M0P9Y|tax",
+"upstream": "entcredit",
+"credit": "91140302MADK1M0P9Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91411302MADUTPPH2E|tax",
+"upstream": "entcredit",
+"credit": "91411302MADUTPPH2E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91330102MAD3D75T26|tax",
+"upstream": "entcredit",
+"credit": "91330102MAD3D75T26",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91330108MACCW3PX1B|tax",
+"upstream": "entcredit",
+"credit": "91330108MACCW3PX1B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91310230MA1HGB1X8H|invoice",
+"upstream": "entcredit",
+"credit": "91310230MA1HGB1X8H",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91371402MA3N32WU4X|invoice",
+"upstream": "entcredit",
+"credit": "91371402MA3N32WU4X",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91330281MA2KQ29B39|invoice",
+"upstream": "entcredit",
+"credit": "91330281MA2KQ29B39",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91320114MA1P8MGC5F|invoice",
+"upstream": "entcredit",
+"credit": "91320114MA1P8MGC5F",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91430921MA4M4P2E1T|tax",
+"upstream": "entcredit",
+"credit": "91430921MA4M4P2E1T",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91341182MA8QP7MQ33|tax",
+"upstream": "entcredit",
+"credit": "91341182MA8QP7MQ33",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91340826MA8PDA651E|invoice",
+"upstream": "entcredit",
+"credit": "91340826MA8PDA651E",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|92340103MAE4J5EX2W|invoice",
+"upstream": "entcredit",
+"credit": "92340103MAE4J5EX2W",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91371322MAEG811A1P|invoice",
+"upstream": "entcredit",
+"credit": "91371322MAEG811A1P",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91410103MA9KLBUN5Q|tax",
+"upstream": "entcredit",
+"credit": "91410103MA9KLBUN5Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91411325MADFRJGM5K|tax",
+"upstream": "entcredit",
+"credit": "91411325MADFRJGM5K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340181MA8P97NJ4U|invoice",
+"upstream": "entcredit",
+"credit": "91340181MA8P97NJ4U",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91130102MAEKLBET1B|invoice",
+"upstream": "entcredit",
+"credit": "91130102MAEKLBET1B",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91420581MAENGMX19J|invoice",
+"upstream": "entcredit",
+"credit": "91420581MAENGMX19J",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91370203MA3TWBLL9D|tax",
+"upstream": "entcredit",
+"credit": "91370203MA3TWBLL9D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91310000MA7DDD6Q95|tax",
+"upstream": "entcredit",
+"credit": "91310000MA7DDD6Q95",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|92371502MA3M47WD3P|invoice",
+"upstream": "entcredit",
+"credit": "92371502MA3M47WD3P",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91370211MA3P57KA0D|tax",
+"upstream": "entcredit",
+"credit": "91370211MA3P57KA0D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91210213MADDA25L6Y|tax",
+"upstream": "entcredit",
+"credit": "91210213MADDA25L6Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340200774971820D|invoice",
+"upstream": "entcredit",
+"credit": "91340200774971820D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91371302MAK7ET283D|invoice",
+"upstream": "entcredit",
+"credit": "91371302MAK7ET283D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|92370481MA3U2CLQX6|invoice",
+"upstream": "entcredit",
+"credit": "92370481MA3U2CLQX6",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91370303MACFU58A2N|invoice",
+"upstream": "entcredit",
+"credit": "91370303MACFU58A2N",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|92371625MA7CKT5515|invoice",
+"upstream": "entcredit",
+"credit": "92371625MA7CKT5515",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91120222MA7KYE1M8R|tax",
+"upstream": "entcredit",
+"credit": "91120222MA7KYE1M8R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370112MABYULHT44|invoice",
+"upstream": "entcredit",
+"credit": "91370112MABYULHT44",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|92410482MAEG36DG36|tax",
+"upstream": "entcredit",
+"credit": "92410482MAEG36DG36",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410302MA3X41DW1F|tax",
+"upstream": "entcredit",
+"credit": "91410302MA3X41DW1F",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91310110558819189C|tax",
+"upstream": "entcredit",
+"credit": "91310110558819189C",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91530102MACGWEEH4M|tax",
+"upstream": "entcredit",
+"credit": "91530102MACGWEEH4M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92340207MA2P7CHR30|invoice",
+"upstream": "entcredit",
+"credit": "92340207MA2P7CHR30",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91330113MADPMKJT6J|tax",
+"upstream": "entcredit",
+"credit": "91330113MADPMKJT6J",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91370600MAE45HM69J|invoice",
+"upstream": "entcredit",
+"credit": "91370600MAE45HM69J",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91340504MAE4B4WQ33|tax",
+"upstream": "entcredit",
+"credit": "91340504MAE4B4WQ33",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91140591MACXR4CDXG|tax",
+"upstream": "entcredit",
+"credit": "91140591MACXR4CDXG",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91370705MA3ETXB70B|invoice",
+"upstream": "entcredit",
+"credit": "91370705MA3ETXB70B",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|92370105MA3U45H2XR|invoice",
+"upstream": "entcredit",
+"credit": "92370105MA3U45H2XR",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91510603MAC9HFWX4H|tax",
+"upstream": "entcredit",
+"credit": "91510603MAC9HFWX4H",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91310230MA1K03CK5U|tax",
+"upstream": "entcredit",
+"credit": "91310230MA1K03CK5U",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410711MADH1JBG49|tax",
+"upstream": "entcredit",
+"credit": "91410711MADH1JBG49",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370305MAD3CLMM6L|tax",
+"upstream": "entcredit",
+"credit": "91370305MAD3CLMM6L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91320305MAK8DJQ41B|tax",
+"upstream": "entcredit",
+"credit": "91320305MAK8DJQ41B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410183MA9F0H5800|tax",
+"upstream": "entcredit",
+"credit": "91410183MA9F0H5800",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|9134012256639204XD|tax",
+"upstream": "entcredit",
+"credit": "9134012256639204XD",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92340104MADE417R3W|invoice",
+"upstream": "entcredit",
+"credit": "92340104MADE417R3W",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91420111MAK7YD4064|tax",
+"upstream": "entcredit",
+"credit": "91420111MAK7YD4064",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91410324MAG0XMLT7B|tax",
+"upstream": "entcredit",
+"credit": "91410324MAG0XMLT7B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|92340104MA2UWMGG5L|invoice",
+"upstream": "entcredit",
+"credit": "92340104MA2UWMGG5L",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91410711MA9KL8PK0B|tax",
+"upstream": "entcredit",
+"credit": "91410711MA9KL8PK0B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|914301027923676861|tax",
+"upstream": "entcredit",
+"credit": "914301027923676861",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91110105MAK59ND37Q|tax",
+"upstream": "entcredit",
+"credit": "91110105MAK59ND37Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91371521MAEMTACM40|invoice",
+"upstream": "entcredit",
+"credit": "91371521MAEMTACM40",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91340100MA2ULNG31D|invoice",
+"upstream": "entcredit",
+"credit": "91340100MA2ULNG31D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91140105MA0M3R7CXB|tax",
+"upstream": "entcredit",
+"credit": "91140105MA0M3R7CXB",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91530325MABLJE8M9J|tax",
+"upstream": "entcredit",
+"credit": "91530325MABLJE8M9J",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91140109MA0KLYN5XM|tax",
+"upstream": "entcredit",
+"credit": "91140109MA0KLYN5XM",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91411728MADDWTA69A|tax",
+"upstream": "entcredit",
+"credit": "91411728MADDWTA69A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91370112MA3WC34HXQ|invoice",
+"upstream": "entcredit",
+"credit": "91370112MA3WC34HXQ",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91371521MA7EBEQW83|invoice",
+"upstream": "entcredit",
+"credit": "91371521MA7EBEQW83",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91370302MACUD6MH23|invoice",
+"upstream": "entcredit",
+"credit": "91370302MACUD6MH23",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91371725MA3MLK079F|invoice",
+"upstream": "entcredit",
+"credit": "91371725MA3MLK079F",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91320583MA7HMPCG0Q|tax",
+"upstream": "entcredit",
+"credit": "91320583MA7HMPCG0Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91410103MAER8KXPXT|tax",
+"upstream": "entcredit",
+"credit": "91410103MAER8KXPXT",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92341623MA2W7N6B91|invoice",
+"upstream": "entcredit",
+"credit": "92341623MA2W7N6B91",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91370103MA3REA5H11|invoice",
+"upstream": "entcredit",
+"credit": "91370103MA3REA5H11",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91320505MA1QEGRUXW|tax",
+"upstream": "entcredit",
+"credit": "91320505MA1QEGRUXW",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91110108MAEW48JKXM|tax",
+"upstream": "entcredit",
+"credit": "91110108MAEW48JKXM",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91140107MA0LDEN28D|tax",
+"upstream": "entcredit",
+"credit": "91140107MA0LDEN28D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91120105MACFUB1Y09|tax",
+"upstream": "entcredit",
+"credit": "91120105MACFUB1Y09",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91340104MA8NTG3DXR|invoice",
+"upstream": "entcredit",
+"credit": "91340104MA8NTG3DXR",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91320106MAEDQCFB4L|tax",
+"upstream": "entcredit",
+"credit": "91320106MAEDQCFB4L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91341622MA8PD61596|tax",
+"upstream": "entcredit",
+"credit": "91341622MA8PD61596",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91371312MACRWJ8J68|tax",
+"upstream": "entcredit",
+"credit": "91371312MACRWJ8J68",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340822MA8NK79242|invoice",
+"upstream": "entcredit",
+"credit": "91340822MA8NK79242",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91371424MA7GTWMT7H|invoice",
+"upstream": "entcredit",
+"credit": "91371424MA7GTWMT7H",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91410328MAEP5CPG5R|tax",
+"upstream": "entcredit",
+"credit": "91410328MAEP5CPG5R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91310116583496123F|invoice",
+"upstream": "entcredit",
+"credit": "91310116583496123F",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91410104MAK4PEWC3G|tax",
+"upstream": "entcredit",
+"credit": "91410104MAK4PEWC3G",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370102579376006H|invoice",
+"upstream": "entcredit",
+"credit": "91370102579376006H",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91410181MACEQC68X8|tax",
+"upstream": "entcredit",
+"credit": "91410181MACEQC68X8",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91450105MAA7DLM77W|tax",
+"upstream": "entcredit",
+"credit": "91450105MAA7DLM77W",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92371602MACN1TXK8L|invoice",
+"upstream": "entcredit",
+"credit": "92371602MACN1TXK8L",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91371302MAE9G5J96G|tax",
+"upstream": "entcredit",
+"credit": "91371302MAE9G5J96G",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91371121MA3D90EF5Y|invoice",
+"upstream": "entcredit",
+"credit": "91371121MA3D90EF5Y",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91110106MAE7TMPA8W|tax",
+"upstream": "entcredit",
+"credit": "91110106MAE7TMPA8W",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91130682MAEWR59C8E|tax",
+"upstream": "entcredit",
+"credit": "91130682MAEWR59C8E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340100MAD9PA4Y6T|invoice",
+"upstream": "entcredit",
+"credit": "91340100MAD9PA4Y6T",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|92370481MA3KYQMH68|invoice",
+"upstream": "entcredit",
+"credit": "92370481MA3KYQMH68",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91340111MAEEUYQW94|invoice",
+"upstream": "entcredit",
+"credit": "91340111MAEEUYQW94",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91411381MA3X5K4U5B|tax",
+"upstream": "entcredit",
+"credit": "91411381MA3X5K4U5B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91500108MAK4J6M15F|tax",
+"upstream": "entcredit",
+"credit": "91500108MAK4J6M15F",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91411121MA461BCA3U|tax",
+"upstream": "entcredit",
+"credit": "91411121MA461BCA3U",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91440114304400759B|tax",
+"upstream": "entcredit",
+"credit": "91440114304400759B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|913701040840082015|invoice",
+"upstream": "entcredit",
+"credit": "913701040840082015",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91371302MAC2M4ER1U|invoice",
+"upstream": "entcredit",
+"credit": "91371302MAC2M4ER1U",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91340100MAEAHUA77D|invoice",
+"upstream": "entcredit",
+"credit": "91340100MAEAHUA77D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91361102MAE3PFAT3U|invoice",
+"upstream": "entcredit",
+"credit": "91361102MAE3PFAT3U",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91320507MA25RUJJ0Q|invoice",
+"upstream": "entcredit",
+"credit": "91320507MA25RUJJ0Q",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91371425MA3T9NH76L|invoice",
+"upstream": "entcredit",
+"credit": "91371425MA3T9NH76L",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91320508MAEXUPYU62|tax",
+"upstream": "entcredit",
+"credit": "91320508MAEXUPYU62",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91140105MA0GWB6R58|tax",
+"upstream": "entcredit",
+"credit": "91140105MA0GWB6R58",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91320507MADJDCCQ09|tax",
+"upstream": "entcredit",
+"credit": "91320507MADJDCCQ09",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91320104MA2012F903|tax",
+"upstream": "entcredit",
+"credit": "91320104MA2012F903",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91320115302624716J|tax",
+"upstream": "entcredit",
+"credit": "91320115302624716J",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340111MA8QAL9981|tax",
+"upstream": "entcredit",
+"credit": "91340111MA8QAL9981",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91530102MA7MHDWT9F|tax",
+"upstream": "entcredit",
+"credit": "91530102MA7MHDWT9F",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|92370681MA94WQ1413|invoice",
+"upstream": "entcredit",
+"credit": "92370681MA94WQ1413",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91340100MAD68M4PXE|invoice",
+"upstream": "entcredit",
+"credit": "91340100MAD68M4PXE",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91330783MAD226U274|tax",
+"upstream": "entcredit",
+"credit": "91330783MAD226U274",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91530326MACX6CUN3D|tax",
+"upstream": "entcredit",
+"credit": "91530326MACX6CUN3D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91110115MA020RX616|tax",
+"upstream": "entcredit",
+"credit": "91110115MA020RX616",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91430111MA7NC2BX10|tax",
+"upstream": "entcredit",
+"credit": "91430111MA7NC2BX10",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91340100MA2NCMXA95|tax",
+"upstream": "entcredit",
+"credit": "91340100MA2NCMXA95",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91330600MA288R398W|tax",
+"upstream": "entcredit",
+"credit": "91330600MA288R398W",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91440300MAEX954Y9E|tax",
+"upstream": "entcredit",
+"credit": "91440300MAEX954Y9E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91340800591433640G|tax",
+"upstream": "entcredit",
+"credit": "91340800591433640G",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91340100MADETF3M1L|tax",
+"upstream": "entcredit",
+"credit": "91340100MADETF3M1L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91460000MADJR6LEX0|tax",
+"upstream": "entcredit",
+"credit": "91460000MADJR6LEX0",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|92371302MA7FW45B0W|invoice",
+"upstream": "entcredit",
+"credit": "92371302MA7FW45B0W",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91429004MACEE4KF92|tax",
+"upstream": "entcredit",
+"credit": "91429004MACEE4KF92",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92340400MA2PHGLM3C|invoice",
+"upstream": "entcredit",
+"credit": "92340400MA2PHGLM3C",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91371425MADJRGYK9X|invoice",
+"upstream": "entcredit",
+"credit": "91371425MADJRGYK9X",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91433101MAEWCQ5C8H|tax",
+"upstream": "entcredit",
+"credit": "91433101MAEWCQ5C8H",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91410103MA9H3CBR9U|tax",
+"upstream": "entcredit",
+"credit": "91410103MA9H3CBR9U",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370214MA3EUT964L|tax",
+"upstream": "entcredit",
+"credit": "91370214MA3EUT964L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92341302MA8NFM290U|invoice",
+"upstream": "entcredit",
+"credit": "92341302MA8NFM290U",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|92430105MA4PRKTJ99|tax",
+"upstream": "entcredit",
+"credit": "92430105MA4PRKTJ99",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91371081MA7DNFTG3F|invoice",
+"upstream": "entcredit",
+"credit": "91371081MA7DNFTG3F",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91530102MA6KKL985B|tax",
+"upstream": "entcredit",
+"credit": "91530102MA6KKL985B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410308MACQNHKF4X|tax",
+"upstream": "entcredit",
+"credit": "91410308MACQNHKF4X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91371102MAEK15GYXD|tax",
+"upstream": "entcredit",
+"credit": "91371102MAEK15GYXD",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91140100MA0HEKXDXG|tax",
+"upstream": "entcredit",
+"credit": "91140100MA0HEKXDXG",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91430422MABQJRAM12|tax",
+"upstream": "entcredit",
+"credit": "91430422MABQJRAM12",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370102MACLQ7455F|invoice",
+"upstream": "entcredit",
+"credit": "91370102MACLQ7455F",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91330108MAD59PJC1Y|tax",
+"upstream": "entcredit",
+"credit": "91330108MAD59PJC1Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91341202MA8PJGAL7X|tax",
+"upstream": "entcredit",
+"credit": "91341202MA8PJGAL7X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91370102MA7JFHGL9X|invoice",
+"upstream": "entcredit",
+"credit": "91370102MA7JFHGL9X",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91210103MAE76C9U7B|tax",
+"upstream": "entcredit",
+"credit": "91210103MAE76C9U7B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410105MA9M3DK028|tax",
+"upstream": "entcredit",
+"credit": "91410105MA9M3DK028",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92370125MA3PWMH16K|invoice",
+"upstream": "entcredit",
+"credit": "92370125MA3PWMH16K",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91320191MAEWXNNG11|tax",
+"upstream": "entcredit",
+"credit": "91320191MAEWXNNG11",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91511421MA62X78XXD|tax",
+"upstream": "entcredit",
+"credit": "91511421MA62X78XXD",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91341522MA2WGE62X1|invoice",
+"upstream": "entcredit",
+"credit": "91341522MA2WGE62X1",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91310115MA1H835C6W|invoice",
+"upstream": "entcredit",
+"credit": "91310115MA1H835C6W",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|92371102MA3U4PMU53|invoice",
+"upstream": "entcredit",
+"credit": "92371102MA3U4PMU53",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91222401MACQDX6J71|tax",
+"upstream": "entcredit",
+"credit": "91222401MACQDX6J71",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340111MA2TAM7148|invoice",
+"upstream": "entcredit",
+"credit": "91340111MA2TAM7148",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91360803MA37R9342T|tax",
+"upstream": "entcredit",
+"credit": "91360803MA37R9342T",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91360121MA3ABY0C23|tax",
+"upstream": "entcredit",
+"credit": "91360121MA3ABY0C23",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91360125MACQGGJK8A|tax",
+"upstream": "entcredit",
+"credit": "91360125MACQGGJK8A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91371721MACCLD050W|invoice",
+"upstream": "entcredit",
+"credit": "91371721MACCLD050W",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91110113055600353N|tax",
+"upstream": "entcredit",
+"credit": "91110113055600353N",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91621002MAEEDYC137|tax",
+"upstream": "entcredit",
+"credit": "91621002MAEEDYC137",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91330105MACYMY0G3H|tax",
+"upstream": "entcredit",
+"credit": "91330105MACYMY0G3H",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370685MA3MAMJ328|tax",
+"upstream": "entcredit",
+"credit": "91370685MA3MAMJ328",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91370105MA3Q7HYJ2R|invoice",
+"upstream": "entcredit",
+"credit": "91370105MA3Q7HYJ2R",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91411702MAEWDXF32N|invoice",
+"upstream": "entcredit",
+"credit": "91411702MAEWDXF32N",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91320105MAD3NU9B8D|tax",
+"upstream": "entcredit",
+"credit": "91320105MAD3NU9B8D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|914501070737727225|tax",
+"upstream": "entcredit",
+"credit": "914501070737727225",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91140105MA0M3X492G|tax",
+"upstream": "entcredit",
+"credit": "91140105MA0M3X492G",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91340111MA8NHAUP8E|tax",
+"upstream": "entcredit",
+"credit": "91340111MA8NHAUP8E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91371621MADCHQRM7A|invoice",
+"upstream": "entcredit",
+"credit": "91371621MADCHQRM7A",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91411600MACJFQJ42U|tax",
+"upstream": "entcredit",
+"credit": "91411600MACJFQJ42U",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92371102MADFH1LB3B|invoice",
+"upstream": "entcredit",
+"credit": "92371102MADFH1LB3B",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91341103MA2RFF3B7P|invoice",
+"upstream": "entcredit",
+"credit": "91341103MA2RFF3B7P",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91410182MA9LH60W34|tax",
+"upstream": "entcredit",
+"credit": "91410182MA9LH60W34",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370502MA3RCMAF9A|tax",
+"upstream": "entcredit",
+"credit": "91370502MA3RCMAF9A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91110111MAE5GPBP76|tax",
+"upstream": "entcredit",
+"credit": "91110111MAE5GPBP76",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91321181MA21WPB550|tax",
+"upstream": "entcredit",
+"credit": "91321181MA21WPB550",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91371502MA3RLU2G7D|invoice",
+"upstream": "entcredit",
+"credit": "91371502MA3RLU2G7D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91320703MAEJDE631R|tax",
+"upstream": "entcredit",
+"credit": "91320703MAEJDE631R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91350681MA32895E96|invoice",
+"upstream": "entcredit",
+"credit": "91350681MA32895E96",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91371400MA3M71TN6U|invoice",
+"upstream": "entcredit",
+"credit": "91371400MA3M71TN6U",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91370102MA3M4MW91L|invoice",
+"upstream": "entcredit",
+"credit": "91370102MA3M4MW91L",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91320302MAETJ5H98B|tax",
+"upstream": "entcredit",
+"credit": "91320302MAETJ5H98B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91371602MA3NNBYR6U|invoice",
+"upstream": "entcredit",
+"credit": "91371602MA3NNBYR6U",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91410183MAEF54BB49|tax",
+"upstream": "entcredit",
+"credit": "91410183MAEF54BB49",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91371502MA3MABED2K|tax",
+"upstream": "entcredit",
+"credit": "91371502MA3MABED2K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91360121MA39RTJY65|tax",
+"upstream": "entcredit",
+"credit": "91360121MA39RTJY65",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340100MA8N9ANN3M|tax",
+"upstream": "entcredit",
+"credit": "91340100MA8N9ANN3M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370705344516596C|invoice",
+"upstream": "entcredit",
+"credit": "91370705344516596C",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|92370103MABXT33Q5C|invoice",
+"upstream": "entcredit",
+"credit": "92370103MABXT33Q5C",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91341825MA8N6CL60F|invoice",
+"upstream": "entcredit",
+"credit": "91341825MA8N6CL60F",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91321391MAEQALN55W|tax",
+"upstream": "entcredit",
+"credit": "91321391MAEQALN55W",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91341321MA8NB1RW92|invoice",
+"upstream": "entcredit",
+"credit": "91341321MA8NB1RW92",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91330109MAET23N55Y|tax",
+"upstream": "entcredit",
+"credit": "91330109MAET23N55Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91110117MA7G6AWY67|tax",
+"upstream": "entcredit",
+"credit": "91110117MA7G6AWY67",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|92341525MAEERRK62Y|invoice",
+"upstream": "entcredit",
+"credit": "92341525MAEERRK62Y",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91532601MA7LUA3U4C|tax",
+"upstream": "entcredit",
+"credit": "91532601MA7LUA3U4C",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370102MA3QW7LN11|invoice",
+"upstream": "entcredit",
+"credit": "91370102MA3QW7LN11",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91140622MA0LGNDD5X|tax",
+"upstream": "entcredit",
+"credit": "91140622MA0LGNDD5X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|92371425MAEX441H0H|invoice",
+"upstream": "entcredit",
+"credit": "92371425MAEX441H0H",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91330100MA2J1GD261|tax",
+"upstream": "entcredit",
+"credit": "91330100MA2J1GD261",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91610103MA6WL4J706|tax",
+"upstream": "entcredit",
+"credit": "91610103MA6WL4J706",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91371100MA94CMKG0C|invoice",
+"upstream": "entcredit",
+"credit": "91371100MA94CMKG0C",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91530112MAELHCMJ2T|tax",
+"upstream": "entcredit",
+"credit": "91530112MAELHCMJ2T",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91330483MA2CXWEY6A|tax",
+"upstream": "entcredit",
+"credit": "91330483MA2CXWEY6A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92371424MA3F5RJ082|invoice",
+"upstream": "entcredit",
+"credit": "92371424MA3F5RJ082",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91150221MA0MY3QW8U|tax",
+"upstream": "entcredit",
+"credit": "91150221MA0MY3QW8U",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410103MAK0PY3J70|invoice",
+"upstream": "entcredit",
+"credit": "91410103MAK0PY3J70",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91341000MA2MRAMC31|invoice",
+"upstream": "entcredit",
+"credit": "91341000MA2MRAMC31",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91530111MADCKDQB1Y|tax",
+"upstream": "entcredit",
+"credit": "91530111MADCKDQB1Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91150403MA0RR9R56T|tax",
+"upstream": "entcredit",
+"credit": "91150403MA0RR9R56T",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370684MA3CJWBUXP|invoice",
+"upstream": "entcredit",
+"credit": "91370684MA3CJWBUXP",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91110400MAC2UY082X|tax",
+"upstream": "entcredit",
+"credit": "91110400MAC2UY082X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1"
+]
+},
+{
+"qkey": "entcredit|91140100MA0HHDYA91|tax",
+"upstream": "entcredit",
+"credit": "91140100MA0HHDYA91",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91410823MA45KWUR75|tax",
+"upstream": "entcredit",
+"credit": "91410823MA45KWUR75",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91110108MAD93PWN5L|tax",
+"upstream": "entcredit",
+"credit": "91110108MAD93PWN5L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370481MAENREPB8K|invoice",
+"upstream": "entcredit",
+"credit": "91370481MAENREPB8K",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91370100MA3N44YN05|tax",
+"upstream": "entcredit",
+"credit": "91370100MA3N44YN05",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91610902MAB310BM5M|invoice",
+"upstream": "entcredit",
+"credit": "91610902MAB310BM5M",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91360301MACKUFQM7X|tax",
+"upstream": "entcredit",
+"credit": "91360301MACKUFQM7X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91140411MA0GU55J6G|tax",
+"upstream": "entcredit",
+"credit": "91140411MA0GU55J6G",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92341500MA2NB1HW4R|invoice",
+"upstream": "entcredit",
+"credit": "92341500MA2NB1HW4R",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|911101066883539549|tax",
+"upstream": "entcredit",
+"credit": "911101066883539549",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92370681MA3N382N2J|invoice",
+"upstream": "entcredit",
+"credit": "92370681MA3N382N2J",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91341202MA8N6Q145E|invoice",
+"upstream": "entcredit",
+"credit": "91341202MA8N6Q145E",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91110108MA7N96QT9E|tax",
+"upstream": "entcredit",
+"credit": "91110108MA7N96QT9E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91341623MA2U3L3U6A|tax",
+"upstream": "entcredit",
+"credit": "91341623MA2U3L3U6A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91341600MA8NP3A00H|invoice",
+"upstream": "entcredit",
+"credit": "91341600MA8NP3A00H",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91110113MABN7DNG9U|tax",
+"upstream": "entcredit",
+"credit": "91110113MABN7DNG9U",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91341721MA8N8CMM91|invoice",
+"upstream": "entcredit",
+"credit": "91341721MA8N8CMM91",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91320214MAE5C58B7R|tax",
+"upstream": "entcredit",
+"credit": "91320214MAE5C58B7R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91340621MA2W62JRX3|invoice",
+"upstream": "entcredit",
+"credit": "91340621MA2W62JRX3",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91370104MAD4W7G347|invoice",
+"upstream": "entcredit",
+"credit": "91370104MAD4W7G347",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91360111MA3975K77K|tax",
+"upstream": "entcredit",
+"credit": "91360111MA3975K77K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91330523MAE3J7J415|tax",
+"upstream": "entcredit",
+"credit": "91330523MAE3J7J415",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370104MA3NJ18T8M|invoice",
+"upstream": "entcredit",
+"credit": "91370104MA3NJ18T8M",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91371702MAEXU4K8XJ|invoice",
+"upstream": "entcredit",
+"credit": "91371702MAEXU4K8XJ",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|92370105MA3EPNPP8W|invoice",
+"upstream": "entcredit",
+"credit": "92370105MA3EPNPP8W",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|92410326MA9K67N34X|invoice",
+"upstream": "entcredit",
+"credit": "92410326MA9K67N34X",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91371502MACAEYEQ98|invoice",
+"upstream": "entcredit",
+"credit": "91371502MACAEYEQ98",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91130682MA0DM2GB6W|invoice",
+"upstream": "entcredit",
+"credit": "91130682MA0DM2GB6W",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91411523MAK2WKEY1L|tax",
+"upstream": "entcredit",
+"credit": "91411523MAK2WKEY1L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91341102MA2W7ERU3W|tax",
+"upstream": "entcredit",
+"credit": "91341102MA2W7ERU3W",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410402MAELYYLN1X|tax",
+"upstream": "entcredit",
+"credit": "91410402MAELYYLN1X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91410100MA40XY197H|tax",
+"upstream": "entcredit",
+"credit": "91410100MA40XY197H",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91330102MA28TNWY0G|tax",
+"upstream": "entcredit",
+"credit": "91330102MA28TNWY0G",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91421381MA49Q8X06T|tax",
+"upstream": "entcredit",
+"credit": "91421381MA49Q8X06T",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91120116MAC26W182D|tax",
+"upstream": "entcredit",
+"credit": "91120116MAC26W182D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91340800MA8N8LKQ3B|invoice",
+"upstream": "entcredit",
+"credit": "91340800MA8N8LKQ3B",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91410182MA46425257|tax",
+"upstream": "entcredit",
+"credit": "91410182MA46425257",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91140824MAE08MMQ98|tax",
+"upstream": "entcredit",
+"credit": "91140824MAE08MMQ98",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91450100MA5QH0563P|tax",
+"upstream": "entcredit",
+"credit": "91450100MA5QH0563P",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370900MA9466B22Q|invoice",
+"upstream": "entcredit",
+"credit": "91370900MA9466B22Q",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91530181MA7C9PBK1F|tax",
+"upstream": "entcredit",
+"credit": "91530181MA7C9PBK1F",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91310113MAE58F8R3D|tax",
+"upstream": "entcredit",
+"credit": "91310113MAE58F8R3D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91330411MAD2GHG75P|tax",
+"upstream": "entcredit",
+"credit": "91330411MAD2GHG75P",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91340111MA2UPKQR5D|invoice",
+"upstream": "entcredit",
+"credit": "91340111MA2UPKQR5D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91420503MAC9MGH761|tax",
+"upstream": "entcredit",
+"credit": "91420503MAC9MGH761",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91370602699669962D|invoice",
+"upstream": "entcredit",
+"credit": "91370602699669962D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91340100MA8NKQ9P4J|tax",
+"upstream": "entcredit",
+"credit": "91340100MA8NKQ9P4J",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|92371526MACTETQ30H|invoice",
+"upstream": "entcredit",
+"credit": "92371526MACTETQ30H",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91341102MA2NDXMN03|tax",
+"upstream": "entcredit",
+"credit": "91341102MA2NDXMN03",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91321003MAECUFKD1A|tax",
+"upstream": "entcredit",
+"credit": "91321003MAECUFKD1A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax1,tax2"
+]
+},
+{
+"qkey": "entcredit|91140105MAE0E11E20|invoice",
+"upstream": "entcredit",
+"credit": "91140105MAE0E11E20",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91340104MA2NXJQ5X9|invoice",
+"upstream": "entcredit",
+"credit": "91340104MA2NXJQ5X9",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91341500MA2W8WMC9X|invoice",
+"upstream": "entcredit",
+"credit": "91341500MA2W8WMC9X",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91320111MA21M2K55N|tax",
+"upstream": "entcredit",
+"credit": "91320111MA21M2K55N",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|92370687MAC880D374|invoice",
+"upstream": "entcredit",
+"credit": "92370687MAC880D374",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice2"
+]
+},
+{
+"qkey": "entcredit|91410800MA474DB24K|tax",
+"upstream": "entcredit",
+"credit": "91410800MA474DB24K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91330102MAK4T4XH55|invoice",
+"upstream": "entcredit",
+"credit": "91330102MAK4T4XH55",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"invoice1,invoice2"
+]
+},
+{
+"qkey": "entcredit|91441802MAK99HRM9H|tax",
+"upstream": "entcredit",
+"credit": "91441802MAK99HRM9H",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91420583MAD5HBT37P|tax",
+"upstream": "entcredit",
+"credit": "91420583MAD5HBT37P",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "entcredit|91370502688264951D|tax",
+"upstream": "entcredit",
+"credit": "91370502688264951D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"tax2"
+]
+},
+{
+"qkey": "salesdata|91440300MA5F0M1Y40|invoice",
+"upstream": "salesdata",
+"credit": "91440300MA5F0M1Y40",
+"dim": "invoice",
+"windows": [
+[
+202409,
+202609
+]
+],
+"subs": [
+"sales"
+]
+},
+{
+"qkey": "salesdata|91440113618415363D|invoice",
+"upstream": "salesdata",
+"credit": "91440113618415363D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sales"
+]
+},
+{
+"qkey": "ctax|91370212MA3MK6PE1R|tax",
+"upstream": "ctax",
+"credit": "91370212MA3MK6PE1R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91110106MAEDTK162A|tax",
+"upstream": "ctax",
+"credit": "91110106MAEDTK162A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91632801MA7590RB5J|tax",
+"upstream": "ctax",
+"credit": "91632801MA7590RB5J",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370112307230222K|tax",
+"upstream": "ctax",
+"credit": "91370112307230222K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91371402MAC5XLC90B|tax",
+"upstream": "ctax",
+"credit": "91371402MAC5XLC90B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610102MAEGC3X199|tax",
+"upstream": "ctax",
+"credit": "91610102MAEGC3X199",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350303MA31Q43D1P|tax",
+"upstream": "ctax",
+"credit": "91350303MA31Q43D1P",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91110117MA7M7P5C6L|tax",
+"upstream": "ctax",
+"credit": "91110117MA7M7P5C6L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370102MA949YGB0G|invoice",
+"upstream": "ctax",
+"credit": "91370102MA949YGB0G",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91630102MABJE6920W|tax",
+"upstream": "ctax",
+"credit": "91630102MABJE6920W",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91522725MAAJU3JC3K|tax",
+"upstream": "ctax",
+"credit": "91522725MAAJU3JC3K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91441322MADJGXAY7K|tax",
+"upstream": "ctax",
+"credit": "91441322MADJGXAY7K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91110108306663907T|tax",
+"upstream": "ctax",
+"credit": "91110108306663907T",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610102MAEGQ5PU77|tax",
+"upstream": "ctax",
+"credit": "91610102MAEGQ5PU77",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91340102MA8NBHJN8D|tax",
+"upstream": "ctax",
+"credit": "91340102MA8NBHJN8D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91441900MABXB0TJ7W|invoice",
+"upstream": "ctax",
+"credit": "91441900MABXB0TJ7W",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370612MA3U352A4Q|invoice",
+"upstream": "ctax",
+"credit": "91370612MA3U352A4Q",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|92441900MAE1GUTA9U|invoice",
+"upstream": "ctax",
+"credit": "92441900MAE1GUTA9U",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|911101055906628128|tax",
+"upstream": "ctax",
+"credit": "911101055906628128",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91520302MABP4N4693|tax",
+"upstream": "ctax",
+"credit": "91520302MABP4N4693",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370220MA3Q0DKN7P|invoice",
+"upstream": "ctax",
+"credit": "91370220MA3Q0DKN7P",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610131MA6X4MYE0L|tax",
+"upstream": "ctax",
+"credit": "91610131MA6X4MYE0L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610116MA7FHFB908|invoice",
+"upstream": "ctax",
+"credit": "91610116MA7FHFB908",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91632801MABJ96UU67|tax",
+"upstream": "ctax",
+"credit": "91632801MABJ96UU67",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370900334613130R|tax",
+"upstream": "ctax",
+"credit": "91370900334613130R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370222MACX941A7B|tax",
+"upstream": "ctax",
+"credit": "91370222MACX941A7B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91210211MA10A5K55Q|invoice",
+"upstream": "ctax",
+"credit": "91210211MA10A5K55Q",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350206MA31XNAH9B|invoice",
+"upstream": "ctax",
+"credit": "91350206MA31XNAH9B",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370112MA3REAH178|tax",
+"upstream": "ctax",
+"credit": "91370112MA3REAH178",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350302MA357G4R55|invoice",
+"upstream": "ctax",
+"credit": "91350302MA357G4R55",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610136MAB0LBRDX1|invoice",
+"upstream": "ctax",
+"credit": "91610136MAB0LBRDX1",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610131MAB0HL0P18|tax",
+"upstream": "ctax",
+"credit": "91610131MAB0HL0P18",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440106589500701K|tax",
+"upstream": "ctax",
+"credit": "91440106589500701K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370305MA3CFW1W02|invoice",
+"upstream": "ctax",
+"credit": "91370305MA3CFW1W02",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350213MA34QPRB8K|tax",
+"upstream": "ctax",
+"credit": "91350213MA34QPRB8K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91441400746256360B|tax",
+"upstream": "ctax",
+"credit": "91441400746256360B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91441900MA4UP6805M|tax",
+"upstream": "ctax",
+"credit": "91441900MA4UP6805M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370724MAENN5CK2G|tax",
+"upstream": "ctax",
+"credit": "91370724MAENN5CK2G",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440106MAC4MGT942|tax",
+"upstream": "ctax",
+"credit": "91440106MAC4MGT942",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91611105MAK8B5901N|tax",
+"upstream": "ctax",
+"credit": "91611105MAK8B5901N",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350602MABTLBP90Q|tax",
+"upstream": "ctax",
+"credit": "91350602MABTLBP90Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440607MAE2Y6K62X|tax",
+"upstream": "ctax",
+"credit": "91440607MAE2Y6K62X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610136MAB0KXLBXW|tax",
+"upstream": "ctax",
+"credit": "91610136MAB0KXLBXW",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440300MA5FTUR367|tax",
+"upstream": "ctax",
+"credit": "91440300MA5FTUR367",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91441300092386712R|invoice",
+"upstream": "ctax",
+"credit": "91441300092386712R",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610824MA70A96A97|tax",
+"upstream": "ctax",
+"credit": "91610824MA70A96A97",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370100MAEKKX1H50|tax",
+"upstream": "ctax",
+"credit": "91370100MAEKKX1H50",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91371502MACGR8BH1W|tax",
+"upstream": "ctax",
+"credit": "91371502MACGR8BH1W",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91210204064441251J|invoice",
+"upstream": "ctax",
+"credit": "91210204064441251J",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440101MA9XRBTK9C|tax",
+"upstream": "ctax",
+"credit": "91440101MA9XRBTK9C",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440114MAK0CL946D|invoice",
+"upstream": "ctax",
+"credit": "91440114MAK0CL946D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440606MA53RUXF07|tax",
+"upstream": "ctax",
+"credit": "91440606MA53RUXF07",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91520115MAC0XL09XU|tax",
+"upstream": "ctax",
+"credit": "91520115MAC0XL09XU",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370213MADYKX1QXP|tax",
+"upstream": "ctax",
+"credit": "91370213MADYKX1QXP",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610111MA6TXLUTXD|tax",
+"upstream": "ctax",
+"credit": "91610111MA6TXLUTXD",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91210242MACC801184|invoice",
+"upstream": "ctax",
+"credit": "91210242MACC801184",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610131MA6UX7TE3E|tax",
+"upstream": "ctax",
+"credit": "91610131MA6UX7TE3E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91630105MABJA2GT36|tax",
+"upstream": "ctax",
+"credit": "91630105MABJA2GT36",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91210211MA0XMDDF8X|tax",
+"upstream": "ctax",
+"credit": "91210211MA0XMDDF8X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440111MAEFK5MA0B|tax",
+"upstream": "ctax",
+"credit": "91440111MAEFK5MA0B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610131MAC8KEG64R|invoice",
+"upstream": "ctax",
+"credit": "91610131MAC8KEG64R",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610700MA6YN307XT|tax",
+"upstream": "ctax",
+"credit": "91610700MA6YN307XT",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91110115MA01RYCR5Q|tax",
+"upstream": "ctax",
+"credit": "91110115MA01RYCR5Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|92441402MAD5W6LC85|tax",
+"upstream": "ctax",
+"credit": "92441402MAD5W6LC85",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350203MA8UG7K10P|tax",
+"upstream": "ctax",
+"credit": "91350203MA8UG7K10P",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370602MABQLG99XA|tax",
+"upstream": "ctax",
+"credit": "91370602MABQLG99XA",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91371302MA3Q2U8R0T|tax",
+"upstream": "ctax",
+"credit": "91371302MA3Q2U8R0T",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440106MAEWB8F09W|tax",
+"upstream": "ctax",
+"credit": "91440106MAEWB8F09W",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|914401013275402361|invoice",
+"upstream": "ctax",
+"credit": "914401013275402361",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440703MACLLF1XX4|tax",
+"upstream": "ctax",
+"credit": "91440703MACLLF1XX4",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610800MA70CTXG55|tax",
+"upstream": "ctax",
+"credit": "91610800MA70CTXG55",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350200MA34A95152|tax",
+"upstream": "ctax",
+"credit": "91350200MA34A95152",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370502MA3P6YLG55|tax",
+"upstream": "ctax",
+"credit": "91370502MA3P6YLG55",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91630203MADCW9JG27|tax",
+"upstream": "ctax",
+"credit": "91630203MADCW9JG27",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91120223MA06EXQ202|tax",
+"upstream": "ctax",
+"credit": "91120223MA06EXQ202",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370826349257634M|tax",
+"upstream": "ctax",
+"credit": "91370826349257634M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350102MA34MDP43Y|tax",
+"upstream": "ctax",
+"credit": "91350102MA34MDP43Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350302MAEJ6Y2M82|tax",
+"upstream": "ctax",
+"credit": "91350302MAEJ6Y2M82",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91110115MA01FX114R|invoice",
+"upstream": "ctax",
+"credit": "91110115MA01FX114R",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91520102MAALQJQJ9N|tax",
+"upstream": "ctax",
+"credit": "91520102MAALQJQJ9N",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91630105MA7GNT4Q7Q|tax",
+"upstream": "ctax",
+"credit": "91630105MA7GNT4Q7Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370211MACGXUTJ5W|tax",
+"upstream": "ctax",
+"credit": "91370211MACGXUTJ5W",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370704MAD3XHTB4L|tax",
+"upstream": "ctax",
+"credit": "91370704MAD3XHTB4L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370213MACHHMWG11|tax",
+"upstream": "ctax",
+"credit": "91370213MACHHMWG11",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91341222MA2T9LW153|tax",
+"upstream": "ctax",
+"credit": "91341222MA2T9LW153",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440114MA9YC7RD76|invoice",
+"upstream": "ctax",
+"credit": "91440114MA9YC7RD76",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91110101MA01P80P0B|tax",
+"upstream": "ctax",
+"credit": "91110101MA01P80P0B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350503MACLW12WXL|tax",
+"upstream": "ctax",
+"credit": "91350503MACLW12WXL",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91630102MADU2YPG12|tax",
+"upstream": "ctax",
+"credit": "91630102MADU2YPG12",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440101MA5D2L4L3T|tax",
+"upstream": "ctax",
+"credit": "91440101MA5D2L4L3T",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91110105330414468Q|tax",
+"upstream": "ctax",
+"credit": "91110105330414468Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91520102MACTTL6X9M|tax",
+"upstream": "ctax",
+"credit": "91520102MACTTL6X9M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610112MAB0G8Q36C|tax",
+"upstream": "ctax",
+"credit": "91610112MAB0G8Q36C",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350627MA33TKY20U|tax",
+"upstream": "ctax",
+"credit": "91350627MA33TKY20U",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610132MA6WQD2L9L|tax",
+"upstream": "ctax",
+"credit": "91610132MA6WQD2L9L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91520115MAAJTB2W5A|tax",
+"upstream": "ctax",
+"credit": "91520115MAAJTB2W5A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610112MA710MQQ97|tax",
+"upstream": "ctax",
+"credit": "91610112MA710MQQ97",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91371000MAD4N2KL4L|tax",
+"upstream": "ctax",
+"credit": "91371000MAD4N2KL4L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91441403MACREDD161|tax",
+"upstream": "ctax",
+"credit": "91441403MACREDD161",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91110108MA7H0DEQ2X|tax",
+"upstream": "ctax",
+"credit": "91110108MA7H0DEQ2X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610112MACQKRW5XJ|tax",
+"upstream": "ctax",
+"credit": "91610112MACQKRW5XJ",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91460000MAEF8WL19E|tax",
+"upstream": "ctax",
+"credit": "91460000MAEF8WL19E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370102MA3T43BL07|tax",
+"upstream": "ctax",
+"credit": "91370102MA3T43BL07",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350104062254639X|tax",
+"upstream": "ctax",
+"credit": "91350104062254639X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370611MACRR98B6D|tax",
+"upstream": "ctax",
+"credit": "91370611MACRR98B6D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350211MA31XXAE19|tax",
+"upstream": "ctax",
+"credit": "91350211MA31XXAE19",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91371602MA3ND4JW8Q|tax",
+"upstream": "ctax",
+"credit": "91371602MA3ND4JW8Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610131MACJLBJR2E|tax",
+"upstream": "ctax",
+"credit": "91610131MACJLBJR2E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350105335745848G|tax",
+"upstream": "ctax",
+"credit": "91350105335745848G",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370203MA7C6PKB9F|tax",
+"upstream": "ctax",
+"credit": "91370203MA7C6PKB9F",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440400MA5296ML57|tax",
+"upstream": "ctax",
+"credit": "91440400MA5296ML57",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440103MA59A2AM8U|tax",
+"upstream": "ctax",
+"credit": "91440103MA59A2AM8U",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91110108MAC6Y8KL0N|tax",
+"upstream": "ctax",
+"credit": "91110108MAC6Y8KL0N",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610102MACRCR0X2M|tax",
+"upstream": "ctax",
+"credit": "91610102MACRCR0X2M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370213MA3RDTMB7Q|tax",
+"upstream": "ctax",
+"credit": "91370213MA3RDTMB7Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370100MAEALQ1L5F|tax",
+"upstream": "ctax",
+"credit": "91370100MAEALQ1L5F",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|913502035684267925|tax",
+"upstream": "ctax",
+"credit": "913502035684267925",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350200MA8UMALC8J|invoice",
+"upstream": "ctax",
+"credit": "91350200MA8UMALC8J",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610113MA6UAW0824|tax",
+"upstream": "ctax",
+"credit": "91610113MA6UAW0824",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91110114MAEUXH1P7T|tax",
+"upstream": "ctax",
+"credit": "91110114MAEUXH1P7T",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440101MA5CK72WXB|tax",
+"upstream": "ctax",
+"credit": "91440101MA5CK72WXB",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350205MADPERJP9Q|tax",
+"upstream": "ctax",
+"credit": "91350205MADPERJP9Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91110113074198232C|tax",
+"upstream": "ctax",
+"credit": "91110113074198232C",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91445221MAC5TM8G37|tax",
+"upstream": "ctax",
+"credit": "91445221MAC5TM8G37",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440113MAK7R4XC6U|tax",
+"upstream": "ctax",
+"credit": "91440113MAK7R4XC6U",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440111MAEXERKJ5M|tax",
+"upstream": "ctax",
+"credit": "91440111MAEXERKJ5M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370282MACR7D0M75|tax",
+"upstream": "ctax",
+"credit": "91370282MACR7D0M75",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610136MA6X3PRP9C|tax",
+"upstream": "ctax",
+"credit": "91610136MA6X3PRP9C",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91520203MAC6KX1N8R|tax",
+"upstream": "ctax",
+"credit": "91520203MAC6KX1N8R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440300MA5GHC3B50|tax",
+"upstream": "ctax",
+"credit": "91440300MA5GHC3B50",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91610104MA6TYRGD1J|tax",
+"upstream": "ctax",
+"credit": "91610104MA6TYRGD1J",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370104MAEPFAM98E|invoice",
+"upstream": "ctax",
+"credit": "91370104MAEPFAM98E",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91440404MA55YHCA0X|invoice",
+"upstream": "ctax",
+"credit": "91440404MA55YHCA0X",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91350503MABUEDR245|tax",
+"upstream": "ctax",
+"credit": "91350503MABUEDR245",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91441300MA5270PY33|tax",
+"upstream": "ctax",
+"credit": "91441300MA5270PY33",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|91370100MABLU0CM62|tax",
+"upstream": "ctax",
+"credit": "91370100MABLU0CM62",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|92110113MA00RF0U08|tax",
+"upstream": "ctax",
+"credit": "92110113MA00RF0U08",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "ctax|9144010106815169X6|tax",
+"upstream": "ctax",
+"credit": "9144010106815169X6",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"ctax"
+]
+},
+{
+"qkey": "sy|91440606MA55UMTC72|tax",
+"upstream": "sy",
+"credit": "91440606MA55UMTC72",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91513401MAEUAQLN7R|tax",
+"upstream": "sy",
+"credit": "91513401MAEUAQLN7R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92510181L700093965|invoice",
+"upstream": "sy",
+"credit": "92510181L700093965",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92510107MACMREQ34J|tax",
+"upstream": "sy",
+"credit": "92510107MACMREQ34J",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91650102MAK74NN008|tax",
+"upstream": "sy",
+"credit": "91650102MAK74NN008",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91654202MAELTANK7E|tax",
+"upstream": "sy",
+"credit": "91654202MAELTANK7E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440101MA5CQCPW2R|tax",
+"upstream": "sy",
+"credit": "91440101MA5CQCPW2R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92500108MAEX92M829|invoice",
+"upstream": "sy",
+"credit": "92500108MAEX92M829",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440606MAEQHABX67|tax",
+"upstream": "sy",
+"credit": "91440606MAEQHABX67",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330782MA2K0Y8R3T|tax",
+"upstream": "sy",
+"credit": "91330782MA2K0Y8R3T",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330110MA2GYWN47T|invoice",
+"upstream": "sy",
+"credit": "91330110MA2GYWN47T",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|913101165647980623|invoice",
+"upstream": "sy",
+"credit": "913101165647980623",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91411302MAG03HNX5X|tax",
+"upstream": "sy",
+"credit": "91411302MAG03HNX5X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130229MA7LYAMD82|tax",
+"upstream": "sy",
+"credit": "91130229MA7LYAMD82",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92331004MAC6767H25|invoice",
+"upstream": "sy",
+"credit": "92331004MAC6767H25",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440607MAE3QWX12L|invoice",
+"upstream": "sy",
+"credit": "91440607MAE3QWX12L",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91410100MAK2RHNQ8G|tax",
+"upstream": "sy",
+"credit": "91410100MAK2RHNQ8G",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92440705MA52UFJF65|tax",
+"upstream": "sy",
+"credit": "92440705MA52UFJF65",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440106MAE6959B85|tax",
+"upstream": "sy",
+"credit": "91440106MAE6959B85",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330900MABPM4WM4M|tax",
+"upstream": "sy",
+"credit": "91330900MABPM4WM4M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|914413035645245121|tax",
+"upstream": "sy",
+"credit": "914413035645245121",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320581MAE1RNTY66|tax",
+"upstream": "sy",
+"credit": "91320581MAE1RNTY66",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91370705MA3WDLG012|invoice",
+"upstream": "sy",
+"credit": "91370705MA3WDLG012",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92330402MA7ETL2K4A|invoice",
+"upstream": "sy",
+"credit": "92330402MA7ETL2K4A",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5GXL8GXJ|tax",
+"upstream": "sy",
+"credit": "91440300MA5GXL8GXJ",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91420100MA4KL5DF6K|tax",
+"upstream": "sy",
+"credit": "91420100MA4KL5DF6K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330782MA28DW0G7A|tax",
+"upstream": "sy",
+"credit": "91330782MA28DW0G7A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92441900MA5258N387|invoice",
+"upstream": "sy",
+"credit": "92441900MA5258N387",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310120MADDUDNG9D|invoice",
+"upstream": "sy",
+"credit": "91310120MADDUDNG9D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91370306MA3U4FXB2P|tax",
+"upstream": "sy",
+"credit": "91370306MA3U4FXB2P",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310116MAK50K8B38|tax",
+"upstream": "sy",
+"credit": "91310116MAK50K8B38",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91350503MACBNCRE32|tax",
+"upstream": "sy",
+"credit": "91350503MACBNCRE32",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320583MA1YLAK333|invoice",
+"upstream": "sy",
+"credit": "91320583MA1YLAK333",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440111MAECYEXL9D|tax",
+"upstream": "sy",
+"credit": "91440111MAECYEXL9D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440111MACX9C8J7C|tax",
+"upstream": "sy",
+"credit": "91440111MACX9C8J7C",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440705MAEWL1C13X|invoice",
+"upstream": "sy",
+"credit": "91440705MAEWL1C13X",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91445102MAE2TNQG12|invoice",
+"upstream": "sy",
+"credit": "91445102MAE2TNQG12",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91510504MA6224RL5Q|invoice",
+"upstream": "sy",
+"credit": "91510504MA6224RL5Q",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330206MA2GRKC38Q|tax",
+"upstream": "sy",
+"credit": "91330206MA2GRKC38Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330726MA7L512F45|tax",
+"upstream": "sy",
+"credit": "91330726MA7L512F45",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91331100MAD7TLE28F|tax",
+"upstream": "sy",
+"credit": "91331100MAD7TLE28F",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91650105686462233N|tax",
+"upstream": "sy",
+"credit": "91650105686462233N",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91653101MA77505212|tax",
+"upstream": "sy",
+"credit": "91653101MA77505212",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91340202MA2WU5MN5R|tax",
+"upstream": "sy",
+"credit": "91340202MA2WU5MN5R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91510181MAC8TW2121|invoice",
+"upstream": "sy",
+"credit": "91510181MAC8TW2121",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130533MA7FDJKT0W|invoice",
+"upstream": "sy",
+"credit": "91130533MA7FDJKT0W",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91340103MAE6E16T2Q|tax",
+"upstream": "sy",
+"credit": "91340103MAE6E16T2Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310115MAEMNUTE94|tax",
+"upstream": "sy",
+"credit": "91310115MAEMNUTE94",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91350581MAK12UFU88|invoice",
+"upstream": "sy",
+"credit": "91350581MAK12UFU88",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441521MA56GNPR1E|tax",
+"upstream": "sy",
+"credit": "91441521MA56GNPR1E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91120118MA06PU7N3A|invoice",
+"upstream": "sy",
+"credit": "91120118MA06PU7N3A",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310120MA1HUMB59D|invoice",
+"upstream": "sy",
+"credit": "91310120MA1HUMB59D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310112MADDW8KC4R|tax",
+"upstream": "sy",
+"credit": "91310112MADDW8KC4R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130903MAEWATRX7D|tax",
+"upstream": "sy",
+"credit": "91130903MAEWATRX7D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440981MAEU8AG296|tax",
+"upstream": "sy",
+"credit": "91440981MAEU8AG296",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441900MAK4K0LK3E|tax",
+"upstream": "sy",
+"credit": "91441900MAK4K0LK3E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440113MAK3R7Q75J|tax",
+"upstream": "sy",
+"credit": "91440113MAK3R7Q75J",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441900MA57AWF34A|invoice",
+"upstream": "sy",
+"credit": "91441900MA57AWF34A",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92610103MACW3NAM0P|invoice",
+"upstream": "sy",
+"credit": "92610103MACW3NAM0P",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91371302MADDKM677C|tax",
+"upstream": "sy",
+"credit": "91371302MADDKM677C",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441900MAE7YH692A|tax",
+"upstream": "sy",
+"credit": "91441900MAE7YH692A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MAD766B81P|tax",
+"upstream": "sy",
+"credit": "91440300MAD766B81P",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91350603MA33QKE78N|invoice",
+"upstream": "sy",
+"credit": "91350603MA33QKE78N",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310115MA1K41YN6W|invoice",
+"upstream": "sy",
+"credit": "91310115MA1K41YN6W",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91370105MAEU6PMP5L|tax",
+"upstream": "sy",
+"credit": "91370105MAEU6PMP5L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441900MA55BEB921|tax",
+"upstream": "sy",
+"credit": "91441900MA55BEB921",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91340881MAEXKN813A|tax",
+"upstream": "sy",
+"credit": "91340881MAEXKN813A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330782MAK60WH04G|tax",
+"upstream": "sy",
+"credit": "91330782MAK60WH04G",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|913101070781286960|tax",
+"upstream": "sy",
+"credit": "913101070781286960",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330110MAE8AFFF3Y|tax",
+"upstream": "sy",
+"credit": "91330110MAE8AFFF3Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441422MADMPWGU1U|invoice",
+"upstream": "sy",
+"credit": "91441422MADMPWGU1U",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440507MA56JGL7X1|tax",
+"upstream": "sy",
+"credit": "91440507MA56JGL7X1",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91445381MAK1WT7Q5N|tax",
+"upstream": "sy",
+"credit": "91445381MAK1WT7Q5N",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130302MAEKQ11M1D|tax",
+"upstream": "sy",
+"credit": "91130302MAEKQ11M1D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441303MAEPL47Y33|tax",
+"upstream": "sy",
+"credit": "91441303MAEPL47Y33",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440608MA55WUP227|tax",
+"upstream": "sy",
+"credit": "91440608MA55WUP227",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92330411MA29G47D81|invoice",
+"upstream": "sy",
+"credit": "92330411MA29G47D81",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440101MA5D14BE9K|invoice",
+"upstream": "sy",
+"credit": "91440101MA5D14BE9K",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320114MA27EGAX0N|tax",
+"upstream": "sy",
+"credit": "91320114MA27EGAX0N",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300760461168Y|tax",
+"upstream": "sy",
+"credit": "91440300760461168Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91210106MADP04776E|tax",
+"upstream": "sy",
+"credit": "91210106MADP04776E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91110108MAD97H6P6F|tax",
+"upstream": "sy",
+"credit": "91110108MAD97H6P6F",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91110105MAE1B5H05H|invoice",
+"upstream": "sy",
+"credit": "91110105MAE1B5H05H",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91430500MA4PYRWXXF|tax",
+"upstream": "sy",
+"credit": "91430500MA4PYRWXXF",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441402MADTT3L07R|tax",
+"upstream": "sy",
+"credit": "91441402MADTT3L07R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91410184MAK06UWCXW|tax",
+"upstream": "sy",
+"credit": "91410184MAK06UWCXW",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91110108668410931L|invoice",
+"upstream": "sy",
+"credit": "91110108668410931L",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310120MA7FKY5D34|tax",
+"upstream": "sy",
+"credit": "91310120MA7FKY5D34",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91610501MA6Y8XXJ8D|invoice",
+"upstream": "sy",
+"credit": "91610501MA6Y8XXJ8D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440106MAEPXG578G|tax",
+"upstream": "sy",
+"credit": "91440106MAEPXG578G",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91445103MACTANHE5Q|tax",
+"upstream": "sy",
+"credit": "91445103MACTANHE5Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441900MAD3PDLL0B|invoice",
+"upstream": "sy",
+"credit": "91441900MAD3PDLL0B",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91331002MAKEJM3E36|tax",
+"upstream": "sy",
+"credit": "91331002MAKEJM3E36",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300312024474M|tax",
+"upstream": "sy",
+"credit": "91440300312024474M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91150691MA0QPJH741|invoice",
+"upstream": "sy",
+"credit": "91150691MA0QPJH741",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310120MA7KYWMM0Y|invoice",
+"upstream": "sy",
+"credit": "91310120MA7KYWMM0Y",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330185MA2GY8HA29|tax",
+"upstream": "sy",
+"credit": "91330185MA2GY8HA29",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320213MA1YG3P982|tax",
+"upstream": "sy",
+"credit": "91320213MA1YG3P982",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91510100MA6CTW9H0X|tax",
+"upstream": "sy",
+"credit": "91510100MA6CTW9H0X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91230606MAEP1N3101|tax",
+"upstream": "sy",
+"credit": "91230606MAEP1N3101",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441900MAK3447E85|tax",
+"upstream": "sy",
+"credit": "91441900MAK3447E85",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320902559302050H|tax",
+"upstream": "sy",
+"credit": "91320902559302050H",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91620200MA72H9L02E|invoice",
+"upstream": "sy",
+"credit": "91620200MA72H9L02E",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440902MACKBXL001|tax",
+"upstream": "sy",
+"credit": "91440902MACKBXL001",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92440605MAC4PNPX0C|tax",
+"upstream": "sy",
+"credit": "92440605MAC4PNPX0C",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330782MA8GUWEG70|tax",
+"upstream": "sy",
+"credit": "91330782MA8GUWEG70",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91610103MA6UTE6N8E|tax",
+"upstream": "sy",
+"credit": "91610103MA6UTE6N8E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5F0M1Y40|invoice",
+"upstream": "sy",
+"credit": "91440300MA5F0M1Y40",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5DA0AN4B|tax",
+"upstream": "sy",
+"credit": "91440300MA5DA0AN4B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330106MAKDAT2J77|tax",
+"upstream": "sy",
+"credit": "91330106MAKDAT2J77",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440101MA5APB749P|invoice",
+"upstream": "sy",
+"credit": "91440101MA5APB749P",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91131126MADXP83R9Y|tax",
+"upstream": "sy",
+"credit": "91131126MADXP83R9Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320582MA2571GQ00|tax",
+"upstream": "sy",
+"credit": "91320582MA2571GQ00",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5FYKYU12|tax",
+"upstream": "sy",
+"credit": "91440300MA5FYKYU12",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91450102MAK422AY5D|tax",
+"upstream": "sy",
+"credit": "91450102MAK422AY5D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5F9K8UX9|invoice",
+"upstream": "sy",
+"credit": "91440300MA5F9K8UX9",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320115MA1W153W81|tax",
+"upstream": "sy",
+"credit": "91320115MA1W153W81",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441900MAD9EFNM26|tax",
+"upstream": "sy",
+"credit": "91441900MAD9EFNM26",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440101MA59GJHQ4F|tax",
+"upstream": "sy",
+"credit": "91440101MA59GJHQ4F",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5G8L3HXL|tax",
+"upstream": "sy",
+"credit": "91440300MA5G8L3HXL",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440605MAK3DKHY8W|tax",
+"upstream": "sy",
+"credit": "91440605MAK3DKHY8W",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|916209023322937199|invoice",
+"upstream": "sy",
+"credit": "916209023322937199",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330702MA7C69MB8D|invoice",
+"upstream": "sy",
+"credit": "91330702MA7C69MB8D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92350402MA8UL74F0Q|invoice",
+"upstream": "sy",
+"credit": "92350402MA8UL74F0Q",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310116MA1JBBAXX4|tax",
+"upstream": "sy",
+"credit": "91310116MA1JBBAXX4",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310116MAK15KG086|tax",
+"upstream": "sy",
+"credit": "91310116MAK15KG086",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130705MAE3BFRT5E|invoice",
+"upstream": "sy",
+"credit": "91130705MAE3BFRT5E",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91340826MADM4KDQ22|invoice",
+"upstream": "sy",
+"credit": "91340826MADM4KDQ22",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320583MA1YLAK333|tax",
+"upstream": "sy",
+"credit": "91320583MA1YLAK333",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310109MACUKHFP14|tax",
+"upstream": "sy",
+"credit": "91310109MACUKHFP14",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91370128MAC65B3Q3J|tax",
+"upstream": "sy",
+"credit": "91370128MAC65B3Q3J",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91430104MAECMTYB9J|tax",
+"upstream": "sy",
+"credit": "91430104MAECMTYB9J",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440101MA9XPLH80K|tax",
+"upstream": "sy",
+"credit": "91440101MA9XPLH80K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91341002MA8QGRP99C|invoice",
+"upstream": "sy",
+"credit": "91341002MA8QGRP99C",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5GL0UC4N|invoice",
+"upstream": "sy",
+"credit": "91440300MA5GL0UC4N",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92320413MADY3WTXXA|invoice",
+"upstream": "sy",
+"credit": "92320413MADY3WTXXA",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320213MA1Y3NL10L|tax",
+"upstream": "sy",
+"credit": "91320213MA1Y3NL10L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5G5CA39Y|tax",
+"upstream": "sy",
+"credit": "91440300MA5G5CA39Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91450200MACT06K76Y|tax",
+"upstream": "sy",
+"credit": "91450200MACT06K76Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310230MA1JY68D5A|tax",
+"upstream": "sy",
+"credit": "91310230MA1JY68D5A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440605MAE1JNC304|tax",
+"upstream": "sy",
+"credit": "91440605MAE1JNC304",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440604MADX5XXP21|tax",
+"upstream": "sy",
+"credit": "91440604MADX5XXP21",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330106MAD4DWJB3P|tax",
+"upstream": "sy",
+"credit": "91330106MAD4DWJB3P",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91411426MA9GTFKM41|invoice",
+"upstream": "sy",
+"credit": "91411426MA9GTFKM41",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130104MA0F82EJ4A|invoice",
+"upstream": "sy",
+"credit": "91130104MA0F82EJ4A",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130628MAERRQR743|tax",
+"upstream": "sy",
+"credit": "91130628MAERRQR743",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440101MA5D0C4P0B|tax",
+"upstream": "sy",
+"credit": "91440101MA5D0C4P0B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91442000MA4UQNRB84|tax",
+"upstream": "sy",
+"credit": "91442000MA4UQNRB84",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91442000MA51MJJE42|tax",
+"upstream": "sy",
+"credit": "91442000MA51MJJE42",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441900MADNNBLHXW|invoice",
+"upstream": "sy",
+"credit": "91441900MADNNBLHXW",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91420116MA49NUN22P|invoice",
+"upstream": "sy",
+"credit": "91420116MA49NUN22P",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91500107MAK709GKXK|tax",
+"upstream": "sy",
+"credit": "91500107MAK709GKXK",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330783MAK1DJWA21|tax",
+"upstream": "sy",
+"credit": "91330783MAK1DJWA21",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91442000MAEWEX6H5T|tax",
+"upstream": "sy",
+"credit": "91442000MAEWEX6H5T",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441208MAEWC2950Y|tax",
+"upstream": "sy",
+"credit": "91441208MAEWC2950Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91350582MA32TX9J5R|invoice",
+"upstream": "sy",
+"credit": "91350582MA32TX9J5R",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440113MAEULNYL5N|tax",
+"upstream": "sy",
+"credit": "91440113MAEULNYL5N",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91140502MAEA0YW08M|tax",
+"upstream": "sy",
+"credit": "91140502MAEA0YW08M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440605MA4WKJ7J46|tax",
+"upstream": "sy",
+"credit": "91440605MA4WKJ7J46",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91340111MADQWN5J9F|tax",
+"upstream": "sy",
+"credit": "91340111MADQWN5J9F",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330702MAE3YUWG77|invoice",
+"upstream": "sy",
+"credit": "91330702MAE3YUWG77",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91500106MAEUB3XH77|tax",
+"upstream": "sy",
+"credit": "91500106MAEUB3XH77",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91141081MA0KBBAF1M|tax",
+"upstream": "sy",
+"credit": "91141081MA0KBBAF1M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92510100MADG71CF5Q|tax",
+"upstream": "sy",
+"credit": "92510100MADG71CF5Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91653022MAKA1XAD8C|tax",
+"upstream": "sy",
+"credit": "91653022MAKA1XAD8C",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91341000MA2N9TM345|invoice",
+"upstream": "sy",
+"credit": "91341000MA2N9TM345",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5ET3MF83|invoice",
+"upstream": "sy",
+"credit": "91440300MA5ET3MF83",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330483MA2CW8MK1Y|tax",
+"upstream": "sy",
+"credit": "91330483MA2CW8MK1Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440604MACF02040E|tax",
+"upstream": "sy",
+"credit": "91440604MACF02040E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91321395MAK48XDH2K|tax",
+"upstream": "sy",
+"credit": "91321395MAK48XDH2K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91411381MAK26LKB23|tax",
+"upstream": "sy",
+"credit": "91411381MAK26LKB23",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330281MA2CKUJJ92|tax",
+"upstream": "sy",
+"credit": "91330281MA2CKUJJ92",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92500154MAAC91L1XP|invoice",
+"upstream": "sy",
+"credit": "92500154MAAC91L1XP",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441900MA7L111542|tax",
+"upstream": "sy",
+"credit": "91441900MA7L111542",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330225MA2KNX8L7R|tax",
+"upstream": "sy",
+"credit": "91330225MA2KNX8L7R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91370105307102300H|tax",
+"upstream": "sy",
+"credit": "91370105307102300H",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441900MAC3G4G368|tax",
+"upstream": "sy",
+"credit": "91441900MAC3G4G368",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92140105MA0M214N4Y|tax",
+"upstream": "sy",
+"credit": "92140105MA0M214N4Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130606MA0EYYQC1C|invoice",
+"upstream": "sy",
+"credit": "91130606MA0EYYQC1C",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92533401MACPTUGJ95|invoice",
+"upstream": "sy",
+"credit": "92533401MACPTUGJ95",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91430111MA7FFDN82G|tax",
+"upstream": "sy",
+"credit": "91430111MA7FFDN82G",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5FJPWL72|tax",
+"upstream": "sy",
+"credit": "91440300MA5FJPWL72",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91321181MA1N0MLU9Y|invoice",
+"upstream": "sy",
+"credit": "91321181MA1N0MLU9Y",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310120MA1JK9KA9X|tax",
+"upstream": "sy",
+"credit": "91310120MA1JK9KA9X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440101MA5D66NM3U|tax",
+"upstream": "sy",
+"credit": "91440101MA5D66NM3U",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130302MABX57H95P|tax",
+"upstream": "sy",
+"credit": "91130302MABX57H95P",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91140109MADXMPWR3B|tax",
+"upstream": "sy",
+"credit": "91140109MADXMPWR3B",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330783MAKD7JCCXC|tax",
+"upstream": "sy",
+"credit": "91330783MAKD7JCCXC",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|914403001924587954|tax",
+"upstream": "sy",
+"credit": "914403001924587954",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440605MACW6XP77B|invoice",
+"upstream": "sy",
+"credit": "91440605MACW6XP77B",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|912301030563189235|invoice",
+"upstream": "sy",
+"credit": "912301030563189235",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440101MA9UK0AB3K|tax",
+"upstream": "sy",
+"credit": "91440101MA9UK0AB3K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91510104MA6C6JP456|tax",
+"upstream": "sy",
+"credit": "91510104MA6C6JP456",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330203MA2J45FF1J|tax",
+"upstream": "sy",
+"credit": "91330203MA2J45FF1J",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92511681MA67W6RE1R|tax",
+"upstream": "sy",
+"credit": "92511681MA67W6RE1R",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310230MABTDN0Y51|invoice",
+"upstream": "sy",
+"credit": "91310230MABTDN0Y51",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130104MA0F82EJ4A|tax",
+"upstream": "sy",
+"credit": "91130104MA0F82EJ4A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91350581MAE17WCU0D|tax",
+"upstream": "sy",
+"credit": "91350581MAE17WCU0D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91500109MA61AULK23|tax",
+"upstream": "sy",
+"credit": "91500109MA61AULK23",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310106MADCMEHD4C|tax",
+"upstream": "sy",
+"credit": "91310106MADCMEHD4C",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91610423MA6XW9NK72|tax",
+"upstream": "sy",
+"credit": "91610423MA6XW9NK72",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92321322MA25WWTJ70|invoice",
+"upstream": "sy",
+"credit": "92321322MA25WWTJ70",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91610136MAB0QMP08E|tax",
+"upstream": "sy",
+"credit": "91610136MAB0QMP08E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320191MA1TAXP09Q|tax",
+"upstream": "sy",
+"credit": "91320191MA1TAXP09Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92500117MACDUGJY7A|invoice",
+"upstream": "sy",
+"credit": "92500117MACDUGJY7A",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92130926MA7LFTQW7L|invoice",
+"upstream": "sy",
+"credit": "92130926MA7LFTQW7L",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5F0M1Y40|tax",
+"upstream": "sy",
+"credit": "91440300MA5F0M1Y40",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91110108MACU02GK7W|tax",
+"upstream": "sy",
+"credit": "91110108MACU02GK7W",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330523MAK4NC910G|tax",
+"upstream": "sy",
+"credit": "91330523MAK4NC910G",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91360521MAEFNK2D54|invoice",
+"upstream": "sy",
+"credit": "91360521MAEFNK2D54",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130502320127369B|invoice",
+"upstream": "sy",
+"credit": "91130502320127369B",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441900MA53EX881A|invoice",
+"upstream": "sy",
+"credit": "91441900MA53EX881A",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320113MAER7MYX1K|invoice",
+"upstream": "sy",
+"credit": "91320113MAER7MYX1K",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91141002MAD59B0Q78|tax",
+"upstream": "sy",
+"credit": "91141002MAD59B0Q78",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330783MA2JX0N715|tax",
+"upstream": "sy",
+"credit": "91330783MA2JX0N715",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92371312MA3FFN6E33|invoice",
+"upstream": "sy",
+"credit": "92371312MA3FFN6E33",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330784MA8G4EW34E|invoice",
+"upstream": "sy",
+"credit": "91330784MA8G4EW34E",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310115MA1K41YN6W|tax",
+"upstream": "sy",
+"credit": "91310115MA1K41YN6W",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440606MAK1TC3Y26|tax",
+"upstream": "sy",
+"credit": "91440606MAK1TC3Y26",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|9161010466318332X5|tax",
+"upstream": "sy",
+"credit": "9161010466318332X5",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91532800316274788X|invoice",
+"upstream": "sy",
+"credit": "91532800316274788X",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91410105MAD0L9BN8D|tax",
+"upstream": "sy",
+"credit": "91410105MAD0L9BN8D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91140109MA0M4XKG7X|tax",
+"upstream": "sy",
+"credit": "91140109MA0M4XKG7X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441900MAK1NULB5Y|tax",
+"upstream": "sy",
+"credit": "91441900MAK1NULB5Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441283MADNAH2H4T|invoice",
+"upstream": "sy",
+"credit": "91441283MADNAH2H4T",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440118MAKD1K4X07|tax",
+"upstream": "sy",
+"credit": "91440118MAKD1K4X07",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5F1L3H02|tax",
+"upstream": "sy",
+"credit": "91440300MA5F1L3H02",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92350524MA30UMXKXC|invoice",
+"upstream": "sy",
+"credit": "92350524MA30UMXKXC",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440106MAE1R82M53|tax",
+"upstream": "sy",
+"credit": "91440106MAE1R82M53",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330681MAK3JY0C0E|tax",
+"upstream": "sy",
+"credit": "91330681MAK3JY0C0E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91350802MA34RU7BX4|tax",
+"upstream": "sy",
+"credit": "91350802MA34RU7BX4",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320509MAEU0H794K|tax",
+"upstream": "sy",
+"credit": "91320509MAEU0H794K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91411324MA9G2KJ8XC|tax",
+"upstream": "sy",
+"credit": "91411324MA9G2KJ8XC",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130108MAK0E2N793|tax",
+"upstream": "sy",
+"credit": "91130108MAK0E2N793",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320191MAEMTUP604|invoice",
+"upstream": "sy",
+"credit": "91320191MAEMTUP604",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92140215MA7XNMEY2R|invoice",
+"upstream": "sy",
+"credit": "92140215MA7XNMEY2R",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MAEL6XPW5T|tax",
+"upstream": "sy",
+"credit": "91440300MAEL6XPW5T",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440606MACMKATT7P|tax",
+"upstream": "sy",
+"credit": "91440606MACMKATT7P",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5EUY97XJ|tax",
+"upstream": "sy",
+"credit": "91440300MA5EUY97XJ",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440105MADNHUHUXM|tax",
+"upstream": "sy",
+"credit": "91440105MADNHUHUXM",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310000MACU33HQ18|invoice",
+"upstream": "sy",
+"credit": "91310000MACU33HQ18",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330481MAC920JQ19|invoice",
+"upstream": "sy",
+"credit": "91330481MAC920JQ19",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|914413035645245121|invoice",
+"upstream": "sy",
+"credit": "914413035645245121",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91110105MACYECT2X9|tax",
+"upstream": "sy",
+"credit": "91110105MACYECT2X9",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91445103MAD8G3TQ0K|tax",
+"upstream": "sy",
+"credit": "91445103MAD8G3TQ0K",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92350583MA33K5681C|invoice",
+"upstream": "sy",
+"credit": "92350583MA33K5681C",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130403MA0G5XHD3J|invoice",
+"upstream": "sy",
+"credit": "91130403MA0G5XHD3J",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130828MA088XGH92|tax",
+"upstream": "sy",
+"credit": "91130828MA088XGH92",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92652701MAK47WPT9M|tax",
+"upstream": "sy",
+"credit": "92652701MAK47WPT9M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91370900MAK2Y7XP4L|tax",
+"upstream": "sy",
+"credit": "91370900MAK2Y7XP4L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91350602MA8TFG1E48|tax",
+"upstream": "sy",
+"credit": "91350602MA8TFG1E48",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91130925MA7N8KEE2Y|invoice",
+"upstream": "sy",
+"credit": "91130925MA7N8KEE2Y",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92330401MA2LBATU7R|invoice",
+"upstream": "sy",
+"credit": "92330401MA2LBATU7R",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91442000MAG1WT8K5M|tax",
+"upstream": "sy",
+"credit": "91442000MAG1WT8K5M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92500120MACKQ0NQ8W|invoice",
+"upstream": "sy",
+"credit": "92500120MACKQ0NQ8W",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92440784L40206882D|invoice",
+"upstream": "sy",
+"credit": "92440784L40206882D",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|913101165647980623|tax",
+"upstream": "sy",
+"credit": "913101165647980623",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440604MADQRWT46F|tax",
+"upstream": "sy",
+"credit": "91440604MADQRWT46F",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91511521MABNRAF08L|tax",
+"upstream": "sy",
+"credit": "91511521MABNRAF08L",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440106MACQ3X7X3X|tax",
+"upstream": "sy",
+"credit": "91440106MACQ3X7X3X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92330206MACM96BD0J|invoice",
+"upstream": "sy",
+"credit": "92330206MACM96BD0J",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91360805MABTQA7B77|tax",
+"upstream": "sy",
+"credit": "91360805MABTQA7B77",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5FL5E4XK|invoice",
+"upstream": "sy",
+"credit": "91440300MA5FL5E4XK",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91350583MA8UX34W4X|tax",
+"upstream": "sy",
+"credit": "91350583MA8UX34W4X",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91500106MAEX9AJ26E|tax",
+"upstream": "sy",
+"credit": "91500106MAEX9AJ26E",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330602MA7J0R3A10|invoice",
+"upstream": "sy",
+"credit": "91330602MA7J0R3A10",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91310114084097398Y|invoice",
+"upstream": "sy",
+"credit": "91310114084097398Y",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91610131MAK49FQH14|tax",
+"upstream": "sy",
+"credit": "91610131MAK49FQH14",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91410223MAEXDC4791|tax",
+"upstream": "sy",
+"credit": "91410223MAEXDC4791",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91510100MAE510H51M|tax",
+"upstream": "sy",
+"credit": "91510100MAE510H51M",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330304MAE0B3FT3B|invoice",
+"upstream": "sy",
+"credit": "91330304MAE0B3FT3B",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441303MA52HE1729|tax",
+"upstream": "sy",
+"credit": "91441303MA52HE1729",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|92331081MA2DTFXJ7B|invoice",
+"upstream": "sy",
+"credit": "92331081MA2DTFXJ7B",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300782787492K|invoice",
+"upstream": "sy",
+"credit": "91440300782787492K",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91441303MA52HE1729|invoice",
+"upstream": "sy",
+"credit": "91441303MA52HE1729",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91120222MABWJ7QUX4|tax",
+"upstream": "sy",
+"credit": "91120222MABWJ7QUX4",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91320594MA1MRNAL4Q|tax",
+"upstream": "sy",
+"credit": "91320594MA1MRNAL4Q",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440101MA9XXQUH4D|tax",
+"upstream": "sy",
+"credit": "91440101MA9XXQUH4D",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440605084531211A|tax",
+"upstream": "sy",
+"credit": "91440605084531211A",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91420900MAEGXQLW3X|invoice",
+"upstream": "sy",
+"credit": "91420900MAEGXQLW3X",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91360202MA38LFGX7P|tax",
+"upstream": "sy",
+"credit": "91360202MA38LFGX7P",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91510108MA69XE6G33|tax",
+"upstream": "sy",
+"credit": "91510108MA69XE6G33",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91110106MAC7PGK10C|tax",
+"upstream": "sy",
+"credit": "91110106MAC7PGK10C",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91420112MAG14HG90Y|tax",
+"upstream": "sy",
+"credit": "91420112MAG14HG90Y",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91440300MA5H6G2F3J|tax",
+"upstream": "sy",
+"credit": "91440300MA5H6G2F3J",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330105341801551J|invoice",
+"upstream": "sy",
+"credit": "91330105341801551J",
+"dim": "invoice",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91652801MA7927LNXT|tax",
+"upstream": "sy",
+"credit": "91652801MA7927LNXT",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330105MAG19NN136|tax",
+"upstream": "sy",
+"credit": "91330105MAG19NN136",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91330114MA8GJ4KLX3|tax",
+"upstream": "sy",
+"credit": "91330114MA8GJ4KLX3",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+},
+{
+"qkey": "sy|91360402MAK7GYE5X0|tax",
+"upstream": "sy",
+"credit": "91360402MAK7GYE5X0",
+"dim": "tax",
+"windows": [
+[
+202410,
+202610
+]
+],
+"subs": [
+"sy"
+]
+}
+]

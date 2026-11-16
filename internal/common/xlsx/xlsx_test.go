@@ -12,6 +12,7 @@ func TestWriteWorkbook(t *testing.T) {
 	wb := &Workbook{}
 	sum := wb.Add("汇总", nil, [][]any{{"客户", "A&B<C>"}, {"类型", "次数"}, {"票", 3}, {"税", 1.5}}, []float64{20, 10})
 	sum.HeaderRows = map[int]bool{1: true}
+	sum.Merges = []string{"A1:B1"}
 	wb.Add("票明细/超长名称超长名称超长名称超长名称超长名称超长名称超长", []string{"时间", "金额"}, nil, nil)
 
 	var buf bytes.Buffer
@@ -40,6 +41,12 @@ func TestWriteWorkbook(t *testing.T) {
 	}
 	if !strings.Contains(s1, "<v>3</v>") || !strings.Contains(s1, "<v>1.5</v>") {
 		t.Error("数字应写成数值单元格")
+	}
+	if !strings.Contains(s1, `<mergeCells count="1"><mergeCell ref="A1:B1"/></mergeCells></worksheet>`) {
+		t.Error("合并单元格应写在 sheetData 之后")
+	}
+	if strings.Contains(files["xl/worksheets/sheet2.xml"], "mergeCells") {
+		t.Error("没有合并区域时不应输出 mergeCells")
 	}
 	wbXML := files["xl/workbook.xml"]
 	if !strings.Contains(wbXML, `name="汇总"`) {

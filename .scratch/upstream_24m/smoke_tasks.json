@@ -1,0 +1,7 @@
+[
+{"qkey":"entcredit|91340826MADM4KDQ22|invoice","upstream":"entcredit","credit":"91340826MADM4KDQ22","dim":"invoice","windows":[[202409,202609]],"subs":["invoice1,invoice2"]},
+{"qkey":"entcredit|91341600MA8P831P7A|tax","upstream":"entcredit","credit":"91341600MA8P831P7A","dim":"tax","windows":[[202409,202609]],"subs":["tax1,tax2"]},
+{"qkey":"ctax|91370212MA3MK6PE1R|tax","upstream":"ctax","credit":"91370212MA3MK6PE1R","dim":"tax","windows":[[202410,202610]],"subs":["ctax"]},
+{"qkey":"sy|91440606MA55UMTC72|tax","upstream":"sy","credit":"91440606MA55UMTC72","dim":"tax","windows":[[202410,202610]],"subs":["sy"]},
+{"qkey":"salesdata|91440300MA5F0M1Y40|invoice","upstream":"salesdata","credit":"91440300MA5F0M1Y40","dim":"invoice","windows":[[202409,202609]],"subs":["sales"]}
+]

@@ -1,6 +1,6 @@
 // Package xlsx 是只用标准库的最小 xlsx 写出器（自 scripts/reconcile_huizhong.go
 // 抽出）：多 sheet、首行表头冻结、列宽、数字与文本两种单元格。够对账报表用，
-// 不支持公式与合并单元格。
+// 支持合并单元格，不支持公式。
 package xlsx
 
 import (
@@ -20,6 +20,7 @@ type Sheet struct {
 	Rows       [][]any
 	Widths     []float64
 	HeaderRows map[int]bool
+	Merges     []string // 合并区域，如 "B1:G1"
 }
 
 type Workbook struct{ Sheets []*Sheet }
@@ -129,7 +130,15 @@ func sheetXML(s *Sheet) string {
 	if len(s.Rows) == 0 {
 		writeRow(&b, rowNum, []any{"(无数据)"}, 0)
 	}
-	b.WriteString("</sheetData></worksheet>")
+	b.WriteString("</sheetData>")
+	if len(s.Merges) > 0 {
+		fmt.Fprintf(&b, `<mergeCells count="%d">`, len(s.Merges))
+		for _, m := range s.Merges {
+			fmt.Fprintf(&b, `<mergeCell ref="%s"/>`, esc(m))
+		}
+		b.WriteString("</mergeCells>")
+	}
+	b.WriteString("</worksheet>")
 	return b.String()
 }
 

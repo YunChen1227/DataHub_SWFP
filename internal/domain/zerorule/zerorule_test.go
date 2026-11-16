@@ -102,10 +102,26 @@ func TestJudgeAndMerge(t *testing.T) {
 	}
 }
 
+func TestExtractWindowContract(t *testing.T) {
+	raw := `{"发票数据聚合":{"kphzxxList":[{"ssyf":"2024-11","kpje":"50"},{"ssyf":"2024-09","kpje":"999"}]},
+	        "税务数据聚合":{"sbsjList":[{"sssjz":"2025-03-31","ysxssr":"-10","ynse":"3"}],"zsbxxList":[{"sssjz":"2026-10-31","sjje":"2"}]}}`
+	from, to := WindowMonths(at, 24)
+	a := ExtractWindow(LabelContract, []byte(raw), from, to)
+	if !a.Known || a.Invoice.FloatString(2) != "50.00" || a.Tax.FloatString(2) != "5.00" {
+		t.Fatalf("contract 24m = known=%v inv=%s tax=%s", a.Known, a.Invoice.FloatString(2), a.Tax.FloatString(2))
+	}
+	if b := Extract(LabelContract, []byte(raw), at); b.Invoice.Sign() != 0 {
+		t.Fatalf("12 个月窗口不应计入 2024-11 的开票, got %s", b.Invoice.FloatString(2))
+	}
+}
+
 func TestWindowBoundaries(t *testing.T) {
 	from, to := window(at)
 	if from != 202510 || to != 202610 {
 		t.Fatalf("window = %d..%d", from, to)
+	}
+	if from, to := WindowMonths(at, 24); from != 202410 || to != 202610 {
+		t.Fatalf("WindowMonths(24) = %d..%d", from, to)
 	}
 	for in, want := range map[string]int{"2026-05": 202605, "202605": 202605, "2026-05-31": 202605, "20260531": 202605, "2026-13": 0, "abc": 0, "": 0} {
 		if got := yearMonth(in); got != want {

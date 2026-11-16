@@ -1,0 +1,1 @@
+[{"qkey": "salesdata|91440300MA5F0M1Y40|invoice", "upstream": "salesdata", "credit": "91440300MA5F0M1Y40", "dim": "invoice", "windows": [[202409, 202609]], "subs": ["sales"]}, {"qkey": "salesdata|91440113618415363D|invoice", "upstream": "salesdata", "credit": "91440113618415363D", "dim": "invoice", "windows": [[202410, 202610]], "subs": ["sales"]}]

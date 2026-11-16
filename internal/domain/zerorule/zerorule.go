@@ -87,8 +87,35 @@ var entTaxRules = []field{
 	{path: []string{"nsrswxx", "zsbxxList"}, amount: []string{"sjje"}, month: []string{"sssjz", "sssjq", "rkrq"}},
 }
 
+// LabelContract 是对下游契约 range（swfp 聚合返回，range 二次解析后）的取数规则名，
+// 供按契约数据复核金额的对账脚本使用；寻源链路不会产生这个段名。
+const LabelContract = "contract"
+
+func init() {
+	invoiceRules[LabelContract] = []field{
+		{path: []string{"发票数据聚合", "kphzxxList"}, amount: []string{"kpje"}, month: []string{"ssyf", "kpqj"}},
+	}
+	taxRules[LabelContract] = []field{
+		{path: []string{"税务数据聚合", "sbsjList"}, amount: []string{"ysxssr", "ynse"}, month: []string{"sssjz", "sssjq", "sbrq"}},
+		{path: []string{"税务数据聚合", "zsbxxList"}, amount: []string{"sjje"}, month: []string{"sssjz", "sssjq", "rkrq"}},
+	}
+}
+
 // Extract 从一个源的原始业务数据里取窗口内金额。at 是请求时间（窗口基准）。
 func Extract(label string, raw []byte, at time.Time) Amounts {
+	from, to := window(at)
+	return ExtractWindow(label, raw, from, to)
+}
+
+// WindowMonths 返回 [请求月-months, 请求月] 的 yyyymm 闭区间（北京时间）。
+func WindowMonths(at time.Time, months int) (from, to int) {
+	t := at.In(beijing)
+	start := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, beijing).AddDate(0, -months, 0)
+	return start.Year()*100 + int(start.Month()), t.Year()*100 + int(t.Month())
+}
+
+// ExtractWindow 同 Extract，但窗口由调用方给出（yyyymm 闭区间）。
+func ExtractWindow(label string, raw []byte, from, to int) Amounts {
 	inv, invOK := invoiceRules[label]
 	tax, taxOK := taxRules[label]
 	out := Amounts{Known: invOK || taxOK, Invoice: new(big.Rat), Tax: new(big.Rat)}
@@ -101,7 +128,6 @@ func Extract(label string, raw []byte, at time.Time) Amounts {
 	if err := dec.Decode(&data); err != nil {
 		return out
 	}
-	from, to := window(at)
 	for _, f := range inv {
 		for _, s := range sums(data, f, from, to) {
 			out.Invoice.Add(out.Invoice, s)
@@ -172,9 +198,7 @@ func Merge(sources []Source) Verdict {
 
 // window 返回 [请求月-12, 请求月] 的 yyyymm 闭区间（北京时间）。
 func window(at time.Time) (from, to int) {
-	t := at.In(beijing)
-	start := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, beijing).AddDate(0, -12, 0)
-	return start.Year()*100 + int(start.Month()), t.Year()*100 + int(t.Month())
+	return WindowMonths(at, 12)
 }
 
 // sums 对一个列表段里窗口内的条目，按金额字段分别求和。
