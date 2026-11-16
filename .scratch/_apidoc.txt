@@ -1,0 +1,1234 @@
+
+===== PAGE 1 =====
+税务发票聚合查询服务（swfp）· API 接口文档与使用手册
+面向接入方（客户）技术与运维人员的对外接口说明。
+版本：swfp v3（税务发票聚合·扁平契约输出；发票与税务接口分开开通）｜ 通信：HTTP + JSON ｜
+编码：UTF-8
+说明：本服务采用统一的请求信封与 MD5 加签方式，响应分为 head（网关头部）与 body（业务结果）
+两部分。数据获取、签名加密等内部细节由本服务处理，调用方无需关心。
+关键特性：凭企业统一社会信用代码（creditCode）一次查询，返回「发票数据聚合」与「税务数据聚
+合」两大业务段，合并为 JSON 字符串置于 body.result.range（结构见 3.1.5）。可通过可选参数
+dataType 指定只要发票、只要税务或两者都要；可通过 scope 控制是否包含可选的销项月度汇总类数
+据。result.range 另附 dataScope，标明本次实际查得了哪些维度。发票接口与税务接口按账户分开开
+通：两项都开通后才可查询票税（dataType 为 both 或不传）；只开通一项时，只能请求该项，超出范围
+直接拒绝。
+一、接入必读
+1.1 适用范围
+本文档适用于接入本平台「税务发票聚合查询服务（swfp）」的第三方产品技术开发人员与日常运维人员。适用业
+务：企业信贷风控、供应链金融、企业经营状况评估等需要企业发票与税务数据的场景。
+1.2 接入须知
+1. 正式访问域名在接入时由我方商务提供（本文完整地址以当前正式环境为准，见 3.1）。
+2. 接入前需先申请开通账户，由我方分配 appKey 与 appSecret（加签密钥）。
+3. 本服务依据企业授权开展查询：调用方应确保已依法取得被查询企业的有效授权。
+4. 发票接口与税务接口按账户分开开通，开通范围由我方在开户时配置。两项都开通，即可查询票税
+（dataType 为 both 或不传）。只开通其中一项时，只能查询该项；不传 dataType 会按票税请求处理，从
+而被拒绝。详见「开通范围」。
+
+
+===== PAGE 2 =====
+1.3 接口说明
+项目
+说明
+请求方式
+POST（查得数查询 / 免费期自查为 GET）
+通信协议
+HTTP
+数据格式
+请求体与响应体均为 JSON
+字符编码
+UTF-8
+超时时间
+单次内部调用约 4 秒；整次查询总预算约 9 秒。建议客户端读超时 ≥ 10 秒
+HTTP 状态
+码
+恒为 200；业务结果与错误均通过响应体的 head.errorCode / body.code 表达
+签名
+调用时需对 body 中的业务参数 + 我方分配的 appSecret 进行 MD5 加签，详见「二、鉴权与
+加签」
+1.4 环境说明
+正式环境：使用正式账户，调用已开通接口，按查得成功计费（见「五、计费说明」）。
+测试环境：使用测试账户，返回联调数据。
+正式账户仅适用于正式环境，测试账户仅适用于测试环境。测试账户同样受发票 / 税务开通范围约束，联调前请向
+我方确认该账户已开通要测的接口。
+二、鉴权与加签
+所有业务接口共用同一套请求信封与鉴权方式。
+2.1 请求信封（顶层参数）
+参数
+示例
+类型
+必
+填
+说明
+appKey
+y890swfp
+String
+是
+我方分配给客户的公开标识
+sign
+0528999dd55c025b8f36fc72dceb1f63
+String
+是
+对 body 业务参数的 MD5
+签名（见 2.3）
+encryptionType
+1
+int
+否
+参数加密类型，1 = 明文
+（默认）
+body
+{...}
+Object
+是
+业务请求体，见各接口定义
+注意：appKey / sign / encryptionType 不参与签名计算。
+
+
+===== PAGE 3 =====
+2.2 鉴权校验顺序
+网关按以下顺序校验，任一失败立即返回对应 head.errorCode（不执行查询、不计费）：
+1. appKey 是否存在 → 否则 505001（errorMsg：appId 异常）
+2. appKey 是否匹配到账户 → 否则 505004（账户信息不存在）
+3. 账户是否有效（启用且在有效期内）→ 否则 505007（服务尚未开通）
+4. 签名是否正确 → 否则 505002（账号信息异常）
+签名通过之后，主查询还会校验业务参数（非法则 505062，见 3.1.1），以及本次 dataType 是否落在账户已开通
+的发票 / 税务范围内（见「开通范围」）。开通范围不符时同样返回 505007，但 errorMsg 会写明当前只开通了哪
+一项；此时不执行查询、不计费、不返回 body。账户停用或过期时的 errorMsg 仅为「服务尚未开通」，与开通范
+围不符的文案不同。
+2.3 加签方式
+1. 取出 body 中所有非空的业务参数（不含文件/字节流类型，不含值为空的参数）。
+2. 按参数名（key）的 ASCII 升序排序；首字符相同则依次比较后续字符。
+3. 将排序后的参数按 参数名参数值 直接拼接，最后追加 appSecret，得到待签名串。
+4. 对待签名串做 MD5，取 32 位小写十六进制字符串，赋值给 sign。
+示例一：body = { "creditCode": "92500233MA60R5KW8M" }，appSecret = "< 你的密钥 >"。待签名串为：
+creditCode92500233MA60R5KW8M< 你的密钥 >
+示例二（携带 scope）：body = { "creditCode": "92500233MA60R5KW8M", "scope": "basic" }。creditCode 的
+ASCII 序在 scope 之前，待签名串为：
+creditCode92500233MA60R5KW8Mscopebasic< 你的密钥 >
+示例三（只开通税务、必须显式携带 dataType）：body = { "creditCode": "92500233MA60R5KW8M",
+"dataType": "tax" }。creditCode 的 ASCII 序在 dataType 之前，待签名串为：
+creditCode92500233MA60R5KW8MdataTypetax< 你的密钥 >
+若同时携带 dataType 与 scope，ASCII 序为 creditCode、dataType、scope。
+sign = MD5( 待签名串 ) 的小写十六进制值。
+提示：拼接顺序由 key 的 ASCII 决定，请勿写死字段顺序；新增字段时排序会自动变化。dataType、scope 只要
+出现在 body 里且非空，就必须参与签名。
+2.4 加签代码示例
+Java
+
+
+===== PAGE 4 =====
+static String sign(Map<String, String> body, String appSecret) throws Exception {
+    List<String> keys = new ArrayList<>();
+    for (Map.Entry<String, String> e : body.entrySet()) {
+        if (e.getValue() != null && !e.getValue().isEmpty()) keys.add(e.getKey());
+    }
+    Collections.sort(keys); // ASCII 升序
+    StringBuilder sb = new StringBuilder();
+    for (String k : keys) sb.append(k).append(body.get(k));
+    sb.append(appSecret);
+    MessageDigest md = MessageDigest.getInstance("MD5");
+    byte[] digest = md.digest(sb.toString().getBytes(StandardCharsets.UTF_8));
+    StringBuilder hex = new StringBuilder();
+    for (byte b : digest) hex.append(String.format("%02x", b));
+    return hex.toString();
+}
+Python
+import hashlib
+def sign(body_params: dict, app_secret: str) -> str:
+    parts = []
+    for k in sorted(body_params.keys()):            # ASCII 升序
+        v = body_params[k]
+        if v is None or v == "":
+            continue                                # 剔除空值
+        parts.append(f"{k}{v}")
+    raw = "".join(parts) + app_secret
+    return hashlib.md5(raw.encode("utf-8")).hexdigest()  # 小写 hex
+Go
+
+
+===== PAGE 5 =====
+func sign(body map[string]string, appSecret string) string {
+    keys := make([]string, 0, len(body))
+    for k, v := range body {
+        if v != "" { // 剔除空值
+            keys = append(keys, k)
+        }
+    }
+    sort.Strings(keys) // ASCII 升序
+    var sb strings.Builder
+    for _, k := range keys {
+        sb.WriteString(k)
+        sb.WriteString(body[k])
+    }
+    sb.WriteString(appSecret)
+    sum := md5.Sum([]byte(sb.String()))
+    return hex.EncodeToString(sum[:]) // 小写 hex
+}
+三、接口列表
+3.1 税务发票聚合查询（swfp）
+项目
+内容
+路径
+POST /v1/openapi/zlx/querySrmxSWFP
+完整地址
+http://www.aiszcloud.cn:8080/v1/openapi/zlx/querySrmxSWFP
+鉴权
+appKey + MD5 签名（见第二章）
+凭企业统一社会信用代码一次查询，按契约整理为「发票数据聚合」与「税务数据聚合」两大业务段合并返回。本
+次能查哪些段，还取决于账户已开通的接口，见「开通范围」。
+
+
+===== PAGE 6 =====
+3.1.1 请求 body 参数
+参数
+示例
+类型
+必
+填
+说明
+creditCode
+92500233MA60R5KW8M
+String
+是
+企业统一社会信用代码（18 位，GB 32100 字
+符集）。比较时忽略首尾空格，字母按大写归一
+dataType
+both
+String
+否
+请求维度：both（缺省）= 发票+税务；invoice
+= 仅发票；tax = 仅税务。不区分大小写。不传
+视为 both
+scope
+all
+String
+否
+数据范围：all（缺省）= 含可选的销项月度汇总
+类数据；basic = 仅基础数据（不含该类可选数
+据）。不区分大小写
+参数非法（creditCode 非 18 位统一社会信用代码格式，或 dataType / scope 取值非法）将返回
+head.errorCode = 505062，不执行查询、不计费。dataType 非法时 errorMsg 为「dataType 取值非法, 须为
+invoice / tax / both」；scope 非法时为「scope 取值非法, 须为 all 或 basic」；creditCode 非法时为
+「creditCode 格式非法」。参数校验先于开通范围校验。
+开通范围
+发票接口与税务接口按账户分开开通，由我方配置。两项都开通，即为开通票税。主查询的 dataType 不得超出已
+开通范围；不传 dataType 视为请求票税（发票 + 税务）。
+超出范围时整单拒绝：不执行查询、不计费、不返回 body。head.errorCode 为 505007，errorMsg 只说明当前
+开通了什么，不随本次多请求了哪一项而变化。服务不会自动改成只查已开通的那一项。
+已开通
+本次 dataType
+结果
+发票 + 税务
+both、不传、invoice、tax
+继续查询
+仅发票
+invoice
+继续查询
+仅发票
+both、不传、tax
+505007，服务尚未开通：仅允许访问发票接口
+仅税务
+tax
+继续查询
+仅税务
+both、不传、invoice
+505007，服务尚未开通：仅允许访问税务接口
+均未开通
+任意合法取值
+505007，服务尚未开通：发票、税务接口均未开通
+本校验只作用于主查询。查得数查询（3.2）与免费期自查（3.3）不按发票 / 税务开通范围拦截，但仍须通过第二
+章鉴权。账户停用或过期时，上述接口一律返回 505007，errorMsg 为「服务尚未开通」。
+3.1.2 请求示例
+① 全量查询（缺省，发票+税务，含可选销项类数据；账户须已开通发票和税务）
+
+
+===== PAGE 7 =====
+{
+  "encryptionType": 1,
+  "appKey": "y890swfp",
+  "sign": "0528999dd55c025b8f36fc72dceb1f63",
+  "body": {
+    "creditCode": "92500233MA60R5KW8M"
+  }
+}
+② 仅发票维度（账户须已开通发票）
+{
+  "encryptionType": 1,
+  "appKey": "y890swfp",
+  "sign": "< 按 2.3 计算 >",
+  "body": {
+    "creditCode": "92500233MA60R5KW8M",
+    "dataType": "invoice"
+  }
+}
+③ 仅税务维度（账户只开通税务时必须显式传入；不传会被当作票税请求而拒绝）
+{
+  "encryptionType": 1,
+  "appKey": "y890swfp",
+  "sign": "< 按 2.3 示例三计算 >",
+  "body": {
+    "creditCode": "92500233MA60R5KW8M",
+    "dataType": "tax"
+  }
+}
+④ 基础数据范围（不含可选销项类数据）
+
+
+===== PAGE 8 =====
+{
+  "encryptionType": 1,
+  "appKey": "y890swfp",
+  "sign": "< 按 2.3 计算 >",
+  "body": {
+    "creditCode": "92500233MA60R5KW8M",
+    "scope": "basic"
+  }
+}
+3.1.3 响应结构
+响应分为 head（网关头部）与 body（业务结果）两部分。
+head 字段：
+参数
+示例
+类型
+说明
+errorCode
+0
+String
+网关返回码。0 = 成功（含查得/查无/未取得数据的确定结论）；
+非 0 = 网关级错误，此时无 body
+errorMsg
+success
+String
+返回描述
+logId
+a1b2c3...
+String
+全链路追踪 ID，排障/对账时请提供
+time
+1280
+Number
+服务处理耗时（毫秒）
+timestamp
+1718456789012
+Number
+响应时间戳（毫秒）
+body 字段（仅 head.errorCode = 0 时返回）：
+参数
+示例
+类型
+说明
+code
+001
+String
+业务结果码。001 = 查得【计费】；999 = 查无【不计费】；002
+= 未取得有效数据且处理异常【不计费】
+msg
+成功
+String
+业务描述
+reqid
+lkf9x2...
+String
+本次请求流水号
+uid
+0140142026...
+String
+交易流水号（对账用）
+verify
+String
+预留字段
+result
+{...}
+Object
+业务内容，code = 001 或 002 时可能存在
+result.range
+"{\"发票数据聚
+合\":...}"
+String
+契约结构的 JSON 字符串，调用方需二次 JSON.parse 后使
+用，结构见 3.1.5。001 恒有；002 在服务端仍产出契约串时也
+会带上（业务段通常为空，dataScope 两维皆假）
+
+
+===== PAGE 9 =====
+3.1.4 响应示例
+① 查得数据（计费；range 内容有省略）
+{
+  "head": {
+    "errorCode": "0",
+    "errorMsg": "success",
+    "logId": "a1b2c3d4",
+    "time": 1280,
+    "timestamp": 1718456789012
+  },
+  "body": {
+    "code": "001",
+    "msg": "成功",
+    "reqid": "lkf9x2ab",
+    "uid": "01401420260708995730278800",
+    "result": {
+      "range": "{\"发票数据聚合\":{\"nsrjbxx\":{\"nsrsbh\":\"…\",\"nsrmc\":\"…\"}},\"
+    }
+  }
+}
+② 全部查无（不计费）
+{
+  "head": {
+    "errorCode": "0",
+    "errorMsg": "success",
+    "logId": "a1b2c3d5",
+    "time": 900,
+    "timestamp": 1718456789013
+  },
+  "body": {
+    "code": "999",
+    "msg": "查无结果",
+    "reqid": "lkf9x2ac",
+    "uid": "01401420260708995730278900"
+  }
+}
+③ 未取得有效数据且处理异常（不计费）
+
+
+===== PAGE 10 =====
+{
+  "head": {
+    "errorCode": "0",
+    "errorMsg": "success",
+    "logId": "a1b2c3d6",
+    "time": 1100,
+    "timestamp": 1718456789014
+  },
+  "body": {
+    "code": "002",
+    "msg": "未取得数据且部分数据源异常",
+    "reqid": "lkf9x2ad",
+    "uid": "01401420260708995730279000"
+  }
+}
+④ 网关级错误（无 body）
+{
+  "head": {
+    "errorCode": "505002",
+    "errorMsg": "账号信息异常",
+    "logId": "a1b2c3d7",
+    "time": 12,
+    "timestamp": 1718456789015
+  }
+}
+⑤ 开通范围不符（只开通了税务，却未传 dataType 或传了 both / invoice；无 body、不计费）
+{
+  "head": {
+    "errorCode": "505007",
+    "errorMsg": "服务尚未开通：仅允许访问税务接口",
+    "logId": "a1b2c3d8",
+    "time": 8,
+    "timestamp": 1718456789016
+  }
+}
+只开通发票时，对应 errorMsg 为「服务尚未开通：仅允许访问发票接口」。两项都未开通时，为「服务尚未开通：
+发票、税务接口均未开通」。
+
+
+===== PAGE 11 =====
+3.1.5 result.range 结构说明（返回值契约）
+result.range 是一个 JSON 字符串。调用方应先对该字符串做一次 JSON.parse / 反序列化，得到含以下固定键的
+对象：
+顶层键
+数据内容
+发票数据聚合
+发票维度业务段：纳税人基本信息对象 + 五类发票相关列表（字段见下）
+税务数据聚合
+税务维度业务段：纳税人基本信息对象 + 四类申报/征收列表（字段见下）
+dataScope
+本次实际查得维度：{"发票": bool, "税务": bool}
+形状约定：
+nsrjbxx：对象（无数据时为 {} 或字段均为空串）。
+各 *List：数组（无数据时为 []）。
+所有叶子字段的值统一为字符串；契约内定义但本次未返回的字段输出空串 ""（字段恒存在）。
+契约之外的内容一律不返回。
+业务数据已按契约字段整理为统一结构；列表内可能含不同统计口径的行（如含税/不含税、剔废等），请按业务需
+要选用，勿无差别跨行直接加总。
+只请求或只查得一个维度时，另一个业务段仍会出现，但其列表为空、nsrjbxx 为空对象，dataScope 中对应布尔
+值为 false。请以 dataScope 判断本次实得，不要把空段当成查得。
+解析示例（JavaScript）
+const range = JSON.parse(resp.body.result.range);
+// 1. 先看本次实得维度
+console.log("实得维度", range.dataScope);
+// 2. 按段取纳税人基本信息（对象）
+const inv = range["发票数据聚合"];
+const jb = inv.nsrjbxx || {};
+console.log("企业名称:", jb.nsrmc);
+// 3. 列表为数组
+for (const row of inv.kphzxxList || []) {
+  console.log(row.ssyf, row.kpje);
+}
+建议调用方按「存在即解析、空串即缺失」的方式做容错处理；契约结构固定，不会出现契约之外的字段。
+
+
+===== PAGE 12 =====
+A. 发票数据聚合 段字段定义
+A.1 nsrjbxx 纳税人基本信息（对象）
+名称
+类型
+说明
+nsrsbh
+string
+纳税人识别号
+nsrmc
+string
+纳税人名称
+hybmdl
+string
+行业编码(大类)
+hymcdl
+string
+行业名称(大类)
+cybm
+string
+产业编码
+cymc
+string
+产业名称
+yqjydz
+string
+企业经营地址
+szdjsswjgdm
+string
+所在地级市税务机关代码
+szdjsswjgmc
+string
+所在地市级税务机关名称
+qydyckpsj
+string
+企业第一次开票时间（yyyy-MM-dd）
+sjjyys
+string
+实际经营月数
+kyrq
+string
+开业(设立)日期
+nsrzt
+string
+纳税人状态码
+zzsnsrlx
+string
+增值税纳税人类型代码
+nsrxypdnd
+string
+纳税人信用评定年度
+nsrxypddj
+string
+纳税人信用评定等级（A、B、C、D、M）
+djzclxDm
+string
+登记注册类型代码
+djzclxmc
+string
+登记注册类型名称
+hybmxl
+string
+行业编码(小类)
+hymcxl
+string
+行业名称(小类)
+zjyckprq
+string
+最近一次开票日期（yyyy-MM-dd）
+dqwkpts
+string
+当前无开票天数
+
+
+===== PAGE 13 =====
+A.2 syhzxxList 销方汇总信息（数组）
+名称
+类型
+说明
+ssyf
+string
+所属月份，yyyy-MM
+nsrsbh
+string
+纳税人识别号
+kpqj
+string
+开票期间，yyyy-MM-dd（所属月份最后一天）
+xfnsrsbh
+string
+销方纳税人识别号
+xfmc
+string
+销方名称
+xfsl
+string
+当月销方总数
+ljkpcs
+string
+累计开票次数
+ljkpjebhs
+string
+累计开票金额（不含税）
+ljse
+string
+累计开票税额
+kpcszb
+string
+开票次数占比
+kpjezb
+string
+开票金额占比（不含税）
+kpjepmbhs
+string
+开票金额排名（不含税）
+syqyhydm
+string
+销方企业所属行业代码
+syqyhymc
+string
+销方企业所属行业名称
+hpjebhs
+string
+红票金额（不含税）
+hpsl
+string
+红票数量
+hpse
+string
+红票税额
+fpjebhs
+string
+废票金额（不含税）
+fpsl
+string
+废票数量
+fpse
+string
+废票税额
+
+
+===== PAGE 14 =====
+A.3 xyhzxxList 下游汇总信息（购方）（数组）
+名称
+类型
+说明
+ssyf
+string
+所属月份，yyyy-MM
+nsrsbh
+string
+纳税人识别号
+kpqj
+string
+开票期间，yyyy-MM-dd
+gfnsrsbh
+string
+购方纳税人识别号
+gfnsrmc
+string
+购方纳税人名称
+gfsl
+string
+当月购方总数
+ljkpcs
+string
+累计开票次数
+ljkpjebhs
+string
+累计开票金额（不含税）
+ljse
+string
+累计开票税额
+kpcszb
+string
+开票次数占比
+kpjezb
+string
+开票金额占比（不含税）
+kpjepmbhs
+string
+开票金额排名（不含税）
+xyqyhydm
+string
+购方企业所属行业代码
+xyqyhymc
+string
+购方企业所属行业名称
+hpjebhs
+string
+红票金额（不含税）
+hpsl
+string
+红票数量
+hpse
+string
+红票税额
+fpjebhs
+string
+废票金额（不含税）
+fpsl
+string
+废票数量
+fpse
+string
+废票税额
+
+
+===== PAGE 15 =====
+A.4 spxxList 商品信息（数组）
+名称
+类型
+说明
+ssyf
+string
+所属月份，yyyy-MM
+nsrsbh
+string
+纳税人识别号
+hwhlwbm
+string
+商品编码
+hwhlwmc
+string
+商品名称
+sl
+string
+税率
+spzsl
+string
+商品总数量
+spzje
+string
+商品总金额（不含税）
+spzse
+string
+商品总税额
+gxfxdhwhlwbmzls
+string
+当月开票所涉及的商品编码总数
+sphlwzslzb
+string
+开票数量占比
+sphlwzjezb
+string
+开票金额占比（不含税）
+jyjezbpm
+string
+交易金额（不含税）排名
+
+
+===== PAGE 16 =====
+A.5 khxsdqList 客户销售地区（数组）
+名称
+类型
+说明
+ssyf
+string
+所属月份，yyyy-MM
+nsrsbh
+string
+纳税人识别号
+kpqj
+string
+开票期间，yyyy-MM-dd
+gfdjssl
+string
+购方地级市数量
+jycs
+string
+交易次数
+jycszb
+string
+交易次数占比
+kpjebhs
+string
+交易金额（不含税）
+jyjezb
+string
+交易金额占比（不含税）
+jyjepm
+string
+交易金额排名（不含税）
+gfdjssjjgdm
+string
+购方地级市税局机构代码
+gfdjsxzqydm
+string
+购方地级市行政区域代码
+gfdjsxzqymc
+string
+购方地级市行政区域名称
+ljse
+string
+累计税额
+
+
+===== PAGE 17 =====
+A.6 kphzxxList 开票汇总信息（数组）
+名称
+类型
+说明
+ssyf
+string
+所属月份，yyyy-MM
+kpqj
+string
+开票期间，yyyy-MM-dd
+nsrsbh
+string
+纳税人识别号
+ljkpcs
+string
+当月累计开票次数
+kpje
+string
+当月累计开票金额
+ljse
+string
+当月累计税额
+hpsl
+string
+当月红票数量
+hpje
+string
+当月红票金额
+hpse
+string
+当月累计红票税额
+fpsl
+string
+当月废票数量
+fpje
+string
+当月废票金额
+fpse
+string
+当月累计废票税额
+dzzgkpjejlp
+string
+当月单张蓝票最高开票金额
+dzzgkpjehhfp
+string
+当月单张发票最高金额
+dykptsqb
+string
+当月开票天数（全部）
+dykptslp
+string
+当月开票天数（仅蓝票）
+zjybkpsj
+string
+当月最近一笔开票时间，yyyy-MM-dd
+dqlxwjyjlts
+string
+当前连续无交易记录天数
+B. 税务数据聚合 段字段定义
+B.1 nsrjbxx 纳税人基本信息（对象）
+字段同 A.1。
+
+
+===== PAGE 18 =====
+B.2 lrbxxList 利润表信息列表（数组）
+名称
+类型
+说明
+nsrsbh
+string
+纳税人识别号
+sbrq
+string
+申报日期
+sssjq
+string
+所属时间起
+sssjz
+string
+所属时间止
+xmmc
+string
+项目名称
+bnljje
+string
+本年累计金额
+bys
+string
+本期数
+sqje
+string
+上期金额
+mc
+string
+序号（行次）
+zlbsxlmc
+string
+资料报送小类名称
+B.3 sbsjList 申报表信息列表（数组）
+名称
+类型
+说明
+nsrsbh
+string
+纳税人识别号
+sbrq
+string
+申报日期
+sfzl
+string
+税（费）种类
+sssjq
+string
+所属日期起
+sssjz
+string
+所属日期止
+qbxssr
+string
+全部销售收入
+ysxssr
+string
+应税销售收入
+ynse
+string
+应纳税额
+yjse
+string
+预缴税额
+ybtse
+string
+应补退税额
+jmse
+string
+减免税额
+sbqx
+string
+申报期限
+
+
+===== PAGE 19 =====
+B.4 zcfzbxxList 资产负债表信息列表（数组）
+名称
+类型
+说明
+nsrsbh
+string
+纳税人识别号
+sbrq
+string
+申报日期
+sssjq
+string
+所属时间起
+sssjz
+string
+所属时间止
+cwbblxdm
+string
+财务报表类型代码
+zlbsxlmc
+string
+资料报送小类名称
+ewbxh
+string
+二维表序号
+zcxmmc
+string
+资产项目名称
+qmyezc
+string
+期末余额资产
+ncyezc
+string
+年初余额资产
+fzhsyzqyxmmc
+string
+负债和所有者权益项目名称
+qmyeqy
+string
+期末余额权益
+ncyeqy
+string
+年初余额权益
+
+
+===== PAGE 20 =====
+B.5 zsbxxList 征收表信息列表（数组）
+名称
+类型
+说明
+nsrsbh
+string
+纳税人识别号
+sssjq
+string
+所属时间起
+sssjz
+string
+所属时间止
+jkjzrq
+string
+缴款截止日期
+jkfsrq
+string
+缴款发生日期
+jkzt
+string
+税款状态
+zsxm
+string
+征收项目
+skzl
+string
+税款种类
+jsje
+string
+计税金额
+sl
+string
+税率
+sjje
+string
+实缴金额
+rkrq
+string
+入库日期
+3.2 成功查得数 / 计费统计查询（扩展接口）
+查询本账户累计成功查得次数与计费统计，用于客户侧自助监控。不返回额度上限/剩余量（本服务无额度限制）。
+不按发票 / 税务开通范围拦截。
+项目
+内容
+路径
+GET /v1/openapi/zlx/quotaSWFP
+完整地址
+http://www.aiszcloud.cn:8080/v1/openapi/zlx/quotaSWFP
+鉴权
+同第二章（请求体中携带 appKey + sign 信封；body 可为 {}，此时 sign = MD5(appSecret)）
+响应示例：
+
+
+===== PAGE 21 =====
+{
+  "errorCode": "0",
+  "errorMsg": "success",
+  "status": "ACTIVE",
+  "serviceUsed": 1280,
+  "totalCalls": 1560,
+  "billing": {
+    "chargedInvoice": 100,
+    "chargedTax": 80,
+    "chargedBoth": 200,
+    "chargedTotal": 380,
+    "amountFen": 36000
+  }
+}
+参数
+说明
+status
+账户状态（ACTIVE / SUSPENDED 等）
+serviceUsed
+累计成功查得数据的次数（仅统计查得成功 body.code=001）
+totalCalls
+累计查询次数（含查得/查无等；一次查询计 1 次；不含被网关拦截的请求）
+billing.chargedInvoice
+发票计费笔数
+billing.chargedTax
+税务计费笔数
+billing.chargedBoth
+发票+税务计费笔数
+billing.chargedTotal
+上述三者之和
+billing.amountFen
+累计应收金额（单位：分）
+说明：无任何额度上限拦截。serviceUsed / totalCalls 是调用口径；billing.* 是计费口径——免费期内的成功查询
+仍会计入 serviceUsed，但不一定计入 billing。开通范围不符、参数非法等被拒绝的请求不计入 totalCalls。
+3.3 主体免费期自查（扩展接口）
+查询指定企业在本账户下发票 / 税务类目的免费期状态，便于对账时自证「本次为何未扣费」。发票与税务的免费
+期相互独立。不按发票 / 税务开通范围拦截。
+项目
+内容
+路径
+GET /v1/openapi/zlx/coverageSWFP
+完整地址
+http://www.aiszcloud.cn:8080/v1/openapi/zlx/coverageSWFP
+鉴权
+同第二章；body 需带 creditCode（校验口径同主查询）
+
+
+===== PAGE 22 =====
+响应示例：
+{
+  "errorCode": "0",
+  "errorMsg": "success",
+  "creditCode": "92500233MA60R5KW8M",
+  "invoice": {
+    "covered": true,
+    "chargedAt": "2026-03-01T10:00:00Z",
+    "expiresAt": "2027-03-01T10:00:00Z",
+    "chargeCount": 1
+  },
+  "tax": {
+    "covered": false,
+    "chargeCount": 0
+  }
+}
+参数
+说明
+creditCode
+归一化后的统一社会信用代码
+invoice / tax
+对应类目的免费期信息
+covered
+当前是否仍在免费期内
+chargedAt
+本次窗口起算时间（RFC3339；未开过窗口时省略）
+expiresAt
+窗口到期时间（RFC3339）
+chargeCount
+该类目历史计费轮数
+3.4 健康检查
+项目
+内容
+路径
+GET /healthz
+完整地址
+http://www.aiszcloud.cn:8080/healthz
+鉴权
+无
+响应
+HTTP 200，纯文本 ok
+
+
+===== PAGE 23 =====
+四、返回码说明
+4.1 网关 head.errorCode
+errorCode
+含义
+是否
+计费
+0
+调用成功（业务结果见 body.code）
+见
+4.2
+505001
+appId 异常（appKey 缺失/非法）
+否
+505002
+账号信息异常（签名校验失败）
+否
+505003
+产品编号异常（保留）
+否
+505004
+账户信息不存在
+否
+505007
+服务尚未开通。账户停用/过期时 errorMsg 为「服务尚未开通」。主查询的 dataType
+超出已开通的发票/税务接口时，errorMsg 为「服务尚未开通：仅允许访问发票接口」
+「服务尚未开通：仅允许访问税务接口」或「服务尚未开通：发票、税务接口均未开通」
+否
+505062
+数据请求异常（参数非法 / 服务处理异常等）
+否
+网关级错误（非 0）时不返回 body。
+4.2 业务 body.code
+code
+含义
+计费
+001
+查得有效数据（请求维度中至少一维有实
+得）
+是（按本次实际产生应收的类目定档，见第五章；免费期
+另述）
+999
+查无结果（确定无数据）
+否
+002
+未取得有效数据且处理过程出现异常
+否
+说明：只要拿到了有效业务数据即为 001 并按应收类目计费，即使只查得发票或只查得税务。是否两维都有，请看
+result.range 内的 dataScope。请求了未开通的维度时不会进入本节，而是直接返回 505007。
+五、计费说明
+1. 仅 body.code = 001 产生计费；999、002 与网关级错误（含开通范围不符的 505007）不计费。
+2. 收费档位按本次实际产生应收的类目确定，与请求了什么无关。实得发票与税务、且两类目都不在免费期
+内，按「税务发票」档；只对应收发票，按「发票」档；只对应收税务，按「税务」档。请求了两项但只查
+得发票，按「发票」档。
+3. 主体年度免费期：同一账户 + 同一企业统一社会信用代码 + 同一类目（发票 / 税务），首次查得计费一次并
+开启约一年的免费窗口；窗口内该类目再次查得不再计入应收。发票与税务窗口相互独立。因此两类目都查
+
+
+===== PAGE 24 =====
+得、但只有一类目仍在免费期内时，只对另一类目按对应单项档计费，不按「税务发票」档计费。可用
+「3.3 主体免费期自查」核对。
+4. 台账按请求幂等：相同业务请求重复提交不会重复计费（以服务端幂等键为准）。
+5. 金额单位为「分」；具体单价以合同/账户配置为准。
+六、使用手册
+6.1 接入流程
+1. 向商务申请账户，获取 appKey、appSecret、正式/测试域名，并确认该账户开通的是发票、税务，还是两
+者（票税）。
+2. 按第二章实现加签，用测试账户联调主查询与 quota / coverage。只开通一项时，主查询必须显式传入对应
+的 dataType。
+3. 解析 result.range：二次 JSON 解析 → 读 dataScope → 取对应业务段字段。
+4. 切正式环境前完成自检清单（6.4）。
+6.2 幂等与重试
+建议客户端为每次业务查询生成稳定的业务流水并做好超时重试；重复提交不会导致重复计费。
+读超时建议 ≥ 10 秒；超时后可用 head.logId 联系我方核对是否已落账。
+网关级错误（鉴权/参数/开通范围）修正后重试即可；999 表示确定查无，无需立即重试同一主体。
+6.3 错误处理建议
+场景
+建议
+505001 / 505004 / 505002
+检查 appKey、加签实现与密钥环境
+505007，errorMsg 为「服务尚
+未开通」
+账户停用或已过期，联系我方恢复
+505007，errorMsg 含「仅允许
+访问」或「均未开通」
+本次 dataType 超出已开通接口。只开通一项时必须显式传入 invoice 或
+tax；不传按票税处理，会被拒绝。修正后重试，不会自动改查已开通的那
+一项
+505062
+检查 creditCode / dataType / scope；仍失败凭 logId 联系我方
+body.code=001
+按 dataScope 使用业务数据；关注计费与免费期
+body.code=999
+确定无数据，按业务策略处理
+body.code=002
+未取得有效数据；凭 logId 联系我方排查，勿当作有数据结果
+6.4 自检清单
+ 域名、appKey、appSecret、环境匹配无误
+ 已确认账户开通的是发票、税务或两者；只开通一项时请求显式带了对应 dataType
+
+
+===== PAGE 25 =====
+ 加签实现按 2.3 / 2.4（ASCII 排序、剔空值、小写 MD5；dataType、scope 非空时参与签名）
+ creditCode 为合法 18 位统一社会信用代码
+ 已按需传入 dataType / scope，非法值会直接 505062
+ 对 result.range 做了二次 JSON 解析，并用 dataScope 判断实得维度
+ 客户端读超时 ≥ 10 秒
+ 排障时保留并提供 head.logId
+附录：术语表
+术语
+说明
+appKey /
+appSecret
+账户公开标识 / 加签密钥
+creditCode
+企业统一社会信用代码
+dataType
+请求维度：发票 / 税务 / 两者。不传视为两者
+开通范围
+账户已开通的发票接口、税务接口。两项都开通即可查询票税；只开通一项时只能请求
+该项
+scope
+数据范围：全部 / 基础
+dataScope
+本次实际查得的维度
+head / body
+网关头部 / 业务结果
+range
+契约业务数据的 JSON 字符串
+logId
+全链路追踪 ID
+uid
+交易流水号（对账用）
+主体年度免费期
+同一账户同一企业同类目首次查得后的约一年免费窗口。发票与税务各自独立

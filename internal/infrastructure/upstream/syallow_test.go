@@ -171,7 +171,7 @@ func TestLoadSyAllowlistProductionFile(t *testing.T) {
 		t.Fatalf("加载生产白名单: %v", err)
 	}
 	st := a.Stats()
-	if st.Total != 295 || st.TaxOnly != 197 || st.InvoiceOnly != 90 || st.Both != 8 {
+	if st.Total != 635 || st.TaxOnly != 366 || st.InvoiceOnly != 261 || st.Both != 8 {
 		t.Fatalf("白名单计数不符: %+v", st)
 	}
 }

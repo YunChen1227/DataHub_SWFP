@@ -1,0 +1,21 @@
+{
+  "head": {
+    "errorCode": "0",
+    "logId": "mwf5ur1v-j92eme33-5433c8dc-ESEMA7KNKH",
+    "time": 2036,
+    "errorMsg": "success",
+    "timestamp": 1794585472359
+  },
+  "body": {
+    "code": "001",
+    "msg": "成功",
+    "uid": "01401420261113988627046600",
+    "reqid": "dmu7gfswl1z5879",
+    "verify": ""
+  },
+  "result_meta": {},
+  "dataScope": {
+    "发票": true,
+    "税务": false
+  }
+}

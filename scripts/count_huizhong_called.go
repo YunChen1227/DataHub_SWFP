@@ -1,20 +1,20 @@
 //go:build ignore
 
 // count_huizhong_called: 统计惠众 10 月账单里的 486 个税号中，
-// 有多少在 2026 年 10 月（北京时间）被我方「任一下游」调用过，有多少完全没被调用过，
-// 并逐条列出每个税号被哪些下游调用、各自次数。结果写入 Excel，不打印明细到终端。
+// 有多少在 2026 年 10 月（北京时间）被「北京联信」这一下游调用过，有多少没被调用过，
+// 并逐条列出每个税号被联信调用的次数。结果写入 Excel，不打印明细到终端。
 //
 // 用法（已内置默认配置文件，直接运行即可）：
 //
 //	CONFIG_FILE=config.aliyun.prod.yaml go run ./scripts/count_huizhong_called.go
 //
-// 输出：当前目录 惠众10月税号下游调用-2026-10.xlsx（可用 OUT 环境变量改路径）。
-//	sheet：汇总 / 逐条下游明细（每税号一行）/ 展开明细（每税号×下游一行）。
+// 输出：当前目录 惠众10月税号-北京联信调用-2026-10.xlsx（可用 OUT 环境变量改路径）。
+//	sheet：汇总 / 逐条明细（每税号一行：是否调用、调用次数）。
 //
 // 口径：
-//   - 「调用过」= audit_log 里存在该税号(credit_code)且 created_at 落在 2026-10 北京自然月的记录；
-//     audit_log 有记录即表示通过鉴权/参数校验并实际发起了查询（含查无、上游失败）。
-//   - 不限 app_key / 客户，即「我方所有下游」。
+//   - 「调用过」= audit_log 里存在该税号(credit_code)、created_at 落在 2026-10 北京自然月、
+//     且所属 license.name = 指定客户 的记录；audit_log 有记录即表示通过鉴权/参数校验并实际发起了查询（含查无、上游失败）。
+//   - 默认只统计客户「北京联信征信咨询有限责任公司」，可用 CUSTOMER 环境变量改为别的下游。
 //   - 该库(datahub_swfp_db)即 swfp 线路，无需再按线路过滤。
 package main
 
@@ -62,6 +62,8 @@ func main() {
 	configFile := env("CONFIG_FILE", "config.aliyun.prod.yaml")
 	// 统计月份（北京时间自然月），默认 2026 年 10 月。
 	month := env("MONTH", "2026-10")
+	// 只统计这个下游客户（license.name），默认北京联信。可用 CUSTOMER 覆盖。
+	customer := env("CUSTOMER", "北京联信征信咨询有限责任公司")
 	from, err := time.ParseInLocation("2006-01", month, cst)
 	if err != nil {
 		fail("MONTH 格式应为 YYYY-MM: %v", err)
@@ -109,47 +111,34 @@ func main() {
 		}
 	}
 
-	var called int
-	err = conn.QueryRow(ctx, `
-SELECT COUNT(DISTINCT credit_code)
-FROM audit_log
-WHERE credit_code = ANY($1)
-  AND created_at >= $2 AND created_at < $3`, uniq, from, to).Scan(&called)
-	if err != nil {
-		fail("查询失败: %v", err)
-	}
-
-	total := len(uniq)
-	notCalled := total - called
-
-	// 逐条明细：每个税号被哪些下游调用（及各自次数）。
-	type caller struct {
-		name string
-		cnt  int
-	}
-	detail := map[string][]caller{}
+	// 逐条明细：每个税号被「联信」在该月调用了几次。
+	detail := map[string]int{}
 	rows, err := conn.Query(ctx, `
-SELECT a.credit_code, COALESCE(NULLIF(l.name,''), a.app_key) AS downstream, COUNT(*)
+SELECT a.credit_code, COUNT(*)
 FROM audit_log a
-LEFT JOIN license l ON l.app_key = a.app_key
+JOIN license l ON l.app_key = a.app_key
 WHERE a.credit_code = ANY($1)
   AND a.created_at >= $2 AND a.created_at < $3
-GROUP BY a.credit_code, downstream
-ORDER BY a.credit_code, downstream`, uniq, from, to)
+  AND l.name = $4
+GROUP BY a.credit_code`, uniq, from, to, customer)
 	if err != nil {
 		fail("查询明细失败: %v", err)
 	}
 	for rows.Next() {
-		var code, name string
+		var code string
 		var cnt int
-		if err := rows.Scan(&code, &name, &cnt); err != nil {
+		if err := rows.Scan(&code, &cnt); err != nil {
 			fail("读取明细失败: %v", err)
 		}
-		detail[code] = append(detail[code], caller{name, cnt})
+		detail[code] = cnt
 	}
 	if err := rows.Err(); err != nil {
 		fail("读取明细失败: %v", err)
 	}
+
+	total := len(uniq)
+	called := len(detail)
+	notCalled := total - called
 
 	sorted := append([]string(nil), uniq...)
 	sort.Strings(sorted)
@@ -157,35 +146,25 @@ ORDER BY a.credit_code, downstream`, uniq, from, to)
 	wb := &xlsx.Workbook{}
 	// 汇总
 	wb.Add("汇总", []string{"指标", "值"}, [][]any{
-		{"惠众10月账单税号总数(去重)", total},
+		{"统计下游客户", customer},
 		{"统计月份(北京时间)", fmt.Sprintf("%s ~ %s", from.Format("2006-01-02"), to.Format("2006-01-02"))},
-		{"10月被我方任一下游调用过的税号数", called},
-		{"10月完全未被我方任一下游调用过的税号数", notCalled},
-	}, []float64{40, 36})
-	// 逐条（每税号一行，下游合并到一列）
+		{"惠众10月账单税号总数(去重)", total},
+		{"其中被该下游本月调用过的税号数", called},
+		{"其中该下游本月未调用过的税号数", notCalled},
+	}, []float64{40, 44})
+	// 逐条：每个税号 联信本月是否调用、调用次数
 	wide := make([][]any, 0, len(sorted))
-	// 展开（每税号×下游一行）
-	long := make([][]any, 0, len(sorted))
 	for _, code := range sorted {
-		cs := detail[code]
-		if len(cs) == 0 {
-			wide = append(wide, []any{code, "否", 0, ""})
-			long = append(long, []any{code, "(无下游调用)", nil})
-			continue
+		if cnt, ok := detail[code]; ok {
+			wide = append(wide, []any{code, "是", cnt})
+		} else {
+			wide = append(wide, []any{code, "否", 0})
 		}
-		parts := make([]string, 0, len(cs))
-		for _, c := range cs {
-			parts = append(parts, fmt.Sprintf("%s(%d)", c.name, c.cnt))
-			long = append(long, []any{code, c.name, c.cnt})
-		}
-		wide = append(wide, []any{code, "是", len(cs), strings.Join(parts, "; ")})
 	}
-	wb.Add("逐条下游明细", []string{"税号", "是否被调用", "下游数", "下游明细(名称:次数)"}, wide,
-		[]float64{22, 12, 10, 80})
-	wb.Add("展开明细", []string{"税号", "下游", "调用次数"}, long,
-		[]float64{22, 40, 12})
+	wb.Add("逐条明细", []string{"税号", fmt.Sprintf("%s本月是否调用", shortName(customer)), "调用次数"}, wide,
+		[]float64{22, 20, 12})
 
-	out := env("OUT", fmt.Sprintf("惠众10月税号下游调用-%s.xlsx", month))
+	out := env("OUT", fmt.Sprintf("惠众10月税号-%s调用-%s.xlsx", shortName(customer), month))
 	f, err := os.Create(out)
 	if err != nil {
 		fail("创建Excel失败: %v", err)
@@ -194,7 +173,17 @@ ORDER BY a.credit_code, downstream`, uniq, from, to)
 	if err := wb.Write(f); err != nil {
 		fail("写Excel失败: %v", err)
 	}
-	fmt.Printf("已生成: %s （税号总数 %d，被调用 %d，未调用 %d）\n", out, total, called, notCalled)
+	fmt.Printf("已生成: %s （税号总数 %d，%s调用 %d，未调用 %d）\n", out, total, shortName(customer), called, notCalled)
+}
+
+// shortName 取客户简称用于文件名/表头：去掉常见后缀。
+func shortName(name string) string {
+	for _, suf := range []string{"征信咨询有限责任公司", "有限责任公司", "有限公司", "股份有限公司"} {
+		if strings.HasSuffix(name, suf) {
+			return strings.TrimSuffix(name, suf)
+		}
+	}
+	return name
 }
 
 // huizhongCodes 为惠众 10 月账单里的全部税号（10月明细A + 10月明细C，共 486 个，已含重复由程序去重）。
