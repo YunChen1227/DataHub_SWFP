@@ -86,14 +86,17 @@ func TestLoadProductionUpstreamAllowlistCSV(t *testing.T) {
 		t.Fatal(err)
 	}
 	st := g.Stats()
-	if st.Total != 1182 {
-		t.Fatalf("total=%d want 1182", st.Total)
+	if st.Total != 2687 {
+		t.Fatalf("total=%d want 2687", st.Total)
 	}
-	if st.ByProvider["entcredit"] != 407 || st.ByProvider["ctax"] != 138 ||
-		st.ByProvider["sy"] != 635 || st.ByProvider["salesdata"] != 2 {
+	if st.ByProvider["entcredit"] != 1583 || st.ByProvider["ctax"] != 451 ||
+		st.ByProvider["sy"] != 635 || st.ByProvider["salesdata"] != 18 {
 		t.Fatalf("byProvider=%v", st.ByProvider)
 	}
-	if st.TaxOnly != 739 || st.InvoiceOnly != 434 || st.Both != 9 {
+	if st.TaxOnly != 740 || st.InvoiceOnly != 1938 || st.Both != 9 {
 		t.Fatalf("dims tax=%d inv=%d both=%d", st.TaxOnly, st.InvoiceOnly, st.Both)
+	}
+	if st.UniqueCodes != 2661 {
+		t.Fatalf("uniqueCodes=%d want 2661", st.UniqueCodes)
 	}
 }
