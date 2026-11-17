@@ -168,6 +168,52 @@ func withCredit(items []Item) []Item {
 	return out
 }
 
+// RouteCall 是一次对某上游的调用（税号 + 上游 + 状态 + 时间）。
+type RouteCall struct {
+	Credit    string
+	Provider  string
+	Status    string
+	Invoice   bool
+	Tax       bool
+	At        time.Time
+	RequestID string
+	AppKey    string
+}
+
+// fetchRouting 抓区间内每次上游调用（可选按下游 app_key 过滤）。
+// appKeys 为空表示不分下游客户、全部统计。
+func fetchRouting(ctx context.Context, db *pgx.Conn, route string, appKeys []string, from, to time.Time) ([]RouteCall, error) {
+	sql := `
+SELECT ` + creditExpr + `, u.provider, u.status, u.dim_invoice, u.dim_tax, u.created_at, u.request_id, u.app_key
+FROM upstream_call u
+JOIN audit_log a ON a.request_id = u.request_id
+LEFT JOIN request_payload p ON p.request_id = u.request_id
+WHERE u.version = $1 AND u.created_at >= $2 AND u.created_at < $3`
+	args := []any{route, from, to}
+	if len(appKeys) > 0 {
+		sql += ` AND a.app_key = ANY($4)`
+		args = append(args, appKeys)
+	}
+	sql += ` ORDER BY ` + creditExpr + `, u.created_at`
+	rows, err := db.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("查 upstream_call: %w", err)
+	}
+	defer rows.Close()
+	var out []RouteCall
+	for rows.Next() {
+		var c RouteCall
+		if err := rows.Scan(&c.Credit, &c.Provider, &c.Status, &c.Invoice, &c.Tax, &c.At, &c.RequestID, &c.AppKey); err != nil {
+			return nil, err
+		}
+		if c.Credit == "" {
+			continue
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
 // dedupe 同一 (税号, 接口) 只保留首次请求；结果按请求时间排序。
 func dedupe(items []Item) []Item {
 	seen := map[string]int{}
