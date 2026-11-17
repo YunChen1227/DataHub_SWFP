@@ -86,7 +86,7 @@ func writeRouting(path, label string, span Month, rows []RouteRow) error {
 	for _, p := range providerOrder {
 		header = append(header, provName(p))
 	}
-	header = append(header, "命中上游", "调用上游数")
+	header = append(header, "命中上游", "命中上游数")
 	matrix := make([][]any, 0, len(credits))
 	provHit := map[string]int{}
 	served := 0
@@ -131,21 +131,21 @@ func writeRouting(path, label string, span Month, rows []RouteRow) error {
 	detail := make([][]any, 0, len(rows))
 	for _, r := range rows {
 		detail = append(detail, []any{
-			r.Credit, provName(r.Provider), dims(r.Inv, r.Tax), r.OK, r.Fail,
+			r.Credit, provName(r.Provider), dims(r.Inv, r.Tax), r.OK,
 			r.First.In(cst).Format(timeLayout), r.Last.In(cst).Format(timeLayout),
 			r.AppKey, r.SampleReq,
 		})
 	}
-	wb.Add("调用明细",
-		[]string{"税号", "上游", "查得维度", "命中次数", "未命中次数", "首次调用", "末次调用", "下游appKey", "示例requestId"},
-		detail, []float64{22, 10, 10, 10, 12, 20, 20, 16, 36})
+	wb.Add("命中明细",
+		[]string{"税号", "上游", "查得维度", "查得次数", "首次查得", "末次查得", "下游appKey", "示例requestId"},
+		detail, []float64{22, 10, 10, 10, 20, 20, 16, 36})
 
 	// 汇总页。
 	sum := [][]any{
 		{"税号上游路由汇总"},
 		{"客户", label},
 		{"区间", span.dateLabel()},
-		{"去重税号数", len(credits)},
+		{"查得税号数", len(credits)},
 		{"至少命中一个上游的税号数", served},
 		{},
 		{"各上游命中税号数（status=ok）"},

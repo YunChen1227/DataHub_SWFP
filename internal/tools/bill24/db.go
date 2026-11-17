@@ -192,7 +192,7 @@ SELECT COALESCE(
          '') AS credit,
        u.provider, u.status, u.dim_invoice, u.dim_tax, u.created_at, u.request_id, u.app_key
 FROM upstream_call u
-WHERE u.version = $1 AND u.created_at >= $2 AND u.created_at < $3`
+WHERE u.version = $1 AND u.created_at >= $2 AND u.created_at < $3 AND u.status = 'ok'`
 	args := []any{route, from, to}
 	if len(appKeys) > 0 {
 		sql += ` AND u.app_key = ANY($4)`
@@ -247,7 +247,7 @@ WHERE u.version = $1 AND u.created_at >= $2 AND u.created_at < $3`
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	fmt.Printf("扫描上游调用 %d 行，聚合出 (税号×上游) %d 组\n", scanned, len(order))
+	fmt.Printf("查得(status=ok)上游调用 %d 行，聚合出 (税号×上游) %d 组\n", scanned, len(order))
 	out := make([]RouteRow, 0, len(order))
 	for _, k := range order {
 		out = append(out, *agg[k])
