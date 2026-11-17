@@ -215,6 +215,44 @@ type Month struct {
 	From, To time.Time
 }
 
+// parseDayRange 解析含首尾的自然日区间，To 为结束日的次日 0 点（查询用左闭右开）。
+func parseDayRange(from, to string) (Month, error) {
+	a, err := time.ParseInLocation("2006-01-02", from, cst)
+	if err != nil {
+		return Month{}, fmt.Errorf("FROM %q 不是 yyyy-MM-dd: %w", from, err)
+	}
+	b, err := time.ParseInLocation("2006-01-02", to, cst)
+	if err != nil {
+		return Month{}, fmt.Errorf("TO %q 不是 yyyy-MM-dd: %w", to, err)
+	}
+	if b.Before(a) {
+		return Month{}, fmt.Errorf("TO %s 早于 FROM %s", to, from)
+	}
+	return Month{Name: from + "_" + to, From: a, To: b.AddDate(0, 0, 1)}, nil
+}
+
+// wholeMonth 表示 From/To 正好是一个自然月。
+func (m Month) wholeMonth() bool {
+	return m.From.Day() == 1 && m.To.Equal(m.From.AddDate(0, 1, 0))
+}
+
+// dateLabel 是对账单「日期」格的文案。
+func (m Month) dateLabel() string {
+	if m.wholeMonth() {
+		return fmt.Sprintf("%d年%d月", m.From.Year(), int(m.From.Month()))
+	}
+	end := m.To.AddDate(0, 0, -1)
+	return m.From.Format("2006-01-02") + " 至 " + end.Format("2006-01-02")
+}
+
+// detailSheet 是明细页名。跨月区间不再按月份拆。
+func (m Month) detailSheet() string {
+	if m.wholeMonth() {
+		return fmt.Sprintf("%d月明细", int(m.From.Month()))
+	}
+	return "查得明细"
+}
+
 func parseMonths(s string) ([]Month, error) {
 	var out []Month
 	for _, p := range strings.Split(s, ",") {

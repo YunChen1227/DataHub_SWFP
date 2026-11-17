@@ -33,7 +33,7 @@ func writeBill(path string, j job, m Month, results []Result) error {
 
 	// 对账单：版式与模板一致，从 B 列起。单价/小计留空，由人工填写。
 	title := j.issuer + "月度对账单"
-	monthLabel := fmt.Sprintf("%d年%d月", m.From.Year(), int(m.From.Month()))
+	monthLabel := m.dateLabel()
 	rows := [][]any{
 		{nil, title},
 		{nil, "客户名称", j.customer},
@@ -51,7 +51,11 @@ func writeBill(path string, j job, m Month, results []Result) error {
 		note = "查得口径，未做金额判定"
 	}
 	rows = append(rows, []any{nil, "小计", nil, len(bill), nil, nil, note})
-	sum := wb.Add("对账单", nil, rows, []float64{4, 12, 52, 12, 10, 10, 46})
+	dateWidth := 12.0
+	if !m.wholeMonth() {
+		dateWidth = 26
+	}
+	sum := wb.Add("对账单", nil, rows, []float64{4, dateWidth, 52, 12, 10, 10, 46})
 	sum.HeaderRows = map[int]bool{2: true}
 	last := len(Ifaces) + 3
 	sum.Merges = []string{"B1:G1", "D2:G2", fmt.Sprintf("B4:B%d", last), fmt.Sprintf("B%d:C%d", last+1, last+1)}
@@ -64,7 +68,7 @@ func writeBill(path string, j job, m Month, results []Result) error {
 			flag(r.Iface.Tax()), flag(r.Iface.Invoice()), "",
 		})
 	}
-	wb.Add(fmt.Sprintf("%d月明细", int(m.From.Month())),
+	wb.Add(m.detailSheet(),
 		[]string{"调用时间", "税号", "appId", "企业名称", "计费税", "计费票", "备注"},
 		detail, []float64{20, 22, 16, 30, 8, 8, 20})
 

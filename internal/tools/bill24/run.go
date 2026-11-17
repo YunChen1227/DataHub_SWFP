@@ -135,6 +135,16 @@ func run(ctx context.Context, db *pgx.Conn, j job) error {
 		return err
 	}
 	if j.foundOnly {
+		if from, to := env("FROM", ""), env("TO", ""); from != "" || to != "" {
+			if from == "" || to == "" {
+				return fmt.Errorf("FROM 和 TO 需同时设置，格式 yyyy-MM-dd")
+			}
+			span, err := parseDayRange(from, to)
+			if err != nil {
+				return err
+			}
+			return runFound(ctx, db, j, []Month{span})
+		}
 		return runFound(ctx, db, j, months)
 	}
 	outRoot := env("OUT_DIR", filepath.Join("test_res", "bill24"))
