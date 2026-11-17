@@ -168,50 +168,91 @@ func withCredit(items []Item) []Item {
 	return out
 }
 
-// RouteCall 是一次对某上游的调用（税号 + 上游 + 状态 + 时间）。
-type RouteCall struct {
-	Credit    string
-	Provider  string
-	Status    string
-	Invoice   bool
-	Tax       bool
-	At        time.Time
-	RequestID string
-	AppKey    string
+// RouteRow 是某税号对某上游的调用聚合（一行）。
+type RouteRow struct {
+	Credit      string
+	Provider    string
+	OK, Fail    int
+	Inv, Tax    bool
+	First, Last time.Time
+	AppKey      string
+	SampleReq   string // 取一个有代表性的 requestId（优先 ok 的）
+	LastStatus  string
 }
 
-// fetchRouting 抓区间内每次上游调用（可选按下游 app_key 过滤）。
-// appKeys 为空表示不分下游客户、全部统计。
-func fetchRouting(ctx context.Context, db *pgx.Conn, route string, appKeys []string, from, to time.Time) ([]RouteCall, error) {
+// fetchRouting 流式扫描区间内每次上游调用，边扫边按 (税号, 上游) 聚合，内存只与
+// 税号数相关。appKeys 为空表示不分下游客户、全量统计。
+//
+// 用 u.app_key 过滤、子查询取税号，避免 JOIN 行翻倍（这是之前 OOM 的主因）。
+func fetchRouting(ctx context.Context, db *pgx.Conn, route string, appKeys []string, from, to time.Time) ([]RouteRow, error) {
 	sql := `
-SELECT ` + creditExpr + `, u.provider, u.status, u.dim_invoice, u.dim_tax, u.created_at, u.request_id, u.app_key
+SELECT COALESCE(
+         NULLIF((SELECT a.credit_code FROM audit_log a WHERE a.request_id = u.request_id LIMIT 1), ''),
+         (SELECT p.credit_code FROM request_payload p WHERE p.request_id = u.request_id LIMIT 1),
+         '') AS credit,
+       u.provider, u.status, u.dim_invoice, u.dim_tax, u.created_at, u.request_id, u.app_key
 FROM upstream_call u
-JOIN audit_log a ON a.request_id = u.request_id
-LEFT JOIN request_payload p ON p.request_id = u.request_id
 WHERE u.version = $1 AND u.created_at >= $2 AND u.created_at < $3`
 	args := []any{route, from, to}
 	if len(appKeys) > 0 {
-		sql += ` AND a.app_key = ANY($4)`
+		sql += ` AND u.app_key = ANY($4)`
 		args = append(args, appKeys)
 	}
-	sql += ` ORDER BY ` + creditExpr + `, u.created_at`
 	rows, err := db.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("查 upstream_call: %w", err)
 	}
 	defer rows.Close()
-	var out []RouteCall
+
+	type key struct{ credit, prov string }
+	agg := map[key]*RouteRow{}
+	var order []key
+	var scanned int
 	for rows.Next() {
-		var c RouteCall
-		if err := rows.Scan(&c.Credit, &c.Provider, &c.Status, &c.Invoice, &c.Tax, &c.At, &c.RequestID, &c.AppKey); err != nil {
+		var credit, provider, status, reqID, appKey string
+		var inv, tax bool
+		var at time.Time
+		if err := rows.Scan(&credit, &provider, &status, &inv, &tax, &at, &reqID, &appKey); err != nil {
 			return nil, err
 		}
-		if c.Credit == "" {
+		scanned++
+		if credit == "" {
 			continue
 		}
-		out = append(out, c)
+		k := key{credit, provider}
+		r := agg[k]
+		if r == nil {
+			r = &RouteRow{Credit: credit, Provider: provider, First: at, Last: at, AppKey: appKey, SampleReq: reqID, LastStatus: status}
+			agg[k] = r
+			order = append(order, k)
+		}
+		if at.Before(r.First) {
+			r.First = at
+		}
+		if at.After(r.Last) {
+			r.Last = at
+			r.LastStatus = status
+		}
+		if status == "ok" {
+			r.OK++
+			if r.SampleReq == "" || r.OK == 1 {
+				r.SampleReq = reqID
+			}
+		} else {
+			r.Fail++
+		}
+		r.Inv = r.Inv || inv
+		r.Tax = r.Tax || tax
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	fmt.Printf("扫描上游调用 %d 行，聚合出 (税号×上游) %d 组\n", scanned, len(order))
+	out := make([]RouteRow, 0, len(order))
+	for _, k := range order {
+		out = append(out, *agg[k])
+	}
+	return out, nil
 }
 
 // dedupe 同一 (税号, 接口) 只保留首次请求；结果按请求时间排序。
